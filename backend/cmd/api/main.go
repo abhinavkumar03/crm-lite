@@ -10,9 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/config"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/routes"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/middleware"
 )
 
 func main() {
@@ -24,6 +25,14 @@ func main() {
 	defer log.Sync()
 
 	router := gin.New()
+
+	router.Use(
+		middleware.RequestID(),
+		middleware.Logger(),
+		middleware.Recovery(),
+		middleware.SecurityHeaders(),
+		middleware.CORS(),
+	)
 
 	routes.Register(router)
 
