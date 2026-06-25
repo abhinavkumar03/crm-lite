@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS activity_logs;
+
+DROP TABLE IF EXISTS tasks;
+
+DROP TABLE IF EXISTS contacts;
+
+DROP TABLE IF EXISTS leads;
+
+DROP TABLE IF EXISTS users;
