@@ -4,9 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	apperrors "github.com/abhinavkumar03/crm-lite/backend/internal/shared/errors"
 )
 
-// Error sends a standardized error response.
 func Error(
 	c *gin.Context,
 	statusCode int,
@@ -20,82 +21,62 @@ func Error(
 	})
 }
 
-// BadRequest returns HTTP 400.
+func FromAppError(
+	c *gin.Context,
+	err *apperrors.AppError,
+) {
+	Error(
+		c,
+		err.StatusCode,
+		err.Message,
+		[]gin.H{
+			{
+				"code": err.Code,
+			},
+		},
+	)
+}
+
 func BadRequest(
 	c *gin.Context,
 	message string,
 	errors interface{},
 ) {
-	Error(
-		c,
-		http.StatusBadRequest,
-		message,
-		errors,
-	)
+	Error(c, http.StatusBadRequest, message, errors)
 }
 
-// Unauthorized returns HTTP 401.
 func Unauthorized(
 	c *gin.Context,
 	message string,
 ) {
-	Error(
-		c,
-		http.StatusUnauthorized,
-		message,
-		nil,
-	)
+	Error(c, http.StatusUnauthorized, message, nil)
 }
 
-// Forbidden returns HTTP 403.
 func Forbidden(
 	c *gin.Context,
 	message string,
 ) {
-	Error(
-		c,
-		http.StatusForbidden,
-		message,
-		nil,
-	)
+	Error(c, http.StatusForbidden, message, nil)
 }
 
-// NotFound returns HTTP 404.
 func NotFound(
 	c *gin.Context,
 	message string,
 ) {
-	Error(
-		c,
-		http.StatusNotFound,
-		message,
-		nil,
-	)
+	Error(c, http.StatusNotFound, message, nil)
 }
 
-// Conflict returns HTTP 409.
 func Conflict(
 	c *gin.Context,
 	message string,
 	errors interface{},
 ) {
-	Error(
-		c,
-		http.StatusConflict,
-		message,
-		errors,
-	)
+	Error(c, http.StatusConflict, message, errors)
 }
 
-// InternalServerError returns HTTP 500.
 func InternalServerError(
 	c *gin.Context,
 	message string,
 ) {
-	Error(
-		c,
-		http.StatusInternalServerError,
-		message,
-		nil,
-	)
+	Error(c, http.StatusInternalServerError, message, nil)
 }
