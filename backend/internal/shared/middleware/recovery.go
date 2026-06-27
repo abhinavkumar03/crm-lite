@@ -4,17 +4,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/response"
 )
 
-func Recovery() gin.HandlerFunc {
-
+func Recovery(logger *zap.Logger) gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
-
-		response.InternalServerError(
-			c,
-			http.StatusText(http.StatusInternalServerError),
-		)
+		logger.Error("panic recovered", zap.Any("panic", recovered))
+		response.InternalServerError(c, http.StatusText(http.StatusInternalServerError))
 	})
 }

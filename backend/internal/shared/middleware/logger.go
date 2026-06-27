@@ -7,12 +7,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/constants"
-	sharedlogger "github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 )
 
-func Logger() gin.HandlerFunc {
-
-	logger := sharedlogger.New()
+func Logger(logger *zap.Logger) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
