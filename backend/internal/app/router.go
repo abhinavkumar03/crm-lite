@@ -4,12 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/routes"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/middleware"
 )
 
 func NewRouter(
 	logger *zap.Logger,
+	modules ...Module,
 ) *gin.Engine {
 
 	router := gin.New()
@@ -22,7 +22,7 @@ func NewRouter(
 		middleware.CORS(),
 	)
 
-	routes.Register(router)
+	RegisterModules(router, modules...)
 
 	return router
 }
