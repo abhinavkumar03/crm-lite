@@ -1,12 +1,21 @@
 package auth
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID           string    `db:"id"`
-	Name         string    `db:"name"`
-	Email        string    `db:"email"`
-	PasswordHash string    `db:"password_hash"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
+	ID uuid.UUID `db:"id"`
+
+	Name string `db:"name"`
+
+	Email string `db:"email"`
+
+	PasswordHash string `db:"password_hash"`
+
+	CreatedAt time.Time `db:"created_at"`
+
+	UpdatedAt time.Time `db:"updated_at"`
 }
