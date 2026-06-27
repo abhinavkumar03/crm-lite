@@ -7,11 +7,11 @@ import (
 )
 
 type Module struct {
-	Handler *handler.Handler
+	Handler *handler.AuthHandler
 }
 
 func NewModule(
-	handler *handler.Handler,
+	handler *handler.AuthHandler,
 ) *Module {
 
 	return &Module{
@@ -19,11 +19,10 @@ func NewModule(
 	}
 }
 
-func (m *Module) RegisterRoutes(
-	router *gin.RouterGroup,
-) {
+func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
+	auth := api.Group("/auth")
 
-	auth := router.Group("/auth")
-
-	m.Handler.RegisterRoutes(auth)
+	auth.POST("/register", m.Handler.Register)
+	auth.POST("/login", m.Handler.Login)
+	auth.GET("/profile", m.Handler.Profile)
 }
