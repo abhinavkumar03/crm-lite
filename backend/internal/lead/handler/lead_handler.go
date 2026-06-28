@@ -186,3 +186,37 @@ func (h *LeadHandler) Update(c *gin.Context) {
 		lead,
 	)
 }
+
+func (h *LeadHandler) Delete(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	leadID := c.Param("id")
+
+	deleted, err := h.service.Delete(
+		c.Request.Context(),
+		leadID,
+		userID,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to delete lead",
+		)
+		return
+	}
+
+	if !deleted {
+		response.NotFound(
+			c,
+			"Lead not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Lead deleted successfully",
+		nil,
+	)
+}

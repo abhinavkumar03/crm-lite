@@ -186,3 +186,16 @@ func (s *Service) Update(
 		Notes:   lead.Notes,
 	}, nil
 }
+
+func (s *Service) Delete(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (bool, error) {
+
+	return s.repository.Delete(
+		ctx,
+		id,
+		ownerID,
+	)
+}
