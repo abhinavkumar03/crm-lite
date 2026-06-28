@@ -139,3 +139,67 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		task,
 	)
 }
+
+func (h *TaskHandler) Update(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	taskID := c.Param("id")
+
+	var req dto.UpdateTaskRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+
+		response.BadRequest(
+			c,
+			"Invalid request body",
+			nil,
+		)
+
+		return
+	}
+
+	if err := validation.ValidateStruct(&req); err != nil {
+
+		response.BadRequest(
+			c,
+			"Validation failed",
+			validation.FormatErrors(err),
+		)
+
+		return
+	}
+
+	task, err := h.service.Update(
+		c.Request.Context(),
+		taskID,
+		userID,
+		req,
+	)
+
+	if err != nil {
+
+		response.BadRequest(
+			c,
+			err.Error(),
+			nil,
+		)
+
+		return
+	}
+
+	if task == nil {
+
+		response.NotFound(
+			c,
+			"Task not found",
+		)
+
+		return
+	}
+
+	response.OK(
+		c,
+		"Task updated successfully",
+		task,
+	)
+}

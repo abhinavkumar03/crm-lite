@@ -189,3 +189,115 @@ func (s *Service) GetByID(
 		DueDate:     dueDate,
 	}, nil
 }
+
+func (s *Service) Update(
+	ctx context.Context,
+	id string,
+	ownerID string,
+	req dto.UpdateTaskRequest,
+) (*dto.TaskResponse, error) {
+
+	task, err := s.taskRepository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if task == nil {
+		return nil, nil
+	}
+
+	if req.Title != "" {
+		task.Title = req.Title
+	}
+
+	if req.Description != "" {
+		task.Description = req.Description
+	}
+
+	if req.Status != "" {
+		task.Status = req.Status
+	}
+
+	if req.LeadID != nil {
+
+		lead, err := s.leadRepository.GetByID(
+			ctx,
+			*req.LeadID,
+			ownerID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if lead == nil {
+			return nil, errors.New("lead not found")
+		}
+
+		task.LeadID = req.LeadID
+	}
+
+	if req.ContactID != nil {
+
+		contact, err := s.contactRepository.GetByID(
+			ctx,
+			*req.ContactID,
+			ownerID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if contact == nil {
+			return nil, errors.New("contact not found")
+		}
+
+		task.ContactID = req.ContactID
+	}
+
+	if req.DueDate != nil {
+
+		t, err := time.Parse(
+			time.RFC3339,
+			*req.DueDate,
+		)
+
+		if err != nil {
+			return nil, errors.New("invalid due_date")
+		}
+
+		task.DueDate = &t
+	}
+
+	err = s.taskRepository.Update(
+		ctx,
+		task,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var dueDate *string
+
+	if task.DueDate != nil {
+		v := task.DueDate.Format(time.RFC3339)
+		dueDate = &v
+	}
+
+	return &dto.TaskResponse{
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Status:      task.Status,
+		LeadID:      task.LeadID,
+		ContactID:   task.ContactID,
+		DueDate:     dueDate,
+	}, nil
+}

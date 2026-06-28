@@ -194,3 +194,39 @@ func (r *Repository) GetByID(
 
 	return &task, nil
 }
+
+func (r *Repository) Update(
+	ctx context.Context,
+	task *entity.Task,
+) error {
+
+	query := `
+	UPDATE tasks
+	SET
+		lead_id = $1,
+		contact_id = $2,
+		title = $3,
+		description = $4,
+		status = $5,
+		due_date = $6,
+		updated_at = NOW()
+	WHERE id = $7
+	AND owner_id = $8
+	RETURNING updated_at;
+	`
+
+	return r.db.QueryRow(
+		ctx,
+		query,
+		task.LeadID,
+		task.ContactID,
+		task.Title,
+		task.Description,
+		task.Status,
+		task.DueDate,
+		task.ID,
+		task.OwnerID,
+	).Scan(
+		&task.UpdatedAt,
+	)
+}
