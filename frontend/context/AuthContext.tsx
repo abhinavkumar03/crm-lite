@@ -14,8 +14,6 @@ type User = {
     email: string;
 };
 
-const [loading, setLoading] = useState(true);
-
 type AuthContextType = {
     token: string | null;
     user: User | null;
@@ -39,6 +37,8 @@ export function AuthProvider({
     const [token, setToken] = useState<string | null>(null);
 
     const [user, setUser] = useState<User | null>(null);
+
+    const [loading, setLoading] = useState(true); 
 
     useEffect(() => {
 

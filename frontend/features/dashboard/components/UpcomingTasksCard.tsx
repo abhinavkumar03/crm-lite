@@ -18,7 +18,7 @@ export default function UpcomingTasksCard({
 
             <div className="space-y-3">
 
-                {tasks.map(task => (
+                {(tasks ?? []).map(task => (
 
                     <div key={task.id}>
 

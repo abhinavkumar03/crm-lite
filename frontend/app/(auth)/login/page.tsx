@@ -35,8 +35,8 @@ export default function LoginPage() {
                 password,
             );
 
-            auth.login(
-                res.data.token,
+            await auth.login(
+                res.data.access_token,
             );
 
             router.push(
