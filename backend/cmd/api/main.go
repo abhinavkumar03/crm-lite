@@ -11,8 +11,11 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/handler"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/service"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -21,7 +24,7 @@ func main() {
 
 	log := logger.New()
 
-	authHandler := handler.New()
+	authHandler := handler.New(service.New(repository.New(&pgxpool.Pool{})))
 	authModule := auth.NewModule(authHandler)
 
 	router := app.NewRouter(log, authModule)

@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/dto"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
 )
 
@@ -55,7 +54,7 @@ func (s *AuthService) verifyPassword(
 func (s *AuthService) Register(
 	ctx context.Context,
 	req dto.RegisterRequest,
-) (*auth.User, error) {
+) (*dto.ProfileResponse, error) {
 
 	exists, err := s.repository.ExistsByEmail(
 		ctx,
@@ -70,17 +69,19 @@ func (s *AuthService) Register(
 		return nil, errors.New("email already exists")
 	}
 
-	hash, err := s.hashPassword(req.Password)
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(req.Password),
+		bcrypt.DefaultCost,
+	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	user := &auth.User{
-		ID:           uuid.New(),
+	user := &entity.User{
 		Name:         req.Name,
 		Email:        req.Email,
-		PasswordHash: hash,
+		PasswordHash: string(hash),
 	}
 
 	err = s.repository.Create(
@@ -92,16 +93,18 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	user.PasswordHash = ""
-
-	return user, nil
+	return &dto.ProfileResponse{
+		ID:    user.ID.String(),
+		Name:  user.Name,
+		Email: user.Email,
+	}, nil
 }
 
 func (s *AuthService) Login(
 	ctx context.Context,
 	email string,
 	password string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	user, err := s.repository.FindByEmail(
 		ctx,
@@ -133,7 +136,7 @@ func (s *AuthService) Login(
 func (s *AuthService) Profile(
 	ctx context.Context,
 	id string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	return s.repository.FindByID(
 		ctx,

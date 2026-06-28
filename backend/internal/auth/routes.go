@@ -2,23 +2,25 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/handler"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/service"
 )
 
 func RegisterRoutes(
 	router *gin.RouterGroup,
+	db *pgxpool.Pool,
 ) {
 
-	h := handler.New()
+	repo := repository.New(db)
 
-	auth := router.Group("/auth")
+	svc := service.New(repo)
 
-	{
-		auth.POST("/register", h.Register)
+	h := handler.New(svc)
 
-		auth.POST("/login", h.Login)
+	authGroup := router.Group("/auth")
 
-		auth.GET("/profile", h.Profile)
-	}
+	authGroup.POST("/register", h.Register)
 }
