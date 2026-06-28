@@ -203,3 +203,41 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		task,
 	)
 }
+
+func (h *TaskHandler) Delete(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	taskID := c.Param("id")
+
+	deleted, err := h.service.Delete(
+		c.Request.Context(),
+		taskID,
+		userID,
+	)
+
+	if err != nil {
+
+		response.InternalServerError(
+			c,
+			"Unable to delete task",
+		)
+
+		return
+	}
+
+	if !deleted {
+
+		response.NotFound(
+			c,
+			"Task not found",
+		)
+
+		return
+	}
+
+	response.OK(
+		c,
+		"Task deleted successfully",
+		nil,
+	)
+}
