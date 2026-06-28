@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 )
 
 type AuthRepository struct {
@@ -20,9 +20,9 @@ func New(db *pgxpool.Pool) *AuthRepository {
 	}
 }
 
-func (r *AuthRepository) Create(
+func (r *AuthRepository) CreateUser(
 	ctx context.Context,
-	user *entity.User,
+	user *auth.User,
 ) error {
 
 	query := `
@@ -57,10 +57,10 @@ func (r *AuthRepository) Create(
 	)
 }
 
-func (r *AuthRepository) FindByEmail(
+func (r *AuthRepository) GetUserByEmail(
 	ctx context.Context,
 	email string,
-) (*entity.User, error) {
+) (*auth.User, error) {
 
 	query := `
 	SELECT
@@ -71,10 +71,10 @@ func (r *AuthRepository) FindByEmail(
 		created_at,
 		updated_at
 	FROM users
-	WHERE email = $1
+	WHERE email = $1;
 	`
 
-	var user entity.User
+	var user auth.User
 
 	err := r.db.QueryRow(
 		ctx,
@@ -100,10 +100,10 @@ func (r *AuthRepository) FindByEmail(
 	return &user, nil
 }
 
-func (r *AuthRepository) FindByID(
+func (r *AuthRepository) GetUserByID(
 	ctx context.Context,
 	id string,
-) (*entity.User, error) {
+) (*auth.User, error) {
 
 	query := `
 	SELECT
@@ -114,10 +114,10 @@ func (r *AuthRepository) FindByID(
 		created_at,
 		updated_at
 	FROM users
-	WHERE id = $1
+	WHERE id = $1;
 	`
 
-	var user entity.User
+	var user auth.User
 
 	err := r.db.QueryRow(
 		ctx,
