@@ -12,6 +12,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
@@ -59,6 +60,7 @@ func main() {
 		context.Background(),
 	)
 
+	healthModule := health.NewModule()
 	authModule := auth.NewModule(db, cfg.JWTSecret)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
@@ -66,6 +68,7 @@ func main() {
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
 	router := app.NewRouter(
 		log,
+		healthModule,
 		authModule,
 		leadModule,
 		contactModule,
