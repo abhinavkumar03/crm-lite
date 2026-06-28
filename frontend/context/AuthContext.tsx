@@ -1,5 +1,6 @@
 "use client";
 
+import { getProfile } from "@/features/auth/api";
 import {
     createContext,
     useContext,
@@ -13,16 +14,21 @@ type User = {
     email: string;
 };
 
+const [loading, setLoading] = useState(true);
+
 type AuthContextType = {
     token: string | null;
     user: User | null;
-    login: (token: string) => void;
+    loading: boolean;
+    login: (token: string) => Promise<void>;
     logout: () => void;
 };
+
 
 const AuthContext = createContext<AuthContextType>(
     {} as AuthContextType
 );
+
 
 export function AuthProvider({
     children,
@@ -36,22 +42,56 @@ export function AuthProvider({
 
     useEffect(() => {
 
-        const stored = localStorage.getItem("token");
+        async function loadUser() {
 
-        if (stored) {
+            const stored = localStorage.getItem("token");
+
+            if (!stored) {
+                setLoading(false);
+                return;
+            }
+
             setToken(stored);
+
+            try {
+
+                const profile = await getProfile();
+
+                setUser(profile.data);
+
+            } catch {
+
+                logout();
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
         }
+
+        loadUser();
 
     }, []);
 
-    function login(jwt: string) {
+    async function login(jwt: string) {
 
-        localStorage.setItem(
-            "token",
-            jwt,
-        );
+        localStorage.setItem("token", jwt);
 
         setToken(jwt);
+
+        try {
+
+            const profile = await getProfile();
+
+            setUser(profile.data);
+
+        } catch {
+
+            logout();
+
+        }
     }
 
     function logout() {
@@ -70,6 +110,7 @@ export function AuthProvider({
             value={{
                 token,
                 user,
+                loading,
                 login,
                 logout,
             }}
