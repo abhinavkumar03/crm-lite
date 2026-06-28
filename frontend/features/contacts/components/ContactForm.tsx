@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { CreateContactPayload } from "../types";
 
-import {
-    CreateLeadPayload,
-} from "../api";
 
 interface Props {
-    initialValues?: CreateLeadPayload;
-    onSubmit: (
-        values: CreateLeadPayload
-    ) => Promise<void>;
+
+    initialValues?: CreateContactPayload;
+
     submitText: string;
+
+    onSubmit: (
+        values: CreateContactPayload
+    ) => Promise<void>;
+
 }
 
-export default function LeadForm({
+export default function ContactForm({
     initialValues,
     onSubmit,
     submitText,
@@ -24,28 +26,26 @@ export default function LeadForm({
         useState(false);
 
     const [form, setForm] =
-        useState<CreateLeadPayload>(
+    useState<CreateContactPayload>(
 
-            initialValues ?? {
+        initialValues ?? {
 
-                name: "",
+            first_name: "",
 
-                email: "",
+            last_name: "",
 
-                phone: "",
+            email: "",
 
-                company: "",
+            phone: "",
 
-                status: "NEW",
+            company: "",
 
-                notes: "",
+        }
 
-            }
-
-        );
+    );
 
     function update(
-        key: keyof CreateLeadPayload,
+        key: keyof CreateContactPayload,
         value: string
     ) {
 
@@ -83,15 +83,29 @@ export default function LeadForm({
             className="space-y-4"
         >
 
-            <input
-                className="w-full rounded border p-3"
-                placeholder="Name"
-                value={form.name}
-                onChange={(e)=>
-                    update("name", e.target.value)
-                }
-                required
-            />
+            <div className="grid grid-cols-2 gap-4">
+
+                <input
+                    className="w-full rounded border p-3"
+                    placeholder="First Name"
+                    value={form.first_name}
+                    onChange={(e) =>
+                        update("first_name", e.target.value)
+                    }
+                    required
+                />
+
+                <input
+                    className="w-full rounded border p-3"
+                    placeholder="Last Name"
+                    value={form.last_name}
+                    onChange={(e) =>
+                        update("last_name", e.target.value)
+                    }
+                    required
+                />
+
+            </div>
 
             <input
                 className="w-full rounded border p-3"
@@ -120,29 +134,6 @@ export default function LeadForm({
                     update("company", e.target.value)
                 }
             />
-
-            <textarea
-                className="w-full rounded border p-3"
-                placeholder="Notes"
-                value={form.notes}
-                onChange={(e)=>
-                    update("notes", e.target.value)
-                }
-            />
-
-            <select
-                className="w-full rounded border p-3"
-                value={form.status}
-                onChange={(e)=>
-                    update("status", e.target.value)
-                }
-            >
-                <option value="NEW">New</option>
-                <option value="CONTACTED">Contacted</option>
-                <option value="QUALIFIED">Qualified</option>
-                <option value="WON">Won</option>
-                <option value="LOST">Lost</option>
-            </select>
 
             <button
                 disabled={loading}
