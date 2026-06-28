@@ -4,7 +4,7 @@ INSERT INTO users (
     password_hash
 )
 VALUES (
-    'Admin User',
+    'Abhinav Kumar',
     'admin@crmlite.com',
     'hashed_password'
 );

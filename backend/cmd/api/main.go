@@ -10,6 +10,7 @@ import (
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
@@ -39,10 +40,12 @@ func main() {
 
 	authModule := auth.NewModule(db, cfg.JWTSecret)
 	leadModule := lead.NewModule(db, authModule.Middleware())
+	contactModule := contact.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		authModule,
 		leadModule,
+		contactModule,
 	)
 
 	application := &app.Application{
