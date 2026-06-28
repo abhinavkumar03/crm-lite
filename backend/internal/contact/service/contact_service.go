@@ -83,3 +83,35 @@ func (s *Service) List(
 
 	return response, nil
 }
+
+func (s *Service) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*dto.ContactResponse, error) {
+
+	contact, err := s.repository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if contact == nil {
+		return nil, nil
+	}
+
+	return &dto.ContactResponse{
+		ID:        contact.ID,
+		FirstName: contact.FirstName,
+		LastName:  contact.LastName,
+		Email:     contact.Email,
+		Phone:     contact.Phone,
+		Company:   contact.Company,
+		JobTitle:  contact.JobTitle,
+		Notes:     contact.Notes,
+	}, nil
+}

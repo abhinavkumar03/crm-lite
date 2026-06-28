@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/entity"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -140,4 +142,60 @@ func (r *Repository) List(
 	}
 
 	return contacts, nil
+}
+
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*entity.Contact, error) {
+
+	query := `
+	SELECT
+		id,
+		owner_id,
+		first_name,
+		last_name,
+		email,
+		phone,
+		company,
+		job_title,
+		notes,
+		created_at,
+		updated_at
+	FROM contacts
+	WHERE id = $1
+	AND owner_id = $2;
+	`
+
+	var contact entity.Contact
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		id,
+		ownerID,
+	).Scan(
+		&contact.ID,
+		&contact.OwnerID,
+		&contact.FirstName,
+		&contact.LastName,
+		&contact.Email,
+		&contact.Phone,
+		&contact.Company,
+		&contact.JobTitle,
+		&contact.Notes,
+		&contact.CreatedAt,
+		&contact.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &contact, nil
 }
