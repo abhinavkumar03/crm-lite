@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/entity"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -137,4 +139,58 @@ func (r *Repository) List(
 	}
 
 	return tasks, rows.Err()
+}
+
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*entity.Task, error) {
+
+	query := `
+	SELECT
+		id,
+		owner_id,
+		lead_id,
+		contact_id,
+		title,
+		description,
+		status,
+		due_date,
+		created_at,
+		updated_at
+	FROM tasks
+	WHERE id = $1
+	AND owner_id = $2;
+	`
+
+	var task entity.Task
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		id,
+		ownerID,
+	).Scan(
+		&task.ID,
+		&task.OwnerID,
+		&task.LeadID,
+		&task.ContactID,
+		&task.Title,
+		&task.Description,
+		&task.Status,
+		&task.DueDate,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &task, nil
 }
