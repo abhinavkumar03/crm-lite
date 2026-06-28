@@ -44,3 +44,7 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 
 	protected.GET("/profile", m.Handler.Profile)
 }
+
+func (m *Module) Middleware() gin.HandlerFunc {
+	return m.AuthMW.Handle()
+}

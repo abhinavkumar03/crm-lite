@@ -5,6 +5,8 @@ import "time"
 type Lead struct {
 	ID string `db:"id" json:"id"`
 
+	OwnerID string `db:"owner_id" json:"owner_id"`
+
 	Name string `db:"name" json:"name"`
 
 	Email string `db:"email" json:"email"`
