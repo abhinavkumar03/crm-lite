@@ -11,6 +11,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
@@ -43,12 +44,14 @@ func main() {
 	leadModule := lead.NewModule(db, authModule.Middleware())
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
+	dashboardModule := dashboard.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		authModule,
 		leadModule,
 		contactModule,
 		taskModule,
+		dashboardModule,
 	)
 
 	application := &app.Application{
