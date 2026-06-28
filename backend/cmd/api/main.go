@@ -12,6 +12,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
@@ -46,8 +47,20 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
+	producer := jobs.NewProducer(
+		redisClient,
+	)
+
+	worker := jobs.NewWorker(
+		redisClient,
+	)
+
+	go worker.Start(
+		context.Background(),
+	)
+
 	authModule := auth.NewModule(db, cfg.JWTSecret)
-	leadModule := lead.NewModule(db, authModule.Middleware())
+	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())

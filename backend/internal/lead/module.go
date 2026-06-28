@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/service"
@@ -17,11 +18,12 @@ type Module struct {
 func NewModule(
 	db *pgxpool.Pool,
 	auth gin.HandlerFunc,
+	producer *jobs.Producer,
 ) *Module {
 
 	repo := repository.New(db)
 
-	svc := service.New(repo)
+	svc := service.New(repo, producer)
 
 	h := handler.New(svc)
 
