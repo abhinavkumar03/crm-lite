@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
@@ -10,14 +11,17 @@ import (
 
 type Service struct {
 	repository *repository.Repository
+	producer   *jobs.Producer
 }
 
 func New(
-	repository *repository.Repository,
+	repo *repository.Repository,
+	producer *jobs.Producer,
 ) *Service {
 
 	return &Service{
-		repository: repository,
+		repository: repo,
+		producer:   producer,
 	}
 }
 
@@ -44,6 +48,34 @@ func (s *Service) Create(
 
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.producer.Publish(
+		ctx,
+		jobs.Job{
+			Type:   jobs.JobLeadCreated,
+			UserID: ownerID,
+			Payload: map[string]interface{}{
+				"lead_id": lead.ID,
+				"name":    lead.Name,
+			},
+		},
+	); err != nil {
+		// log if desired, but don't fail the HTTP request
+	}
+
+	if lead.Email != "" {
+		_ = s.producer.Publish(
+			ctx,
+			jobs.Job{
+				Type:   jobs.JobSendEmail,
+				UserID: ownerID,
+				Payload: map[string]interface{}{
+					"email": lead.Email,
+					"name":  lead.Name,
+				},
+			},
+		)
 	}
 
 	return &dto.LeadResponse{
