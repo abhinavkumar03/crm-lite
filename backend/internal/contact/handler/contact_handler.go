@@ -102,3 +102,37 @@ func (h *ContactHandler) List(c *gin.Context) {
 		contacts,
 	)
 }
+
+func (h *ContactHandler) GetByID(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	contactID := c.Param("id")
+
+	contact, err := h.service.GetByID(
+		c.Request.Context(),
+		contactID,
+		userID,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to fetch contact",
+		)
+		return
+	}
+
+	if contact == nil {
+		response.NotFound(
+			c,
+			"Contact not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Contact fetched successfully",
+		contact,
+	)
+}

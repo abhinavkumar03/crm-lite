@@ -38,5 +38,5 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 
 	contact.POST("", m.Handler.Create)
 	contact.GET("", m.Handler.List)
-
+	contact.GET("/:id", m.Handler.GetByID)
 }
