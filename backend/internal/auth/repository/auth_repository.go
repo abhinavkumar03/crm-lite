@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
 )
 
 type AuthRepository struct {
@@ -22,7 +22,7 @@ func New(db *pgxpool.Pool) *AuthRepository {
 
 func (r *AuthRepository) CreateUser(
 	ctx context.Context,
-	user *auth.User,
+	user *entity.User,
 ) error {
 
 	query := `
@@ -60,7 +60,7 @@ func (r *AuthRepository) CreateUser(
 func (r *AuthRepository) GetUserByEmail(
 	ctx context.Context,
 	email string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	query := `
 	SELECT
@@ -74,7 +74,7 @@ func (r *AuthRepository) GetUserByEmail(
 	WHERE email = $1;
 	`
 
-	var user auth.User
+	var user entity.User
 
 	err := r.db.QueryRow(
 		ctx,
@@ -103,7 +103,7 @@ func (r *AuthRepository) GetUserByEmail(
 func (r *AuthRepository) GetUserByID(
 	ctx context.Context,
 	id string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	query := `
 	SELECT
@@ -117,7 +117,7 @@ func (r *AuthRepository) GetUserByID(
 	WHERE id = $1;
 	`
 
-	var user auth.User
+	var user entity.User
 
 	err := r.db.QueryRow(
 		ctx,

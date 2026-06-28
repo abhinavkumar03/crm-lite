@@ -6,21 +6,25 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/dto"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/jwt"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
 )
 
 type AuthService struct {
 	repository *repository.AuthRepository
+	jwt        *jwt.Service
 }
 
 func New(
 	repository *repository.AuthRepository,
+	jwt *jwt.Service,
 ) *AuthService {
 
 	return &AuthService{
 		repository: repository,
+		jwt:        jwt,
 	}
 }
 
@@ -78,7 +82,7 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	user := &auth.User{
+	user := &entity.User{
 		Name:         req.Name,
 		Email:        req.Email,
 		PasswordHash: string(passwordHash),
@@ -94,7 +98,7 @@ func (s *AuthService) Register(
 	}
 
 	return &dto.UserResponse{
-		ID:    user.ID,
+		ID:    user.ID.String(),
 		Name:  user.Name,
 		Email: user.Email,
 	}, nil
@@ -103,7 +107,7 @@ func (s *AuthService) Register(
 func (s *AuthService) Login(
 	ctx context.Context,
 	req dto.LoginRequest,
-) (*auth.User, error) {
+) (*dto.LoginResponse, error) {
 
 	user, err := s.repository.GetUserByEmail(
 		ctx,
@@ -115,7 +119,9 @@ func (s *AuthService) Login(
 	}
 
 	if user == nil {
-		return nil, errors.New("invalid email or password")
+		return nil, errors.New(
+			"invalid email or password",
+		)
 	}
 
 	err = bcrypt.CompareHashAndPassword(
@@ -124,10 +130,28 @@ func (s *AuthService) Login(
 	)
 
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, errors.New(
+			"invalid email or password",
+		)
 	}
 
-	return user, nil
+	token, err := s.jwt.GenerateToken(
+		user.ID.String(),
+		user.Email,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.LoginResponse{
+		AccessToken: token,
+		User: dto.UserResponse{
+			ID:    user.ID.String(),
+			Name:  user.Name,
+			Email: user.Email,
+		},
+	}, nil
 }
 
 func (s *AuthService) GetProfile(
@@ -149,7 +173,7 @@ func (s *AuthService) GetProfile(
 	}
 
 	return &dto.UserResponse{
-		ID:    user.ID,
+		ID:    user.ID.String(),
 		Name:  user.Name,
 		Email: user.Email,
 	}, nil
