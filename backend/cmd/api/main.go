@@ -10,6 +10,7 @@ import (
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
@@ -36,13 +37,12 @@ func main() {
 	}
 	defer db.Close()
 
-	authModule := auth.NewModule(
-		db,
-		cfg.JWTSecret,
-	)
+	authModule := auth.NewModule(db, cfg.JWTSecret)
+	leadModule := lead.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		authModule,
+		leadModule,
 	)
 
 	application := &app.Application{

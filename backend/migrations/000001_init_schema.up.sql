@@ -29,6 +29,8 @@ CREATE TABLE leads (
 
     status VARCHAR(50) NOT NULL DEFAULT 'NEW',
 
+    notes TEXT,
+
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
