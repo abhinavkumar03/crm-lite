@@ -48,4 +48,5 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	tasks.GET("", m.Handler.List)
 	tasks.GET("/:id", m.Handler.GetByID)
 	tasks.PUT("/:id", m.Handler.Update)
+	tasks.DELETE("/:id", m.Handler.Delete)
 }
