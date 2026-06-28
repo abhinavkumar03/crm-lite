@@ -236,3 +236,29 @@ func (r *Repository) Update(
 		&lead.UpdatedAt,
 	)
 }
+
+func (r *Repository) Delete(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (bool, error) {
+
+	query := `
+	DELETE FROM leads
+	WHERE id = $1
+	AND owner_id = $2;
+	`
+
+	result, err := r.db.Exec(
+		ctx,
+		query,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
+}
