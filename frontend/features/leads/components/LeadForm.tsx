@@ -3,15 +3,21 @@
 import { useState } from "react";
 
 import {
-    createLead,
     CreateLeadPayload,
 } from "../api";
 
 interface Props {
-    onSuccess: () => void;
+    initialValues?: CreateLeadPayload;
+    onSubmit: (
+        values: CreateLeadPayload
+    ) => Promise<void>;
+    submitText: string;
 }
 
-export default function CreateLeadForm({
+export default function LeadForm({
+    initialValues,
+    onSubmit,
+    submitText,
     onSuccess,
 }: Props) {
 
@@ -19,14 +25,25 @@ export default function CreateLeadForm({
         useState(false);
 
     const [form, setForm] =
-        useState<CreateLeadPayload>({
-            name: "",
-            email: "",
-            phone: "",
-            company: "",
-            status: "NEW",
-            notes: "",
-        });
+        useState<CreateLeadPayload>(
+
+            initialValues ?? {
+
+                name: "",
+
+                email: "",
+
+                phone: "",
+
+                company: "",
+
+                status: "NEW",
+
+                notes: "",
+
+            }
+
+        );
 
     function update(
         key: keyof CreateLeadPayload,
@@ -50,9 +67,9 @@ export default function CreateLeadForm({
 
             setLoading(true);
 
-            await createLead(form);
+            await onSubmit(form);
 
-            onSuccess();
+            onSuccess?.();
 
         } finally {
 
@@ -135,8 +152,8 @@ export default function CreateLeadForm({
                 className="w-full rounded bg-blue-600 py-3 text-white"
             >
                 {loading
-                    ? "Creating..."
-                    : "Create Lead"}
+                    ? "Saving..."
+                    : submitText}
             </button>
 
         </form>

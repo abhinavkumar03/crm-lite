@@ -6,10 +6,14 @@ export default function LeadTable({
     leads,
     page,
     setPage,
+    onEdit,
+    onDelete,
 }: {
     leads: Lead[];
     page: number;
     setPage: React.Dispatch<React.SetStateAction<number>>;
+    onEdit: (lead: Lead) => void;
+    onDelete: (lead: Lead) => void;
 }) {
 
     return (
@@ -18,7 +22,7 @@ export default function LeadTable({
 
                 <thead>
 
-                    <tr className="border-b bg-gray-50">
+                    <tr className="border-b bg-gray-100">
 
                         <th className="p-3 text-left">
 
@@ -93,16 +97,18 @@ export default function LeadTable({
 
                                 <div className="flex gap-3">
 
-                                    <button className="text-blue-600 hover:underline">
-
+                                    <button
+                                        onClick={() => onEdit(lead)}
+                                        className="text-blue-600 hover:underline"
+                                    >
                                         Edit
-
                                     </button>
 
-                                    <button className="text-red-600 hover:underline">
-
+                                    <button
+                                        onClick={() => onDelete(lead)}
+                                        className="text-red-600 hover:underline"
+                                    >
                                         Delete
-
                                     </button>
 
                                 </div>
