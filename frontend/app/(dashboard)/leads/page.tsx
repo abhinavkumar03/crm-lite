@@ -107,6 +107,23 @@ export default function LeadsPage() {
             />
 
             <Modal
+                open={open}
+                title="Create Lead"
+                onClose={() => setOpen(false)}
+            >
+                <LeadForm
+                    submitText="Create Contact"
+                    onSubmit={async (values) => {
+                        await createLead(values);
+
+                        setOpen(false);
+
+                        loadLeads();
+                    }}
+                />
+            </Modal>
+
+            <Modal
                 open={!!editingLead}
                 title="Edit Lead"
                 onClose={() => setEditingLead(null)}
