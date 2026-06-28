@@ -1,0 +1,112 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	contactrepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
+	leadrepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/task/entity"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
+)
+
+type Service struct {
+	taskRepository    *repository.Repository
+	leadRepository    *leadrepository.Repository
+	contactRepository *contactrepository.Repository
+}
+
+func New(
+	taskRepo *repository.Repository,
+	leadRepo *leadrepository.Repository,
+	contactRepo *contactrepository.Repository,
+) *Service {
+
+	return &Service{
+		taskRepository:    taskRepo,
+		leadRepository:    leadRepo,
+		contactRepository: contactRepo,
+	}
+}
+
+func (s *Service) Create(
+	ctx context.Context,
+	ownerID string,
+	req dto.CreateTaskRequest,
+) (*dto.TaskResponse, error) {
+
+	// Validate Lead ownership (optional)
+	if req.LeadID != nil {
+
+		lead, err := s.leadRepository.GetByID(
+			ctx,
+			*req.LeadID,
+			ownerID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if lead == nil {
+			return nil, errors.New("lead not found")
+		}
+	}
+
+	// Validate Contact ownership (optional)
+	if req.ContactID != nil {
+
+		contact, err := s.contactRepository.GetByID(
+			ctx,
+			*req.ContactID,
+			ownerID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if contact == nil {
+			return nil, errors.New("contact not found")
+		}
+	}
+
+	task := &entity.Task{
+		OwnerID:     ownerID,
+		LeadID:      req.LeadID,
+		ContactID:   req.ContactID,
+		Title:       req.Title,
+		Description: req.Description,
+		Status:      entity.StatusPending,
+	}
+
+	if req.DueDate != nil {
+		t, err := time.Parse(time.RFC3339, *req.DueDate)
+		if err != nil {
+			return nil, errors.New("invalid due_date")
+		}
+		task.DueDate = &t
+	}
+
+	if err := s.taskRepository.Create(ctx, task); err != nil {
+		return nil, err
+	}
+
+	var dueDate *string
+	if task.DueDate != nil {
+		v := task.DueDate.Format(time.RFC3339)
+		dueDate = &v
+	}
+
+	return &dto.TaskResponse{
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Status:      task.Status,
+		LeadID:      task.LeadID,
+		ContactID:   task.ContactID,
+		DueDate:     dueDate,
+	}, nil
+}

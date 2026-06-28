@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
 )
 
 func main() {
@@ -41,11 +42,13 @@ func main() {
 	authModule := auth.NewModule(db, cfg.JWTSecret)
 	leadModule := lead.NewModule(db, authModule.Middleware())
 	contactModule := contact.NewModule(db, authModule.Middleware())
+	taskModule := task.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		authModule,
 		leadModule,
 		contactModule,
+		taskModule,
 	)
 
 	application := &app.Application{
