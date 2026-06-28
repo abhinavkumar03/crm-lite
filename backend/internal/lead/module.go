@@ -38,4 +38,5 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	leads.Use(m.auth)
 
 	leads.POST("", m.Handler.Create)
+	leads.GET("", m.Handler.List)
 }

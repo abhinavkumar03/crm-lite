@@ -2,6 +2,7 @@ package handler
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/service"
@@ -59,5 +60,49 @@ func (h *LeadHandler) Create(c *gin.Context) {
 		c,
 		"Lead created successfully",
 		lead,
+	)
+}
+
+func (h *LeadHandler) List(c *gin.Context) {
+
+	userID := c.GetString("userID")
+
+	req := dto.ListLeadsRequest{
+		Page:   1,
+		Limit:  10,
+		Search: c.DefaultQuery("search", ""),
+		Status: c.DefaultQuery("status", ""),
+	}
+
+	if page := c.Query("page"); page != "" {
+		if p, err := strconv.Atoi(page); err == nil && p > 0 {
+			req.Page = p
+		}
+	}
+
+	if limit := c.Query("limit"); limit != "" {
+		if l, err := strconv.Atoi(limit); err == nil && l > 0 && l <= 100 {
+			req.Limit = l
+		}
+	}
+
+	leads, err := h.service.List(
+		c.Request.Context(),
+		userID,
+		req,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to fetch leads",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Leads fetched successfully",
+		leads,
 	)
 }
