@@ -191,3 +191,37 @@ func (h *ContactHandler) Update(c *gin.Context) {
 		contact,
 	)
 }
+
+func (h *ContactHandler) Delete(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	contactID := c.Param("id")
+
+	deleted, err := h.service.Delete(
+		c.Request.Context(),
+		contactID,
+		userID,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to delete contact",
+		)
+		return
+	}
+
+	if !deleted {
+		response.NotFound(
+			c,
+			"Contact not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Contact deleted successfully",
+		nil,
+	)
+}
