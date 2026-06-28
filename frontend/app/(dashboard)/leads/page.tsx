@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { getLeads } from "@/features/leads/api";
+import { createLead, deleteLead, getLeads, updateLead } from "@/features/leads/api";
 
 import { Lead } from "@/features/leads/types";
 
 import LeadTable from "@/features/leads/components/LeadTable";
-import CreateLeadForm from "@/features/leads/components/CreateLeadForm";
+import LeadForm from "@/features/leads/components/LeadForm";
 import Modal from "@/components/common/Modal";
 
 export default function LeadsPage() {
@@ -20,6 +20,8 @@ export default function LeadsPage() {
 
     const [search, setSearch] =
         useState("");
+
+    const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
     const [open, setOpen] = useState(false);
 
@@ -39,6 +41,21 @@ export default function LeadsPage() {
 
         setLeads(res.data);
 
+    }
+
+    async function handleDelete(lead: Lead) {
+
+        const ok = window.confirm(
+            "Delete this lead?"
+        );
+
+        if (!ok) {
+            return;
+        }
+
+        await deleteLead(lead.id);
+
+        await loadLeads();
     }
 
     return (
@@ -85,18 +102,35 @@ export default function LeadsPage() {
                 leads={leads}
                 page={page}
                 setPage={setPage}
+                onEdit={setEditingLead}
+                onDelete={handleDelete}
             />
+
             <Modal
-                open={open}
-                title="Create Lead"
-                onClose={() => setOpen(false)}
+                open={!!editingLead}
+                title="Edit Lead"
+                onClose={() => setEditingLead(null)}
             >
-                <CreateLeadForm
-                    onSuccess={() => {
-                        setOpen(false);
-                        loadLeads();
-                    }}
-                />
+                {editingLead && (
+                    <LeadForm
+                        initialValues={{
+                            name: editingLead.name,
+                            email: editingLead.email,
+                            phone: editingLead.phone,
+                            company: editingLead.company,
+                            status: editingLead.status,
+                            notes: editingLead.notes,
+                        }}
+                        submitText="Update Lead"
+                        onSubmit={async (values) => {
+                            await updateLead(editingLead.id, values);
+
+                            setEditingLead(null);
+
+                            loadLeads();
+                        }}
+                    />
+                )}
             </Modal>
 
         </div>

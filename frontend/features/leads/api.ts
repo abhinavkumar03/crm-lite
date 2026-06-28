@@ -33,3 +33,26 @@ export async function createLead(
 
     return response.data;
 }
+
+export async function updateLead(
+    id: string,
+    payload: CreateLeadPayload
+) {
+    const response = await api.put(
+        `/leads/${id}`,
+        payload
+    );
+
+    return response.data;
+}
+
+export async function deleteLead(
+    id: string
+) {
+
+    const response = await api.delete(
+        `/leads/${id}`
+    );
+
+    return response.data;
+}
