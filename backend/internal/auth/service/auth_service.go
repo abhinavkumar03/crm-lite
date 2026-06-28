@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/dto"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
 )
 
@@ -54,9 +54,9 @@ func (s *AuthService) verifyPassword(
 func (s *AuthService) Register(
 	ctx context.Context,
 	req dto.RegisterRequest,
-) (*dto.ProfileResponse, error) {
+) (*dto.UserResponse, error) {
 
-	exists, err := s.repository.ExistsByEmail(
+	existingUser, err := s.repository.GetUserByEmail(
 		ctx,
 		req.Email,
 	)
@@ -65,11 +65,11 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	if exists {
+	if existingUser != nil {
 		return nil, errors.New("email already exists")
 	}
 
-	hash, err := bcrypt.GenerateFromPassword(
+	passwordHash, err := bcrypt.GenerateFromPassword(
 		[]byte(req.Password),
 		bcrypt.DefaultCost,
 	)
@@ -78,13 +78,13 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	user := &entity.User{
+	user := &auth.User{
 		Name:         req.Name,
 		Email:        req.Email,
-		PasswordHash: string(hash),
+		PasswordHash: string(passwordHash),
 	}
 
-	err = s.repository.Create(
+	err = s.repository.CreateUser(
 		ctx,
 		user,
 	)
@@ -93,8 +93,8 @@ func (s *AuthService) Register(
 		return nil, err
 	}
 
-	return &dto.ProfileResponse{
-		ID:    user.ID.String(),
+	return &dto.UserResponse{
+		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
 	}, nil
@@ -102,13 +102,12 @@ func (s *AuthService) Register(
 
 func (s *AuthService) Login(
 	ctx context.Context,
-	email string,
-	password string,
-) (*entity.User, error) {
+	req dto.LoginRequest,
+) (*auth.User, error) {
 
-	user, err := s.repository.FindByEmail(
+	user, err := s.repository.GetUserByEmail(
 		ctx,
-		email,
+		req.Email,
 	)
 
 	if err != nil {
@@ -116,30 +115,42 @@ func (s *AuthService) Login(
 	}
 
 	if user == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New("invalid email or password")
 	}
 
-	err = s.verifyPassword(
-		user.PasswordHash,
-		password,
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash),
+		[]byte(req.Password),
 	)
 
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New("invalid email or password")
 	}
-
-	user.PasswordHash = ""
 
 	return user, nil
 }
 
-func (s *AuthService) Profile(
+func (s *AuthService) GetProfile(
 	ctx context.Context,
-	id string,
-) (*entity.User, error) {
+	userID string,
+) (*dto.UserResponse, error) {
 
-	return s.repository.FindByID(
+	user, err := s.repository.GetUserByID(
 		ctx,
-		id,
+		userID,
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	return &dto.UserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+	}, nil
 }
