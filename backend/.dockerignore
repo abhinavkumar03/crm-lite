@@ -1,0 +1,9 @@
+.git
+
+.env
+
+tmp
+
+vendor
+
+README.md
