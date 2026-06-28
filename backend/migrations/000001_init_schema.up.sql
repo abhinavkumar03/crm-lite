@@ -61,18 +61,29 @@ CREATE TABLE IF NOT EXISTS contacts
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks
+(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    owner_id UUID NOT NULL REFERENCES users(id),
+    owner_id UUID NOT NULL
+        REFERENCES users(id)
+        ON DELETE CASCADE,
 
-    title VARCHAR(255) NOT NULL,
+    lead_id UUID
+        REFERENCES leads(id)
+        ON DELETE SET NULL,
+
+    contact_id UUID
+        REFERENCES contacts(id)
+        ON DELETE SET NULL,
+
+    title VARCHAR(200) NOT NULL,
 
     description TEXT,
 
-    due_date TIMESTAMP,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
 
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    due_date TIMESTAMP,
 
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
