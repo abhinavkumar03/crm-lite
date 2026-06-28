@@ -105,3 +105,37 @@ func (h *TaskHandler) List(c *gin.Context) {
 		tasks,
 	)
 }
+
+func (h *TaskHandler) GetByID(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	taskID := c.Param("id")
+
+	task, err := h.service.GetByID(
+		c.Request.Context(),
+		taskID,
+		userID,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to fetch task",
+		)
+		return
+	}
+
+	if task == nil {
+		response.NotFound(
+			c,
+			"Task not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Task fetched successfully",
+		task,
+	)
+}

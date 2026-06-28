@@ -151,3 +151,41 @@ func (s *Service) List(
 
 	return response, nil
 }
+
+func (s *Service) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*dto.TaskResponse, error) {
+
+	task, err := s.taskRepository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if task == nil {
+		return nil, nil
+	}
+
+	var dueDate *string
+
+	if task.DueDate != nil {
+		value := task.DueDate.Format(time.RFC3339)
+		dueDate = &value
+	}
+
+	return &dto.TaskResponse{
+		ID:          task.ID,
+		Title:       task.Title,
+		Description: task.Description,
+		Status:      task.Status,
+		LeadID:      task.LeadID,
+		ContactID:   task.ContactID,
+		DueDate:     dueDate,
+	}, nil
+}
