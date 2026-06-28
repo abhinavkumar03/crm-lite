@@ -90,3 +90,99 @@ func (s *Service) List(
 
 	return response, nil
 }
+
+func (s *Service) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*dto.LeadResponse, error) {
+
+	lead, err := s.repository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if lead == nil {
+		return nil, nil
+	}
+
+	return &dto.LeadResponse{
+		ID:      lead.ID,
+		Name:    lead.Name,
+		Email:   lead.Email,
+		Phone:   lead.Phone,
+		Company: lead.Company,
+		Status:  lead.Status,
+		Notes:   lead.Notes,
+	}, nil
+}
+
+func (s *Service) Update(
+	ctx context.Context,
+	id string,
+	ownerID string,
+	req dto.UpdateLeadRequest,
+) (*dto.LeadResponse, error) {
+
+	lead, err := s.repository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if lead == nil {
+		return nil, nil
+	}
+
+	if req.Name != "" {
+		lead.Name = req.Name
+	}
+
+	if req.Email != "" {
+		lead.Email = req.Email
+	}
+
+	if req.Phone != "" {
+		lead.Phone = req.Phone
+	}
+
+	if req.Company != "" {
+		lead.Company = req.Company
+	}
+
+	if req.Status != "" {
+		lead.Status = req.Status
+	}
+
+	if req.Notes != "" {
+		lead.Notes = req.Notes
+	}
+
+	err = s.repository.Update(
+		ctx,
+		lead,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.LeadResponse{
+		ID:      lead.ID,
+		Name:    lead.Name,
+		Email:   lead.Email,
+		Phone:   lead.Phone,
+		Company: lead.Company,
+		Status:  lead.Status,
+		Notes:   lead.Notes,
+	}, nil
+}
