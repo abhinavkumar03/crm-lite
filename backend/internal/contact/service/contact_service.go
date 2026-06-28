@@ -115,3 +115,73 @@ func (s *Service) GetByID(
 		Notes:     contact.Notes,
 	}, nil
 }
+
+func (s *Service) Update(
+	ctx context.Context,
+	id string,
+	ownerID string,
+	req dto.UpdateContactRequest,
+) (*dto.ContactResponse, error) {
+
+	contact, err := s.repository.GetByID(
+		ctx,
+		id,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if contact == nil {
+		return nil, nil
+	}
+
+	if req.FirstName != "" {
+		contact.FirstName = req.FirstName
+	}
+
+	if req.LastName != "" {
+		contact.LastName = req.LastName
+	}
+
+	if req.Email != "" {
+		contact.Email = req.Email
+	}
+
+	if req.Phone != "" {
+		contact.Phone = req.Phone
+	}
+
+	if req.Company != "" {
+		contact.Company = req.Company
+	}
+
+	if req.JobTitle != "" {
+		contact.JobTitle = req.JobTitle
+	}
+
+	if req.Notes != "" {
+		contact.Notes = req.Notes
+	}
+
+	err = s.repository.Update(
+		ctx,
+		contact,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.ContactResponse{
+		ID:        contact.ID,
+		FirstName: contact.FirstName,
+		LastName:  contact.LastName,
+		Email:     contact.Email,
+		Phone:     contact.Phone,
+		Company:   contact.Company,
+		JobTitle:  contact.JobTitle,
+		Notes:     contact.Notes,
+	}, nil
+}
