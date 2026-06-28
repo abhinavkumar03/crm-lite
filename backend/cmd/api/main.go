@@ -10,8 +10,8 @@ import (
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 )
 
@@ -21,10 +21,29 @@ func main() {
 
 	log := logger.New()
 
-	authHandler := handler.New()
-	authModule := auth.NewModule(authHandler)
+	dsn := database.BuildDSN(
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBSSLMode,
+	)
 
-	router := app.NewRouter(log, authModule)
+	db, err := database.New(dsn)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	defer db.Close()
+
+	authModule := auth.NewModule(
+		db,
+		cfg.JWTSecret,
+	)
+	router := app.NewRouter(
+		log,
+		authModule,
+	)
 
 	application := &app.Application{
 		Config: cfg,

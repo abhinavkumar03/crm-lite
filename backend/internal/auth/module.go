@@ -2,20 +2,34 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/handler"
+	jwt "github.com/abhinavkumar03/crm-lite/backend/internal/auth/jwt"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/middleware"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/service"
 )
 
 type Module struct {
 	Handler *handler.AuthHandler
+	AuthMW  *middleware.AuthMiddleware
 }
 
-func NewModule(
-	handler *handler.AuthHandler,
-) *Module {
+func NewModule(db *pgxpool.Pool, jwtSecret string) *Module {
+	repo := repository.New(db)
+
+	jwtSvc := jwt.NewService(jwtSecret)
+
+	svc := service.New(repo, jwtSvc)
+
+	h := handler.New(svc)
+
+	mw := middleware.New(jwtSvc)
 
 	return &Module{
-		Handler: handler,
+		Handler: h,
+		AuthMW:  mw,
 	}
 }
 
@@ -24,5 +38,9 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 
 	auth.POST("/register", m.Handler.Register)
 	auth.POST("/login", m.Handler.Login)
-	auth.GET("/profile", m.Handler.Profile)
+
+	protected := auth.Group("/")
+	protected.Use(m.AuthMW.Handle())
+
+	protected.GET("/profile", m.Handler.Profile)
 }

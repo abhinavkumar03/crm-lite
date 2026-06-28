@@ -1,21 +1,18 @@
 package auth
 
-import (
-	"time"
-
-	"github.com/google/uuid"
-)
+import "time"
 
 type User struct {
-	ID uuid.UUID `db:"id"`
+	ID string `json:"id" db:"id"`
 
-	Name string `db:"name"`
+	Name string `json:"name" db:"name"`
 
-	Email string `db:"email"`
+	Email string `json:"email" db:"email"`
 
-	PasswordHash string `db:"password_hash"`
+	// Never expose this in API responses.
+	PasswordHash string `json:"-" db:"password_hash"`
 
-	CreatedAt time.Time `db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 
-	UpdatedAt time.Time `db:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }

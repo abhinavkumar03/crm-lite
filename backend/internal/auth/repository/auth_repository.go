@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
 )
 
 type AuthRepository struct {
@@ -20,15 +20,14 @@ func New(db *pgxpool.Pool) *AuthRepository {
 	}
 }
 
-func (r *AuthRepository) Create(
+func (r *AuthRepository) CreateUser(
 	ctx context.Context,
-	user *auth.User,
+	user *entity.User,
 ) error {
 
 	query := `
 	INSERT INTO users
 	(
-		id,
 		name,
 		email,
 		password_hash
@@ -37,27 +36,31 @@ func (r *AuthRepository) Create(
 	(
 		$1,
 		$2,
-		$3,
-		$4
+		$3
 	)
+	RETURNING
+		id,
+		created_at,
+		updated_at;
 	`
 
-	_, err := r.db.Exec(
+	return r.db.QueryRow(
 		ctx,
 		query,
-		user.ID,
 		user.Name,
 		user.Email,
 		user.PasswordHash,
+	).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.UpdatedAt,
 	)
-
-	return err
 }
 
-func (r *AuthRepository) FindByEmail(
+func (r *AuthRepository) GetUserByEmail(
 	ctx context.Context,
 	email string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	query := `
 	SELECT
@@ -68,10 +71,10 @@ func (r *AuthRepository) FindByEmail(
 		created_at,
 		updated_at
 	FROM users
-	WHERE email = $1
+	WHERE email = $1;
 	`
 
-	var user auth.User
+	var user entity.User
 
 	err := r.db.QueryRow(
 		ctx,
@@ -97,10 +100,10 @@ func (r *AuthRepository) FindByEmail(
 	return &user, nil
 }
 
-func (r *AuthRepository) FindByID(
+func (r *AuthRepository) GetUserByID(
 	ctx context.Context,
 	id string,
-) (*auth.User, error) {
+) (*entity.User, error) {
 
 	query := `
 	SELECT
@@ -111,10 +114,10 @@ func (r *AuthRepository) FindByID(
 		created_at,
 		updated_at
 	FROM users
-	WHERE id = $1
+	WHERE id = $1;
 	`
 
-	var user auth.User
+	var user entity.User
 
 	err := r.db.QueryRow(
 		ctx,
@@ -138,4 +141,32 @@ func (r *AuthRepository) FindByID(
 	}
 
 	return &user, nil
+}
+
+func (r *AuthRepository) ExistsByEmail(
+	ctx context.Context,
+	email string,
+) (bool, error) {
+
+	query := `
+	SELECT EXISTS(
+		SELECT 1
+		FROM users
+		WHERE email = $1
+	)
+	`
+
+	var exists bool
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		email,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
