@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/entity"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -143,4 +145,94 @@ func (r *Repository) List(
 	}
 
 	return leads, rows.Err()
+}
+
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (*entity.Lead, error) {
+
+	query := `
+	SELECT
+		id,
+		name,
+		email,
+		phone,
+		company,
+		status,
+		notes,
+		owner_id,
+		created_at,
+		updated_at
+	FROM leads
+	WHERE id = $1
+	AND owner_id = $2;
+	`
+
+	var lead entity.Lead
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		id,
+		ownerID,
+	).Scan(
+		&lead.ID,
+		&lead.Name,
+		&lead.Email,
+		&lead.Phone,
+		&lead.Company,
+		&lead.Status,
+		&lead.Notes,
+		&lead.OwnerID,
+		&lead.CreatedAt,
+		&lead.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &lead, nil
+}
+
+func (r *Repository) Update(
+	ctx context.Context,
+	lead *entity.Lead,
+) error {
+
+	query := `
+	UPDATE leads
+	SET
+		name = $1,
+		email = $2,
+		phone = $3,
+		company = $4,
+		status = $5,
+		notes = $6,
+		updated_at = NOW()
+	WHERE id = $7
+	AND owner_id = $8
+	RETURNING updated_at;
+	`
+
+	return r.db.QueryRow(
+		ctx,
+		query,
+		lead.Name,
+		lead.Email,
+		lead.Phone,
+		lead.Company,
+		lead.Status,
+		lead.Notes,
+		lead.ID,
+		lead.OwnerID,
+	).Scan(
+		&lead.UpdatedAt,
+	)
 }

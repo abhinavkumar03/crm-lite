@@ -106,3 +106,83 @@ func (h *LeadHandler) List(c *gin.Context) {
 		leads,
 	)
 }
+
+func (h *LeadHandler) GetByID(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	leadID := c.Param("id")
+
+	lead, err := h.service.GetByID(
+		c.Request.Context(),
+		leadID,
+		userID,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to fetch lead",
+		)
+		return
+	}
+
+	if lead == nil {
+		response.NotFound(
+			c,
+			"Lead not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Lead fetched successfully",
+		lead,
+	)
+}
+
+func (h *LeadHandler) Update(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	leadID := c.Param("id")
+
+	var req dto.UpdateLeadRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(
+			c,
+			"Invalid request body",
+			nil,
+		)
+		return
+	}
+
+	lead, err := h.service.Update(
+		c.Request.Context(),
+		leadID,
+		userID,
+		req,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to update lead",
+		)
+		return
+	}
+
+	if lead == nil {
+		response.NotFound(
+			c,
+			"Lead not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Lead updated successfully",
+		lead,
+	)
+}
