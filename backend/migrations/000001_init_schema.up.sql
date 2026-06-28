@@ -36,18 +36,25 @@ CREATE TABLE leads (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE contacts (
+CREATE TABLE IF NOT EXISTS contacts
+(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    owner_id UUID NOT NULL REFERENCES users(id),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
-    name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+
+    last_name VARCHAR(100),
 
     email VARCHAR(255),
 
-    phone VARCHAR(50),
+    phone VARCHAR(20),
 
-    company VARCHAR(255),
+    company VARCHAR(150),
+
+    job_title VARCHAR(150),
+
+    notes TEXT,
 
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 

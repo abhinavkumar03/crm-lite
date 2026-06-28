@@ -10,6 +10,12 @@ ON leads(status);
 CREATE INDEX idx_contacts_owner
 ON contacts(owner_id);
 
+CREATE INDEX idx_contacts_email
+ON contacts(email);
+
+CREATE INDEX idx_contacts_company
+ON contacts(company);
+
 CREATE INDEX idx_tasks_owner
 ON tasks(owner_id);
 
