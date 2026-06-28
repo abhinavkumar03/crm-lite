@@ -45,4 +45,5 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	tasks.Use(m.auth)
 
 	tasks.POST("", m.Handler.Create)
+	tasks.GET("", m.Handler.List)
 }
