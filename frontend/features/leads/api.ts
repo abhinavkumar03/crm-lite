@@ -13,3 +13,23 @@ export async function getLeads(
 
     return response.data;
 }
+
+export interface CreateLeadPayload {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    status: string;
+    notes: string;
+}
+
+export async function createLead(
+    payload: CreateLeadPayload
+) {
+    const response = await api.post(
+        "/leads",
+        payload
+    );
+
+    return response.data;
+}

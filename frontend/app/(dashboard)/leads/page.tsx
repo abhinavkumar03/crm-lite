@@ -7,6 +7,8 @@ import { getLeads } from "@/features/leads/api";
 import { Lead } from "@/features/leads/types";
 
 import LeadTable from "@/features/leads/components/LeadTable";
+import CreateLeadForm from "@/features/leads/components/CreateLeadForm";
+import Modal from "@/components/common/Modal";
 
 export default function LeadsPage() {
 
@@ -18,6 +20,8 @@ export default function LeadsPage() {
 
     const [search, setSearch] =
         useState("");
+
+    const [open, setOpen] = useState(false);
 
     useEffect(() => {
 
@@ -50,11 +54,10 @@ export default function LeadsPage() {
                 </h1>
 
                 <button
+                    onClick={() => setOpen(true)}
                     className="rounded bg-blue-600 px-4 py-2 text-white"
                 >
-
                     Create Lead
-
                 </button>
 
             </div>
@@ -83,6 +86,18 @@ export default function LeadsPage() {
                 page={page}
                 setPage={setPage}
             />
+            <Modal
+                open={open}
+                title="Create Lead"
+                onClose={() => setOpen(false)}
+            >
+                <CreateLeadForm
+                    onSuccess={() => {
+                        setOpen(false);
+                        loadLeads();
+                    }}
+                />
+            </Modal>
 
         </div>
 
