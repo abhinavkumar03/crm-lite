@@ -6,6 +6,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard/service"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type Module struct {
@@ -15,12 +16,13 @@ type Module struct {
 
 func NewModule(
 	db *pgxpool.Pool,
+	redis *redis.Client,
 	auth gin.HandlerFunc,
 ) *Module {
 
 	repo := repository.New(db)
 
-	svc := service.New(repo)
+	svc := service.New(repo, redis)
 
 	h := handler.New(svc)
 
