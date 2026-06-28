@@ -136,3 +136,58 @@ func (h *ContactHandler) GetByID(c *gin.Context) {
 		contact,
 	)
 }
+
+func (h *ContactHandler) Update(c *gin.Context) {
+
+	userID := c.GetString("userID")
+	contactID := c.Param("id")
+
+	var req dto.UpdateContactRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(
+			c,
+			"Invalid request body",
+			nil,
+		)
+		return
+	}
+
+	if err := validation.ValidateStruct(&req); err != nil {
+		response.BadRequest(
+			c,
+			"Validation failed",
+			validation.FormatErrors(err),
+		)
+		return
+	}
+
+	contact, err := h.service.Update(
+		c.Request.Context(),
+		contactID,
+		userID,
+		req,
+	)
+
+	if err != nil {
+		response.InternalServerError(
+			c,
+			"Unable to update contact",
+		)
+		return
+	}
+
+	if contact == nil {
+		response.NotFound(
+			c,
+			"Contact not found",
+		)
+		return
+	}
+
+	response.OK(
+		c,
+		"Contact updated successfully",
+		contact,
+	)
+}

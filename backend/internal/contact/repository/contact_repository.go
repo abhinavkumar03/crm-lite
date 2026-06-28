@@ -199,3 +199,41 @@ func (r *Repository) GetByID(
 
 	return &contact, nil
 }
+
+func (r *Repository) Update(
+	ctx context.Context,
+	contact *entity.Contact,
+) error {
+
+	query := `
+	UPDATE contacts
+	SET
+		first_name = $1,
+		last_name = $2,
+		email = $3,
+		phone = $4,
+		company = $5,
+		job_title = $6,
+		notes = $7,
+		updated_at = NOW()
+	WHERE id = $8
+	AND owner_id = $9
+	RETURNING updated_at;
+	`
+
+	return r.db.QueryRow(
+		ctx,
+		query,
+		contact.FirstName,
+		contact.LastName,
+		contact.Email,
+		contact.Phone,
+		contact.Company,
+		contact.JobTitle,
+		contact.Notes,
+		contact.ID,
+		contact.OwnerID,
+	).Scan(
+		&contact.UpdatedAt,
+	)
+}
