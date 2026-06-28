@@ -2,6 +2,8 @@ package config
 
 import (
 	"log"
+	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +19,11 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBSSLMode  string
+
+	RedisHost     string
+	RedisPort     string
+	RedisPassword string
+	RedisDB       int
 
 	JWTSecret string
 }
@@ -40,6 +47,26 @@ func Load() *Config {
 		DBPassword: getEnv("DB_PASSWORD", ""),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 
+		RedisHost:     getEnv("REDIS_HOST", "localhost"),
+		RedisPort:     getEnv("REDIS_PORT", "6379"),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+		RedisDB:       getEnvAsInt("REDIS_DB", 0),
+
 		JWTSecret: getEnv("JWT_SECRET", "change-me-in-production"),
 	}
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	value := os.Getenv(key)
+
+	if value == "" {
+		return defaultValue
+	}
+
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+
+	return intValue
 }
