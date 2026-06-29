@@ -119,7 +119,7 @@ export default function LeadTable({
 
                     ))}
 
-                    {leads.length === 0 && (
+                    {(leads ?? []).length === 0 && (
 
                         <tr>
 

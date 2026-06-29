@@ -35,7 +35,7 @@ export default function RecentLeadsCard({
 
       {/* Empty State */}
 
-      {leads.length === 0 && (
+      {(leads ?? []).length === 0 && (
         <div className="flex flex-col items-center justify-center py-16">
           <UserRound
             size={48}
@@ -119,7 +119,7 @@ export default function RecentLeadsCard({
 
       {/* Footer */}
 
-      {leads.length > 0 && (
+      {(leads ?? []).length > 0 && (
         <div className="border-t border-slate-100 bg-slate-50 p-5">
           <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 font-medium text-slate-700 transition hover:bg-slate-100">
             View Complete Lead List
