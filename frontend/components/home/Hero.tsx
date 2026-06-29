@@ -76,7 +76,7 @@ export default function Hero() {
             {/* Badges */}
 
             <div className="mt-10 flex flex-wrap gap-3">
-              {badges.map((badge) => (
+              {badges?.map((badge) => (
                 <div
                   key={badge}
                   className="badge"

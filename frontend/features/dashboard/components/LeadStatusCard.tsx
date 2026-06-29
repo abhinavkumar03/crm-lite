@@ -82,7 +82,7 @@ export default function LeadStatusCard({
       {/* Status */}
 
       <div className="mt-8 space-y-6">
-        {items.map((item) => {
+        {items?.map((item) => {
           const Icon = item.icon;
 
           const percent =

@@ -64,7 +64,7 @@ export default function ContactTable({
 
                 <tbody>
 
-                    {contacts.map((contact) => (
+                    {contacts?.map((contact) => (
 
                         <tr
                             key={contact.id}

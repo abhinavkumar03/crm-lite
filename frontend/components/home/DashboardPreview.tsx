@@ -135,7 +135,7 @@ export default function DashboardPreview() {
 
           <div className="grid grid-cols-3 gap-4">
 
-            {metrics.map((item) => {
+            {metrics?.map((item) => {
               const Icon = item.icon;
 
               return (
@@ -195,7 +195,7 @@ export default function DashboardPreview() {
 
               <div className="space-y-4">
 
-                {pipeline.map((item) => (
+                {pipeline?.map((item) => (
                   <div key={item.stage}>
 
                     <div className="mb-2 flex justify-between text-sm">
@@ -234,7 +234,7 @@ export default function DashboardPreview() {
 
               <div className="space-y-4">
 
-                {leads.map((lead) => (
+                {leads?.map((lead) => (
 
                   <div
                     key={lead}
@@ -286,7 +286,7 @@ export default function DashboardPreview() {
 
             <div className="grid gap-3 md:grid-cols-2">
 
-              {tasks.map((task) => (
+              {tasks?.map((task) => (
 
                 <div
                   key={task}

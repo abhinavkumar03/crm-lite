@@ -60,7 +60,7 @@ export default function LeadTable({
 
                 <tbody>
 
-                    {leads.map((lead) => (
+                    {leads?.map((lead) => (
 
                         <tr
                             key={lead.id}

@@ -55,7 +55,7 @@ export default function RecentLeadsCard({
       {/* Leads */}
 
       <div className="divide-y divide-slate-100">
-        {leads.map((lead, index) => (
+        {leads?.map((lead, index) => (
           <div
             key={lead.id}
             className="group flex items-center justify-between p-5 transition-all duration-300 hover:bg-slate-50"
@@ -66,7 +66,7 @@ export default function RecentLeadsCard({
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-lg font-bold text-white shadow-sm">
                 {lead.name
                   ?.split(" ")
-                  .map((word) => word[0])
+                  ?.map((word) => word[0])
                   .join("")
                   .slice(0, 2)
                   .toUpperCase()}

@@ -63,7 +63,7 @@ export default function UpcomingTasksCard({
       {/* Task List */}
 
       <div className="divide-y divide-slate-100">
-        {tasks.map((task) => {
+        {tasks?.map((task) => {
           const status =
             task.status?.toLowerCase() ?? "pending";
 
