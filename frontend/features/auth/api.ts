@@ -1,22 +1,48 @@
 import api from "@/services/api";
 
-export async function login(
-    email: string,
-    password: string,
-) {
+import {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  ProfileResponse,
+} from "./types";
 
-    const response = await api.post(
-        "/auth/login",
-        {
-            email,
-            password,
-        },
+/* ---------------- Login ---------------- */
+
+export async function login(
+  payload: LoginRequest
+): Promise<LoginResponse> {
+  const { data } =
+    await api.post<LoginResponse>(
+      "/auth/login",
+      payload
     );
 
-    return response.data;
+  return data;
 }
 
-export async function getProfile() {
-    const response = await api.get("/auth/profile");
-    return response.data;
+/* ---------------- Register ---------------- */
+
+export async function register(
+  payload: RegisterRequest
+): Promise<RegisterResponse> {
+  const { data } =
+    await api.post<RegisterResponse>(
+      "/auth/register",
+      payload
+    );
+
+  return data;
+}
+
+/* ---------------- Profile ---------------- */
+
+export async function getProfile(): Promise<ProfileResponse> {
+  const { data } =
+    await api.get<ProfileResponse>(
+      "/auth/profile"
+    );
+
+  return data;
 }

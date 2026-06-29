@@ -11,6 +11,8 @@ import {
   Activity,
   ExternalLink,
 } from "lucide-react";
+import NavbarActions from "./NavbarActions";
+import NavbarMobile from "./NavbarMobile";
 
 const navigation = [
   {
@@ -77,83 +79,39 @@ export default function Navbar() {
             </nav>
 
             {/* Desktop Actions */}
-            <div className="hidden items-center gap-3 lg:flex">
-              <Link
-                href="https://github.com"
-                target="_blank"
-                className="secondary-btn"
-              >
-                <ExternalLink size={18} />
-                GitHub
-              </Link>
-
-              <Link
-                href="/login"
-                className="primary-btn"
-              >
-                Login
-                <ArrowRight size={18} />
-              </Link>
+            <div className="hidden lg:block">
+                <NavbarActions />
             </div>
 
             {/* Mobile Button */}
             <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="rounded-xl border border-slate-200 p-2 transition hover:bg-slate-100 lg:hidden"
+              onClick={() =>
+                setMobileOpen(true)
+              }
+              className="
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              p-2
+              transition
+              hover:bg-slate-100
+              lg:hidden
+              "
             >
-              {mobileOpen ? (
-                <X size={22} />
-              ) : (
-                <Menu size={22} />
-              )}
+              <Menu size={22} />
             </button>
           </div>
         </div>
       </header>
 
       {/* Mobile Navigation */}
-      {mobileOpen && (
-        <div className="border-b border-slate-200 bg-white shadow-lg lg:hidden">
-          <div className="container-width py-6">
-            <div className="flex flex-col gap-2">
-              {navigation?.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-700 transition hover:bg-slate-100"
-                  >
-                    <Icon size={18} />
-                    {item.name}
-                  </a>
-                );
-              })}
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3">
-              <Link
-                href="https://github.com"
-                target="_blank"
-                className="secondary-btn"
-              >
-                <ExternalLink size={18} />
-                GitHub
-              </Link>
-
-              <Link
-                href="/login"
-                className="primary-btn"
-              >
-                Login
-                <ArrowRight size={18} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      <NavbarMobile
+        open={mobileOpen}
+        onClose={() =>
+          setMobileOpen(false)
+        }
+      />
     </>
   );
 }

@@ -90,7 +90,7 @@ export default function Sidebar({
             >
                 {/* Logo */}
 
-                <div className="relative border-b border-slate-200 p-6">
+                <div className="relative border-b border-slate-200 p-4">
                 {/* Close Button */}
 
                 <button

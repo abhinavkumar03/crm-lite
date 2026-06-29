@@ -20,6 +20,7 @@ import PageHeader from "@/components/common/PageHeader";
 import Toolbar from "@/components/common/Toolbar";
 import SearchInput from "@/components/common/SearchInput";
 import CreateButton from "@/components/common/CreateButton";
+import { toast } from "sonner";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -57,6 +58,7 @@ export default function LeadsPage() {
     if (!ok) return;
 
     await deleteLead(lead.id);
+    toast.success("Lead deleted.");
 
     await loadLeads();
   }
@@ -130,11 +132,13 @@ export default function LeadsPage() {
             values
           ) => {
             await createLead(values);
+            toast.success("Lead created.");
 
             setOpen(false);
 
             loadLeads();
           }}
+          onClose={() => setLeadOpen(false)}
         />
       </Modal>
 
@@ -166,10 +170,8 @@ export default function LeadsPage() {
             onSubmit={async (
               values
             ) => {
-              await updateLead(
-                editingLead.id,
-                values
-              );
+              await updateLead(editingLead.id,values);
+              toast.success("Lead updated.");
 
               setEditingLead(
                 null
@@ -177,6 +179,7 @@ export default function LeadsPage() {
 
               loadLeads();
             }}
+            onClose={() => setEditingLead(null)}
           />
         )}
       </Modal>

@@ -31,7 +31,7 @@ export default function Topbar({
       lg:px-8
       "
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 w-full">
         <button
           onClick={onMenuClick}
           className="
@@ -48,7 +48,7 @@ export default function Topbar({
           <Menu size={20} />
         </button>
 
-        <SearchBar />
+        {/* <SearchBar /> */}
       </div>
 
       <div className="flex items-center gap-3 lg:gap-4">
