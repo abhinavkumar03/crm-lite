@@ -6,7 +6,13 @@ import SearchBar from "./SearchBar";
 import NotificationBell from "./NotificationBell";
 import UserMenu from "./UserMenu";
 
-export default function Topbar() {
+type Props = {
+  onMenuClick: () => void;
+};
+
+export default function Topbar({
+  onMenuClick,
+}: Props) {
   return (
     <header
       className="
@@ -20,19 +26,22 @@ export default function Topbar() {
       border-b
       border-slate-200
       bg-white/80
-      px-8
+      px-4
       backdrop-blur-xl
+      lg:px-8
       "
     >
-      {/* Left */}
-
       <div className="flex items-center gap-4">
         <button
+          onClick={onMenuClick}
           className="
           rounded-xl
           border
           border-slate-200
+          bg-white
           p-2
+          transition
+          hover:bg-slate-100
           lg:hidden
           "
         >
@@ -42,9 +51,7 @@ export default function Topbar() {
         <SearchBar />
       </div>
 
-      {/* Right */}
-
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 lg:gap-4">
         <NotificationBell />
 
         <UserMenu />
