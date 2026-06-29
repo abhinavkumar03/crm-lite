@@ -43,7 +43,7 @@ export default function UpcomingTasksCard({
 
       {/* Empty State */}
 
-      {tasks.length === 0 && (
+      {(tasks ?? []).length === 0 && (
         <div className="flex flex-col items-center justify-center py-16">
           <CalendarDays
             size={48}
@@ -138,7 +138,7 @@ export default function UpcomingTasksCard({
 
       {/* Footer */}
 
-      {tasks.length > 0 && (
+      {(tasks ?? []).length > 0 && (
         <div className="border-t border-slate-100 bg-slate-50 p-5">
           <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 font-medium text-slate-700 transition hover:bg-slate-100">
             View Task Board

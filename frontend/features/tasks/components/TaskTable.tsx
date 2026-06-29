@@ -113,7 +113,7 @@ export default function TaskTable({
 
                     ))}
 
-                    {tasks.length === 0 && (
+                    {(tasks ?? []).length === 0 && (
 
                         <tr>
 

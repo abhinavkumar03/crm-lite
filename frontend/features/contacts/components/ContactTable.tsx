@@ -131,7 +131,7 @@ export default function ContactTable({
 
                     ))}
 
-                    {contacts.length === 0 && (
+                    {(contacts ?? []).length === 0 && (
 
                         <tr>
 
