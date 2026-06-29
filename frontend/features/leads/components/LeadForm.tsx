@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { X } from "lucide-react";
+
 import { CreateLeadPayload } from "../api";
 
 import FormCard from "@/components/common/form/FormCard";
@@ -17,12 +19,14 @@ type Props = {
   onSubmit: (
     values: CreateLeadPayload
   ) => Promise<void>;
+  onClose?: () => void;
 };
 
 export default function LeadForm({
   initialValues,
   submitText,
   onSubmit,
+  onClose,
 }: Props) {
   const [loading, setLoading] =
     useState(false);
@@ -69,6 +73,45 @@ export default function LeadForm({
       className="space-y-8"
     >
       <FormCard>
+        {/* Header */}
+
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Create Lead
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Enter the lead information below.
+            </p>
+          </div>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              text-slate-500
+              transition
+              hover:border-red-200
+              hover:bg-red-50
+              hover:text-red-500
+              "
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
+
         {/* Basic Information */}
 
         <FormSection

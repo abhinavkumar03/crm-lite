@@ -12,7 +12,9 @@ import LeadStatusCard from "@/features/dashboard/components/LeadStatusCard";
 import TaskStatusCard from "@/features/dashboard/components/TaskStatusCard";
 import RecentLeadsCard from "@/features/dashboard/components/RecentLeadsCard";
 import UpcomingTasksCard from "@/features/dashboard/components/UpcomingTasksCard";
-import QuickActionsCard from "@/features/dashboard/components/QuickActionsCard";
+import QuickActionsCard, { QuickActionType } from "@/features/dashboard/components/QuickActionsCard";
+import { useRouter } from "next/navigation";
+import DashboardQuickActionModals from "@/features/dashboard/components/DashboardQuickActionModals";
 
 export default function DashboardPage() {
     const [dashboard, setDashboard] =
@@ -20,6 +22,17 @@ export default function DashboardPage() {
 
     const [loading, setLoading] =
         useState(true);
+
+    const router = useRouter();
+
+    const [leadOpen, setLeadOpen] =
+        useState(false);
+
+    const [contactOpen, setContactOpen] =
+        useState(false);
+
+    const [taskOpen, setTaskOpen] =
+        useState(false);
 
     useEffect(() => {
         loadDashboard();
@@ -34,6 +47,28 @@ export default function DashboardPage() {
             setDashboard(data);
         } finally {
             setLoading(false);
+        }
+    }
+
+    function handleQuickAction(
+        action: QuickActionType
+    ) {
+        switch (action) {
+            case "lead":
+                setLeadOpen(true);
+                break;
+
+            case "contact":
+                setContactOpen(true);
+                break;
+
+            case "task":
+                setTaskOpen(true);
+                break;
+
+            case "call":
+                router.push("/calls");
+                break;
         }
     }
 
@@ -113,7 +148,25 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                <QuickActionsCard />
+                <QuickActionsCard onAction={handleQuickAction} />
+
+                <DashboardQuickActionModals
+                    leadOpen={leadOpen}
+                    contactOpen={contactOpen}
+                    taskOpen={taskOpen}
+                    onCloseLead={() =>
+                        setLeadOpen(false)
+                    }
+                    onCloseContact={() =>
+                        setContactOpen(false)
+                    }
+                    onCloseTask={() =>
+                        setTaskOpen(false)
+                    }
+                    onSuccess={() => {
+                        loadDashboard();
+                    }}
+                />
             </div>
         </div>
     );

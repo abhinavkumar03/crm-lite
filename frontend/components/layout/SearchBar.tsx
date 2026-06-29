@@ -28,6 +28,7 @@ export default function SearchBar() {
         focus:border-emerald-500
         focus:bg-white
         "
+        disabled
       />
     </div>
   );

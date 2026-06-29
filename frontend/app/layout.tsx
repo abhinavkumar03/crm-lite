@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/context/AuthContext";
+import ToastProvider from "@/components/common/ToastProvider";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body className={`${geist.variable} antialiased`}>
         <AuthProvider>
           {children}
+          <ToastProvider />
         </AuthProvider>
       </body>
     </html>

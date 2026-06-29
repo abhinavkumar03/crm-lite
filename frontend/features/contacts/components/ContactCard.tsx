@@ -93,7 +93,7 @@ export default function ContactCard({
 
       {/* Actions */}
 
-      <div className="mt-6 flex gap-3 border-t border-slate-100 pt-5">
+      <div className="mt-6 flex gap-3">
         <button
           onClick={() => onEdit(contact)}
           className="
