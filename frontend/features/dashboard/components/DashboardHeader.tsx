@@ -49,11 +49,6 @@ export default function DashboardHeader({ onRefresh }: Props) {
           <RefreshCw size={18} />
           Refresh
         </button>
-
-        <button className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 font-medium text-white shadow transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-600">
-          <Plus size={18} />
-          New Lead
-        </button>
       </div>
     </section>
   );

@@ -1,40 +1,54 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { Menu } from "lucide-react";
+
+import SearchBar from "./SearchBar";
+import NotificationBell from "./NotificationBell";
+import UserMenu from "./UserMenu";
 
 export default function Topbar() {
+  return (
+    <header
+      className="
+      sticky
+      top-0
+      z-30
+      flex
+      h-20
+      items-center
+      justify-between
+      border-b
+      border-slate-200
+      bg-white/80
+      px-8
+      backdrop-blur-xl
+      "
+    >
+      {/* Left */}
 
-    const auth = useAuth();
+      <div className="flex items-center gap-4">
+        <button
+          className="
+          rounded-xl
+          border
+          border-slate-200
+          p-2
+          lg:hidden
+          "
+        >
+          <Menu size={20} />
+        </button>
 
-    const router = useRouter();
+        <SearchBar />
+      </div>
 
-    function logout() {
-        auth.logout();
-        router.replace("/login");
-    }
+      {/* Right */}
 
-    return (
-        <header className="flex h-16 items-center justify-between border-b bg-white px-6">
+      <div className="flex items-center gap-4">
+        <NotificationBell />
 
-            <h1 className="text-lg font-semibold">
-                CRM Lite
-            </h1>
-
-            <div className="text-sm">
-                <p>{auth.user?.name}</p>
-                <p className="text-gray-500">
-                    {auth.user?.email}
-                </p>
-            </div>
-
-            <button
-                onClick={logout}
-                className="rounded bg-red-500 px-4 py-2 text-white"
-            >
-                Logout
-            </button>
-
-        </header>
-    );
+        <UserMenu />
+      </div>
+    </header>
+  );
 }
