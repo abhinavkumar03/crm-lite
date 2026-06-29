@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   title: "CRM Lite",
   description:
     "Production-ready CRM built with Go, PostgreSQL, Redis, Next.js and Docker.",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({
