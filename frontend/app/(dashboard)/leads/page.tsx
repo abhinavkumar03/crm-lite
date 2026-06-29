@@ -138,7 +138,7 @@ export default function LeadsPage() {
 
             loadLeads();
           }}
-          onClose={() => setLeadOpen(false)}
+          onClose={() => setOpen(false)}
         />
       </Modal>
 
