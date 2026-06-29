@@ -60,7 +60,7 @@ export default function Navbar() {
 
             {/* Desktop Navigation */}
             <nav className="hidden items-center gap-2 lg:flex">
-              {navigation.map((item) => {
+              {navigation?.map((item) => {
                 const Icon = item.icon;
 
                 return (
@@ -116,7 +116,7 @@ export default function Navbar() {
         <div className="border-b border-slate-200 bg-white shadow-lg lg:hidden">
           <div className="container-width py-6">
             <div className="flex flex-col gap-2">
-              {navigation.map((item) => {
+              {navigation?.map((item) => {
                 const Icon = item.icon;
 
                 return (

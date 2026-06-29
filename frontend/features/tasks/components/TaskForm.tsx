@@ -179,7 +179,7 @@ export default function TaskForm({
 
                 </option>
 
-                {leads.map((lead) => (
+                {leads?.map((lead) => (
 
                     <option
                         key={lead.id}
@@ -208,7 +208,7 @@ export default function TaskForm({
 
                 </option>
 
-                {contacts.map((contact) => (
+                {contacts?.map((contact) => (
 
                     <option
                         key={contact.id}

@@ -47,7 +47,7 @@ export default function QuickActionsCard() {
       </div>
 
       <div className="grid gap-4 p-6">
-        {actions.map((action) => {
+        {actions?.map((action) => {
           const Icon = action.icon;
 
           return (

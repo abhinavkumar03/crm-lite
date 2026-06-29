@@ -49,7 +49,7 @@ export default function MetricsGrid({
 
   return (
     <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics.map((metric) => (
+      {metrics?.map((metric) => (
         <MetricCard
           key={metric.title}
           title={metric.title}
