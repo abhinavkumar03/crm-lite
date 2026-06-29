@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/middleware"
 )
 
@@ -22,11 +23,10 @@ func NewRouter(
 		middleware.SecurityHeaders(),
 		middleware.CORS(),
 	)
+	cfg := config.Load()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-		},
+		AllowOrigins: cfg.FrontendURLs,
 		AllowMethods: []string{
 			"GET",
 			"POST",
