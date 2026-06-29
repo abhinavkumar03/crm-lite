@@ -1,189 +1,122 @@
+import {
+  Building2,
+  Mail,
+  Phone,
+} from "lucide-react";
+
 import { Contact } from "../types";
 
+import DataTable from "@/components/common/table/DataTable";
+import AvatarCell from "@/components/common/table/AvatarCell";
+import TableActionMenu from "@/components/common/table/TableActionMenu";
+import TablePagination from "@/components/common/table/TablePagination";
+import EmptyTable from "@/components/common/table/EmptyTable";
+
+type Props = {
+  contacts: Contact[];
+  page: number;
+  setPage: React.Dispatch<React.SetStateAction<number>>;
+  onEdit: (contact: Contact) => void;
+  onDelete: (contact: Contact) => void;
+};
+
 export default function ContactTable({
-    contacts,
-    page,
-    setPage,
-    onEdit,
-    onDelete,
-}: {
-    contacts: Contact[];
-    page: number;
-    setPage: React.Dispatch<React.SetStateAction<number>>;
-    onEdit: (contact: Contact) => void;
-    onDelete: (contact: Contact) => void;
-}) {
-
-    return (
-        <>
-            <table className="w-full border border-gray-200">
-
-                <thead>
-
-                    <tr className="border-b bg-gray-100">
-
-                        <th className="p-3 text-left">
-
-                            First Name
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Last Name
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Email
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Phone
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Company
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Actions
-
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {contacts?.map((contact) => (
-
-                        <tr
-                            key={contact.id}
-                            className="border-b"
-                        >
-
-                            <td className="p-3">
-
-                                {contact.first_name}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                {contact.last_name}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                {contact.email}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                {contact.phone}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                {contact.company}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                <div className="flex gap-3">
-
-                                    <button
-                                        onClick={() => onEdit(contact)}
-                                        className="text-blue-600 hover:underline"
-                                    >
-
-                                        Edit
-
-                                    </button>
-
-                                    <button
-                                        onClick={() => onDelete(contact)}
-                                        className="text-red-600 hover:underline"
-                                    >
-
-                                        Delete
-
-                                    </button>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    ))}
-
-                    {(contacts ?? []).length === 0 && (
-
-                        <tr>
-
-                            <td
-                                colSpan={6}
-                                className="p-6 text-center text-gray-500"
-                            >
-
-                                No contacts found.
-
-                            </td>
-
-                        </tr>
-
-                    )}
-
-                </tbody>
-
-            </table>
-
-            <div className="mt-4 flex items-center justify-end gap-3">
-
-                <button
-                    onClick={() =>
-                        setPage((p) => Math.max(1, p - 1))
-                    }
-                    disabled={page === 1}
-                    className="rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-
-                    Previous
-
-                </button>
-
-                <span className="font-medium">
-
-                    {page}
-
+  contacts,
+  page,
+  setPage,
+  onEdit,
+  onDelete,
+}: Props) {
+  return (
+    <DataTable
+      hasData={contacts.length > 0}
+      columns={
+        <tr className="border-b border-slate-200 text-left">
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Contact
+          </th>
+
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Contact Details
+          </th>
+
+          <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Actions
+          </th>
+        </tr>
+      }
+      emptyState={
+        <EmptyTable
+          title="No Contacts Found"
+          description="Create your first contact to begin managing customer relationships."
+        />
+      }
+      pagination={
+        <TablePagination
+          page={page}
+          onPageChange={setPage}
+        />
+      }
+    >
+      {contacts.map((contact) => (
+        <tr
+          key={contact.id}
+          className="transition-colors hover:bg-slate-50"
+        >
+          {/* Contact */}
+
+          <td className="px-6 py-5">
+            <AvatarCell
+              name={`${contact.first_name} ${contact.last_name}`}
+              subtitle={contact.company}
+            />
+          </td>
+
+          {/* Details */}
+
+          <td className="px-6 py-5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-slate-700">
+                <Mail
+                  size={15}
+                  className="text-slate-400"
+                />
+
+                <span className="truncate">
+                  {contact.email}
                 </span>
+              </div>
 
-                <button
-                    onClick={() =>
-                        setPage((p) => p + 1)
-                    }
-                    className="rounded border px-4 py-2"
-                >
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Phone
+                  size={15}
+                  className="text-slate-400"
+                />
 
-                    Next
+                {contact.phone}
+              </div>
 
-                </button>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Building2
+                  size={15}
+                  className="text-slate-400"
+                />
 
+                {contact.company}
+              </div>
             </div>
-        </>
-    );
+          </td>
+
+          {/* Actions */}
+
+          <td className="px-6 py-5 text-right">
+            <TableActionMenu
+              onEdit={() => onEdit(contact)}
+              onDelete={() => onDelete(contact)}
+            />
+          </td>
+        </tr>
+      ))}
+    </DataTable>
+  );
 }

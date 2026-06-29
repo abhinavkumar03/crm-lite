@@ -1,172 +1,149 @@
+import {
+  CalendarDays,
+  FileText,
+  Link2,
+} from "lucide-react";
+
 import { Task } from "../types";
 
-import StatusBadge from "./StatusBadge";
+import DataTable from "@/components/common/table/DataTable";
+import StatusBadge from "@/components/common/table/StatusBadge";
+import TableActionMenu from "@/components/common/table/TableActionMenu";
+import TablePagination from "@/components/common/table/TablePagination";
+import EmptyTable from "@/components/common/table/EmptyTable";
+
+type Props = {
+  tasks: Task[];
+  page: number;
+  setPage: React.Dispatch<React.SetStateAction<number>>;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
+};
 
 export default function TaskTable({
-    tasks,
-    page,
-    setPage,
-    onEdit,
-    onDelete,
-}: {
-    tasks: Task[];
-    page: number;
-    setPage: React.Dispatch<React.SetStateAction<number>>;
-    onEdit: (task: Task) => void;
-    onDelete: (task: Task) => void;
-}) {
+  tasks,
+  page,
+  setPage,
+  onEdit,
+  onDelete,
+}: Props) {
+  return (
+    <DataTable
+      hasData={tasks.length > 0}
+      columns={
+        <tr className="border-b border-slate-200 text-left">
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Task
+          </th>
 
-    return (
-        <>
-            <table className="w-full border border-gray-200">
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Status
+          </th>
 
-                <thead>
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Due Date
+          </th>
 
-                    <tr className="border-b bg-gray-100">
+          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Linked
+          </th>
 
-                        <th className="p-3 text-left">
+          <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Actions
+          </th>
+        </tr>
+      }
+      emptyState={
+        <EmptyTable
+          title="No Tasks Found"
+          description="Create your first task to start tracking customer activities."
+        />
+      }
+      pagination={
+        <TablePagination
+          page={page}
+          onPageChange={setPage}
+        />
+      }
+    >
+      {tasks.map((task) => (
+        <tr
+          key={task.id}
+          className="transition-colors hover:bg-slate-50"
+        >
+          {/* Task */}
 
-                            Title
+          <td className="px-6 py-5">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 rounded-xl bg-emerald-100 p-2">
+                <FileText
+                  size={18}
+                  className="text-emerald-600"
+                />
+              </div>
 
-                        </th>
+              <div>
+                <h3 className="font-semibold text-slate-900">
+                  {task.title}
+                </h3>
 
-                        <th className="p-3 text-left">
-
-                            Status
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Due Date
-
-                        </th>
-
-                        <th className="p-3 text-left">
-
-                            Actions
-
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    {tasks?.map((task) => (
-
-                        <tr
-                            key={task.id}
-                            className="border-b"
-                        >
-
-                            <td className="p-3">
-
-                                {task.title}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                <StatusBadge
-                                    status={task.status}
-                                />
-
-                            </td>
-
-                            <td className="p-3">
-
-                                {task.due_date
-                                    ? new Date(task.due_date).toLocaleString()
-                                    : "-"}
-
-                            </td>
-
-                            <td className="p-3">
-
-                                <div className="flex gap-3">
-
-                                    <button
-                                        onClick={() => onEdit(task)}
-                                        className="text-blue-600 hover:underline"
-                                    >
-
-                                        Edit
-
-                                    </button>
-
-                                    <button
-                                        onClick={() => onDelete(task)}
-                                        className="text-red-600 hover:underline"
-                                    >
-
-                                        Delete
-
-                                    </button>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    ))}
-
-                    {(tasks ?? []).length === 0 && (
-
-                        <tr>
-
-                            <td
-                                colSpan={4}
-                                className="p-6 text-center text-gray-500"
-                            >
-
-                                No tasks found.
-
-                            </td>
-
-                        </tr>
-
-                    )}
-
-                </tbody>
-
-            </table>
-
-            <div className="mt-4 flex items-center justify-end gap-3">
-
-                <button
-                    onClick={() =>
-                        setPage((p) => Math.max(1, p - 1))
-                    }
-                    disabled={page === 1}
-                    className="rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-
-                    Previous
-
-                </button>
-
-                <span className="font-medium">
-
-                    {page}
-
-                </span>
-
-                <button
-                    onClick={() =>
-                        setPage((p) => p + 1)
-                    }
-                    className="rounded border px-4 py-2"
-                >
-
-                    Next
-
-                </button>
-
+                <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                  {task.description || "No description provided"}
+                </p>
+              </div>
             </div>
-        </>
-    );
+          </td>
 
+          {/* Status */}
+
+          <td className="px-6 py-5">
+            <StatusBadge
+              status={task.status}
+            />
+          </td>
+
+          {/* Due Date */}
+
+          <td className="px-6 py-5">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <CalendarDays
+                size={16}
+                className="text-slate-400"
+              />
+
+              {task.due_date
+                ? new Date(task.due_date).toLocaleDateString()
+                : "-"}
+            </div>
+          </td>
+
+          {/* Related Entity */}
+
+          <td className="px-6 py-5">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Link2
+                size={16}
+                className="text-slate-400"
+              />
+
+              {task.lead_id
+                ? `Lead #${task.lead_id}`
+                : task.contact_id
+                ? `Contact #${task.contact_id}`
+                : "-"}
+            </div>
+          </td>
+
+          {/* Actions */}
+
+          <td className="px-6 py-5 text-right">
+            <TableActionMenu
+              onEdit={() => onEdit(task)}
+              onDelete={() => onDelete(task)}
+            />
+          </td>
+        </tr>
+      ))}
+    </DataTable>
+  );
 }
