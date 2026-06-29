@@ -38,7 +38,7 @@ export function AuthProvider({
 
     const [user, setUser] = useState<User | null>(null);
 
-    const [loading, setLoading] = useState(true); 
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
 
@@ -76,21 +76,29 @@ export function AuthProvider({
     }, []);
 
     async function login(jwt: string) {
+        console.log("Received JWT:", jwt);
 
         localStorage.setItem("token", jwt);
+
+        console.log(
+            "Stored JWT:",
+            localStorage.getItem("token")
+        );
 
         setToken(jwt);
 
         try {
+            console.log("Calling profile...");
 
             const profile = await getProfile();
 
+            console.log("Profile response:", profile);
+
             setUser(profile.data);
 
-        } catch {
-
-            logout();
-
+        } catch (err) {
+            console.error("Profile failed", err);
+            throw err;
         }
     }
 
