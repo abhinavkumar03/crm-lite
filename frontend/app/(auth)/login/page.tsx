@@ -27,32 +27,23 @@ export default function LoginPage() {
         e.preventDefault();
 
         try {
-
             setLoading(true);
 
-            const res = await login(
-                email,
-                password,
-            );
+            const res = await login(email, password);
+            console.log("Login response:", res);
 
-            await auth.login(
-                res.data.access_token,
-            );
+            console.log("Before auth.login");
+            await auth.login(res.data.access_token);
+            console.log("After auth.login");
 
-            router.push(
-                "/dashboard",
-            );
+            console.log("Before router.push");
+            router.push("/dashboard");
 
-        } catch {
-
-            alert(
-                "Invalid credentials",
-            );
-
+        } catch (err) {
+            console.error(err);
+            alert("Invalid credentials");
         } finally {
-
             setLoading(false);
-
         }
     }
 
@@ -75,7 +66,7 @@ export default function LoginPage() {
                     className="mb-4 w-full rounded border p-3"
                     placeholder="Email"
                     value={email}
-                    onChange={(e)=>setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                 />
 
                 <input
@@ -83,7 +74,7 @@ export default function LoginPage() {
                     className="mb-6 w-full rounded border p-3"
                     placeholder="Password"
                     value={password}
-                    onChange={(e)=>setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target.value)}
                 />
 
                 <button
