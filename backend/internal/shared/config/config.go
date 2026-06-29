@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -26,6 +27,8 @@ type Config struct {
 	RedisDB       int
 
 	JWTSecret string
+
+	FrontendURLs []string
 }
 
 func Load() *Config {
@@ -53,6 +56,11 @@ func Load() *Config {
 		RedisDB:       getEnvAsInt("REDIS_DB", 0),
 
 		JWTSecret: getEnv("JWT_SECRET", "change-me-in-production"),
+
+		FrontendURLs: getEnvAsSlice(
+			"FRONTEND_URLS",
+			[]string{"http://localhost:3000"},
+		),
 	}
 }
 
@@ -69,4 +77,24 @@ func getEnvAsInt(key string, defaultValue int) int {
 	}
 
 	return intValue
+}
+
+func getEnvAsSlice(key string, defaultValue []string) []string {
+	value := os.Getenv(key)
+
+	if value == "" {
+		return defaultValue
+	}
+
+	parts := strings.Split(value, ",")
+
+	var result []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+
+	return result
 }
