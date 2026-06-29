@@ -1,6 +1,6 @@
 # CRM Lite
 
-Production-style CRM MVP built to demonstrate modern backend engineering practices.
+Production-style CRM Lite MVP built to demonstrate modern backend engineering practices.
 
 ## Tech Stack
 
