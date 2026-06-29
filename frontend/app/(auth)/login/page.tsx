@@ -30,13 +30,7 @@ export default function LoginPage() {
             setLoading(true);
 
             const res = await login(email, password);
-            console.log("Login response:", res);
-
-            console.log("Before auth.login");
             await auth.login(res.data.access_token);
-            console.log("After auth.login");
-
-            console.log("Before router.push");
             router.push("/dashboard");
 
         } catch (err) {
