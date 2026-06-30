@@ -3,18 +3,24 @@ package service
 import (
 	"context"
 
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
+
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 )
 
 type Service struct {
-	repository *repository.Repository
+	repository      *repository.Repository
+	activityService *activityService.Service
 }
 
-func New(repository *repository.Repository) *Service {
+func New(repository *repository.Repository, activityService *activityService.Service,
+) *Service {
 	return &Service{
-		repository: repository,
+		repository:      repository,
+		activityService: activityService,
 	}
 }
 
@@ -38,6 +44,16 @@ func (s *Service) Create(
 	if err := s.repository.Create(ctx, contact); err != nil {
 		return nil, err
 	}
+
+	_ = s.activityService.Create(
+		ctx,
+		"CONTACT",
+		contact.ID,
+		activityEntity.ActionContactCreated,
+		"Contact created",
+		nil,
+		ownerID,
+	)
 
 	return &dto.ContactResponse{
 		ID:        contact.ID,
@@ -154,6 +170,16 @@ func (s *Service) Update(
 		return nil, err
 	}
 
+	_ = s.activityService.Create(
+		ctx,
+		"CONTACT",
+		contact.ID,
+		activityEntity.ActionContactUpdated,
+		"Contact updated",
+		nil,
+		ownerID,
+	)
+
 	return &dto.ContactResponse{
 		ID:        contact.ID,
 		FirstName: contact.FirstName,
@@ -172,9 +198,27 @@ func (s *Service) Delete(
 	ownerID string,
 ) (bool, error) {
 
-	return s.repository.Delete(
+	deleted, err := s.repository.Delete(
 		ctx,
 		id,
 		ownerID,
 	)
+
+	if err != nil {
+		return false, err
+	}
+
+	if deleted {
+		_ = s.activityService.Create(
+			ctx,
+			"CONTACT",
+			id,
+			activityEntity.ActionContactDeleted,
+			"Contact deleted",
+			nil,
+			ownerID,
+		)
+	}
+
+	return deleted, nil
 }

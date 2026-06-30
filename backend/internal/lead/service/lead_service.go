@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
@@ -10,18 +14,22 @@ import (
 )
 
 type Service struct {
-	repository *repository.Repository
-	producer   *jobs.Producer
+	repository      *repository.Repository
+	producer        *jobs.Producer
+	activityService *activityService.Service
 }
 
 func New(
 	repo *repository.Repository,
 	producer *jobs.Producer,
+	activityService *activityService.Service,
+
 ) *Service {
 
 	return &Service{
-		repository: repo,
-		producer:   producer,
+		repository:      repo,
+		producer:        producer,
+		activityService: activityService,
 	}
 }
 
@@ -49,6 +57,16 @@ func (s *Service) Create(
 	if err != nil {
 		return nil, err
 	}
+
+	_ = s.activityService.Create(
+		ctx,
+		"LEAD",
+		lead.ID,
+		activityEntity.ActionLeadCreated,
+		"Lead created",
+		nil,
+		ownerID,
+	)
 
 	if err := s.producer.Publish(
 		ctx,
@@ -150,6 +168,9 @@ func (s *Service) Update(
 		return nil, err
 	}
 
+	oldStatus := lead.Status
+	newStatus := req.Status
+
 	if lead == nil {
 		return nil, nil
 	}
@@ -187,6 +208,33 @@ func (s *Service) Update(
 		return nil, err
 	}
 
+	_ = s.activityService.Create(
+		ctx,
+		"LEAD",
+		lead.ID,
+		activityEntity.ActionLeadUpdated,
+		"Lead updated",
+		nil,
+		ownerID,
+	)
+
+	if oldStatus != newStatus {
+		metadata, _ := json.Marshal(map[string]any{
+			"from": oldStatus,
+			"to":   newStatus,
+		})
+
+		_ = s.activityService.Create(
+			ctx,
+			"LEAD",
+			lead.ID,
+			activityEntity.ActionLeadStatusChanged,
+			"Lead status changed",
+			metadata,
+			ownerID,
+		)
+	}
+
 	return &dto.LeadResponse{
 		ID:      lead.ID,
 		Name:    lead.Name,
@@ -204,9 +252,27 @@ func (s *Service) Delete(
 	ownerID string,
 ) (bool, error) {
 
-	return s.repository.Delete(
+	deleted, err := s.repository.Delete(
 		ctx,
 		id,
 		ownerID,
 	)
+
+	if err != nil {
+		return false, err
+	}
+
+	if deleted {
+		_ = s.activityService.Create(
+			ctx,
+			"LEAD",
+			id,
+			activityEntity.ActionLeadDeleted,
+			"Lead deleted",
+			nil,
+			ownerID,
+		)
+	}
+
+	return deleted, nil
 }

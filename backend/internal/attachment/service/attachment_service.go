@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
+
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 
 	contactRepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	leadRepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
@@ -17,13 +21,11 @@ import (
 )
 
 type Service struct {
-	repository *repository.Repository
-
-	leadRepo *leadRepository.Repository
-
-	contactRepo *contactRepository.Repository
-
-	taskRepo *taskRepository.Repository
+	repository      *repository.Repository
+	leadRepo        *leadRepository.Repository
+	contactRepo     *contactRepository.Repository
+	taskRepo        *taskRepository.Repository
+	activityService *activityService.Service
 }
 
 func New(
@@ -31,13 +33,16 @@ func New(
 	leadRepo *leadRepository.Repository,
 	contactRepo *contactRepository.Repository,
 	taskRepo *taskRepository.Repository,
+	activityService *activityService.Service,
+
 ) *Service {
 
 	return &Service{
-		repository:  repository,
-		leadRepo:    leadRepo,
-		contactRepo: contactRepo,
-		taskRepo:    taskRepo,
+		repository:      repository,
+		leadRepo:        leadRepo,
+		contactRepo:     contactRepo,
+		taskRepo:        taskRepo,
+		activityService: activityService,
 	}
 }
 
@@ -145,7 +150,6 @@ func (s *Service) Create(
 	}
 
 	attachment := &entity.Attachment{
-
 		ID: uuid.NewString(),
 
 		EntityType: entity.EntityType(
@@ -169,10 +173,29 @@ func (s *Service) Create(
 		CreatedAt: time.Now().UTC(),
 	}
 
-	return s.repository.Create(
+	if err := s.repository.Create(
 		ctx,
 		attachment,
+	); err != nil {
+		return err
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"file_name":     attachment.FileName,
+		"resource_type": attachment.ResourceType,
+	})
+
+	_ = s.activityService.Create(
+		ctx,
+		entityType,
+		entityID,
+		activityEntity.ActionAttachmentAdded,
+		"Uploaded attachment",
+		metadata,
+		ownerID,
 	)
+
+	return nil
 }
 
 func (s *Service) List(
@@ -273,8 +296,26 @@ func (s *Service) Delete(
 	// We only remove the database record.
 	// Cloudinary cleanup will be added later.
 
-	return s.repository.Delete(
+	if err := s.repository.Delete(
 		ctx,
 		attachmentID,
+	); err != nil {
+		return err
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"file_name": attachment.FileName,
+	})
+
+	_ = s.activityService.Create(
+		ctx,
+		string(attachment.EntityType),
+		attachment.EntityID,
+		activityEntity.ActionAttachmentDeleted,
+		"Deleted attachment",
+		metadata,
+		ownerID,
 	)
+
+	return nil
 }

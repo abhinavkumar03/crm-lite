@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
+
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog/entity"
@@ -16,10 +20,11 @@ import (
 )
 
 type Service struct {
-	repository  *repository.Repository
-	leadRepo    *leadRepository.Repository
-	contactRepo *contactRepository.Repository
-	taskRepo    *taskRepository.Repository
+	repository      *repository.Repository
+	leadRepo        *leadRepository.Repository
+	contactRepo     *contactRepository.Repository
+	taskRepo        *taskRepository.Repository
+	activityService *activityService.Service
 }
 
 func New(
@@ -27,13 +32,16 @@ func New(
 	leadRepo *leadRepository.Repository,
 	contactRepo *contactRepository.Repository,
 	taskRepo *taskRepository.Repository,
+	activityService *activityService.Service,
+
 ) *Service {
 
 	return &Service{
-		repository:  repository,
-		leadRepo:    leadRepo,
-		contactRepo: contactRepo,
-		taskRepo:    taskRepo,
+		repository:      repository,
+		leadRepo:        leadRepo,
+		contactRepo:     contactRepo,
+		taskRepo:        taskRepo,
+		activityService: activityService,
 	}
 }
 
@@ -196,7 +204,27 @@ func (s *Service) Create(
 		UpdatedAt:       now,
 	}
 
-	return s.repository.Create(ctx, call)
+	if err := s.repository.Create(ctx, call); err != nil {
+		return err
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"direction":        call.Direction,
+		"status":           call.Status,
+		"duration_seconds": call.DurationSeconds,
+	})
+
+	_ = s.activityService.Create(
+		ctx,
+		entityType,
+		entityID,
+		activityEntity.ActionCallLogged,
+		"Logged a call",
+		metadata,
+		ownerID,
+	)
+
+	return nil
 }
 
 func (s *Service) List(
@@ -294,7 +322,21 @@ func (s *Service) Update(
 	call.UpdatedAt = time.Now().UTC()
 	call.UpdatedBy = &ownerID
 
-	return s.repository.Update(ctx, call)
+	if err := s.repository.Update(ctx, call); err != nil {
+		return err
+	}
+
+	_ = s.activityService.Create(
+		ctx,
+		string(call.EntityType),
+		call.EntityID,
+		activityEntity.ActionCallUpdated,
+		"Updated a call log",
+		nil,
+		ownerID,
+	)
+
+	return nil
 }
 
 func (s *Service) Delete(
@@ -321,8 +363,22 @@ func (s *Service) Delete(
 		return err
 	}
 
-	return s.repository.Delete(
+	if err := s.repository.Delete(
 		ctx,
 		callLogID,
+	); err != nil {
+		return err
+	}
+
+	_ = s.activityService.Create(
+		ctx,
+		string(call.EntityType),
+		call.EntityID,
+		activityEntity.ActionCallDeleted,
+		"Deleted a call log",
+		nil,
+		ownerID,
 	)
+
+	return nil
 }

@@ -19,6 +19,14 @@ const (
 
 	ActionLeadStatusChanged = "LEAD_STATUS_CHANGED"
 
+	ActionLeadDeleted = "LEAD_DELETED"
+
+	ActionContactCreated = "CONTACT_ADDED"
+
+	ActionContactUpdated = "CONTACT_UPDATED"
+
+	ActionContactDeleted = "CONTACT_DELETED"
+
 	ActionNoteAdded = "NOTE_ADDED"
 
 	ActionNoteUpdated = "NOTE_UPDATED"
@@ -36,6 +44,10 @@ const (
 	ActionAttachmentDeleted = "ATTACHMENT_DELETED"
 
 	ActionTaskCreated = "TASK_CREATED"
+
+	ActionTaskUpdated = "TASK_UPDATED"
+
+	ActionTaskDeleted = "TASK_DELETED"
 
 	ActionTaskCompleted = "TASK_COMPLETED"
 )
