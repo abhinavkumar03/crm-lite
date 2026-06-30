@@ -68,7 +68,6 @@ export default function LeadNotes({
         }
 
         await deleteLeadNote(
-            leadId,
             note.id
         );
 

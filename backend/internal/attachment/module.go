@@ -75,5 +75,5 @@ func (m *Module) RegisterRoutes(
 	api.POST("/attachments/contact/:contactId", m.handler.CreateContactAttachment)
 	api.GET("/attachments/contact/:contactId", m.handler.ListContactAttachments)
 
-	api.DELETE("/attachments/:noteId", m.handler.DeleteAttachment)
+	api.DELETE("/attachments/:attachmentId", m.handler.DeleteAttachment)
 }

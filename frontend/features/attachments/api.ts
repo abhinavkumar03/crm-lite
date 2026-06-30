@@ -1,46 +1,42 @@
 import api from "@/services/api";
+import { uploadFile } from "@/features/uploads/api";
 
 export async function getLeadAttachments(
-  leadId: string
+    leadId: string
 ) {
-  const res = await api.get(
-    `/attachments/lead/${leadId}`
-  );
+    const res = await api.get(
+        `/attachments/lead/${leadId}`
+    );
 
-  return res.data.data;
+    return res.data.data;
 }
 
 export async function uploadLeadAttachment(
-  leadId: string,
-  file: File
+    leadId: string,
+    file: File
 ) {
-  const formData =
-    new FormData();
+    const uploaded = await uploadFile(file);
 
-  formData.append(
-    "file",
-    file
-  );
+    const payload = {
+        file_name: file.name,
+        file_url: uploaded.url,
+        public_id: uploaded.public_id,
+        resource_type: uploaded.resource_type,
+        file_size: uploaded.bytes,
+    };
 
-  const res = await api.post(
-    `/attachments/lead/${leadId}`,
-    formData,
-    {
-      headers: {
-        "Content-Type":
-          "multipart/form-data",
-      },
-    }
-  );
+    const res = await api.post(
+        `/attachments/lead/${leadId}`,
+        payload
+    );
 
-  return res.data.data;
+    return res.data.data;
 }
 
 export async function deleteLeadAttachment(
-  leadId: string,
-  attachmentId: string
+    attachmentId: string
 ) {
-  await api.delete(
-    `/attachments/${attachmentId}`
-  );
+    await api.delete(
+        `/attachments/${attachmentId}`
+    );
 }
