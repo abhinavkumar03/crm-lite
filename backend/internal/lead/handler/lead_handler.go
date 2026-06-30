@@ -64,7 +64,7 @@ func (h *LeadHandler) Create(c *gin.Context) {
 	)
 }
 
-func (h *Handler) List(c *gin.Context) {
+func (h *LeadHandler) List(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
