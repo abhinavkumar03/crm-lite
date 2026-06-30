@@ -101,3 +101,23 @@ CREATE TABLE activity_logs (
 
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE notes (
+
+    id UUID PRIMARY KEY,
+
+    entity_type VARCHAR(30) NOT NULL,
+
+    entity_id UUID NOT NULL,
+
+    note TEXT NOT NULL,
+
+    created_by UUID NOT NULL,
+
+    updated_by UUID,
+
+    created_at TIMESTAMP NOT NULL,
+
+    updated_at TIMESTAMP NOT NULL
+
+);
