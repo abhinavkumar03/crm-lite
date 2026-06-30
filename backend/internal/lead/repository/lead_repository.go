@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
@@ -67,50 +69,135 @@ func (r *Repository) Create(
 func (r *Repository) List(
 	ctx context.Context,
 	ownerID string,
-	req dto.ListLeadsRequest,
-) ([]entity.Lead, error) {
+	req dto.ListLeadRequest,
+) (*dto.ListLeadResponse, error) {
+
+	conditions := []string{
+		"owner_id = $1",
+	}
+
+	args := []interface{}{
+		ownerID,
+	}
+
+	argIndex := 2
+
+	if req.Search != "" {
+
+		conditions = append(
+			conditions,
+			fmt.Sprintf(`(
+LOWER(name) LIKE $%d
+OR LOWER(email) LIKE $%d
+OR LOWER(phone) LIKE $%d
+OR LOWER(company) LIKE $%d
+)`,
+				argIndex,
+				argIndex,
+				argIndex,
+				argIndex,
+			),
+		)
+
+		args = append(
+			args,
+			"%"+strings.ToLower(req.Search)+"%",
+		)
+
+		argIndex++
+	}
+
+	if req.Status != "" {
+
+		conditions = append(
+			conditions,
+			fmt.Sprintf(
+				"status = $%d",
+				argIndex,
+			),
+		)
+
+		args = append(
+			args,
+			req.Status,
+		)
+
+		argIndex++
+	}
+
+	whereClause := strings.Join(
+		conditions,
+		" AND ",
+	)
+
+	var total int64
+
+	countQuery := fmt.Sprintf(`
+SELECT COUNT(*)
+FROM leads
+WHERE %s
+`, whereClause)
+
+	err := r.db.QueryRow(
+		ctx,
+		countQuery,
+		args...,
+	).Scan(&total)
+
+	if err != nil {
+		return nil, err
+	}
+
+	allowedSorts := map[string]string{
+		"name":       "name",
+		"company":    "company",
+		"status":     "status",
+		"created_at": "created_at",
+	}
+
+	sortBy := "created_at"
+
+	if v, ok := allowedSorts[req.SortBy]; ok {
+		sortBy = v
+	}
+
+	order := "DESC"
+
+	if strings.EqualFold(req.SortOrder, "ASC") {
+		order = "ASC"
+	}
 
 	offset := (req.Page - 1) * req.Limit
 
-	query := `
-	SELECT
-		id,
-		name,
-		email,
-		phone,
-		company,
-		status,
-		notes,
-		owner_id,
-		created_at,
-		updated_at
-	FROM leads
-	WHERE owner_id = $1
-	AND (
-		$2 = ''
-		OR
-		name ILIKE '%' || $2 || '%'
-		OR
-		email ILIKE '%' || $2 || '%'
+	query := fmt.Sprintf(`
+SELECT
+	id,
+	name,
+	email,
+	phone,
+	company,
+	status,
+	notes,
+	owner_id,
+	created_at,
+	updated_at
+FROM leads
+WHERE %s
+ORDER BY %s %s
+LIMIT %d
+OFFSET %d
+`,
+		whereClause,
+		sortBy,
+		order,
+		req.Limit,
+		offset,
 	)
-	AND (
-		$3 = ''
-		OR
-		status = $3
-	)
-	ORDER BY created_at DESC
-	LIMIT $4
-	OFFSET $5;
-	`
 
 	rows, err := r.db.Query(
 		ctx,
 		query,
-		ownerID,
-		req.Search,
-		req.Status,
-		req.Limit,
-		offset,
+		args...,
 	)
 
 	if err != nil {
@@ -119,13 +206,13 @@ func (r *Repository) List(
 
 	defer rows.Close()
 
-	var leads []entity.Lead
+	leads := make([]dto.LeadResponse, 0)
 
 	for rows.Next() {
 
-		var lead entity.Lead
+		var lead dto.LeadResponse
 
-		err = rows.Scan(
+		err := rows.Scan(
 			&lead.ID,
 			&lead.Name,
 			&lead.Email,
@@ -142,10 +229,34 @@ func (r *Repository) List(
 			return nil, err
 		}
 
-		leads = append(leads, lead)
+		leads = append(
+			leads,
+			lead,
+		)
 	}
 
-	return leads, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	totalPages := 0
+
+	if total > 0 {
+		totalPages = int(
+			math.Ceil(
+				float64(total) /
+					float64(req.Limit),
+			),
+		)
+	}
+
+	return &dto.ListLeadResponse{
+		Data:       leads,
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (r *Repository) GetByID(

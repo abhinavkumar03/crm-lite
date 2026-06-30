@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/service"
@@ -63,27 +64,33 @@ func (h *LeadHandler) Create(c *gin.Context) {
 	)
 }
 
-func (h *LeadHandler) List(c *gin.Context) {
+func (h *Handler) List(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
-	req := dto.ListLeadsRequest{
-		Page:   1,
-		Limit:  10,
-		Search: c.DefaultQuery("search", ""),
-		Status: c.DefaultQuery("status", ""),
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	if page < 1 {
+		page = 1
 	}
 
-	if page := c.Query("page"); page != "" {
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			req.Page = p
-		}
+	if limit <= 0 {
+		limit = 20
 	}
 
-	if limit := c.Query("limit"); limit != "" {
-		if l, err := strconv.Atoi(limit); err == nil && l > 0 && l <= 100 {
-			req.Limit = l
-		}
+	if limit > 100 {
+		limit = 100
+	}
+
+	req := dto.ListLeadRequest{
+		Page:      page,
+		Limit:     limit,
+		Search:    strings.TrimSpace(c.Query("search")),
+		Status:    strings.TrimSpace(c.Query("status")),
+		SortBy:    c.DefaultQuery("sort_by", "created_at"),
+		SortOrder: c.DefaultQuery("sort_order", "desc"),
 	}
 
 	leads, err := h.service.List(
