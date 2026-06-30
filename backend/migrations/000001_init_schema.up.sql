@@ -121,3 +121,31 @@ CREATE TABLE notes (
     updated_at TIMESTAMP NOT NULL
 
 );
+
+CREATE TABLE call_logs (
+
+    id UUID PRIMARY KEY,
+
+    entity_type VARCHAR(30) NOT NULL,
+
+    entity_id UUID NOT NULL,
+
+    direction VARCHAR(20) NOT NULL,
+
+    status VARCHAR(30) NOT NULL,
+
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+
+    summary TEXT,
+
+    follow_up_at TIMESTAMP NULL,
+
+    created_by UUID NOT NULL,
+
+    updated_by UUID,
+
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+
+);

@@ -42,3 +42,12 @@ ON notes(created_by);
 
 CREATE INDEX idx_notes_created_at
 ON notes(created_at DESC);
+
+CREATE INDEX idx_call_logs_entity
+ON call_logs(entity_type, entity_id);
+
+CREATE INDEX idx_call_logs_created_by
+ON call_logs(created_by);
+
+CREATE INDEX idx_call_logs_followup
+ON call_logs(follow_up_at);
