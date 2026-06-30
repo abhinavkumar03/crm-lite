@@ -71,7 +71,6 @@ export default function LeadAttachments({
   }
 
   await deleteLeadAttachment(
-    leadId,
     attachment.id
   );
 
