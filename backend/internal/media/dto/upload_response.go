@@ -7,7 +7,7 @@ type UploadResponse struct {
 
 	ResourceType string `json:"resource_type"`
 
-	Bytes int64 `json:"bytes"`
+	Bytes int `json:"bytes"`
 
 	Format string `json:"format"`
 }

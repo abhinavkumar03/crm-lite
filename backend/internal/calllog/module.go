@@ -4,6 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	activityRepository "github.com/abhinavkumar03/crm-lite/backend/internal/activity/repository"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
+
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog/handler"
 	noteRepo "github.com/abhinavkumar03/crm-lite/backend/internal/calllog/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog/service"
@@ -31,11 +34,21 @@ func NewModule(
 
 	taskRepository := taskRepo.New(db)
 
+	activityRepo := activityRepository.New(db)
+
+	activitySvc := activityService.New(
+		activityRepo,
+		leadRepository,
+		contactRepository,
+		taskRepository,
+	)
+
 	noteService := service.New(
 		noteRepository,
 		leadRepository,
 		contactRepository,
 		taskRepository,
+		activitySvc,
 	)
 
 	noteHandler := handler.New(noteService)

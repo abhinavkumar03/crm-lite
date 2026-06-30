@@ -1,9 +1,14 @@
 package contact
 
 import (
+	activityRepository "github.com/abhinavkumar03/crm-lite/backend/internal/activity/repository"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
+
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/service"
+	leadRepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
+	taskRepository "github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -20,7 +25,21 @@ func NewModule(
 
 	repo := repository.New(db)
 
-	svc := service.New(repo)
+	leadRepo := leadRepository.New(db)
+	taskRepo := taskRepository.New(db)
+	activityRepo := activityRepository.New(db)
+
+	activitySvc := activityService.New(
+		activityRepo,
+		leadRepo,
+		repo,
+		taskRepo,
+	)
+
+	svc := service.New(
+		repo,
+		activitySvc,
+	)
 
 	h := handler.New(svc)
 
