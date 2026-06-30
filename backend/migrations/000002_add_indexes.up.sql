@@ -60,3 +60,12 @@ ON attachments(public_id);
 
 CREATE INDEX idx_attachment_uploaded_by
 ON attachments(uploaded_by);
+
+CREATE INDEX idx_activity_entity
+ON activities(entity_type, entity_id);
+
+CREATE INDEX idx_activity_created_at
+ON activities(created_at DESC);
+
+CREATE INDEX idx_activity_user
+ON activities(performed_by);
