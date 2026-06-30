@@ -18,6 +18,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/media"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
@@ -83,6 +84,11 @@ func main() {
 	calllogModule := calllog.NewModule(db, authModule.Middleware())
 	attachmentModule := attachment.NewModule(db, authModule.Middleware())
 	activityModule := activity.NewModule(db, authModule.Middleware())
+	mediaModule, err := media.NewModule(cfg, authModule.Middleware())
+	if err != nil {
+		log.Sugar().Fatalf("failed to initialize media module: %v", err)
+	}
+
 	router := app.NewRouter(
 		log,
 		healthModule,
@@ -96,6 +102,7 @@ func main() {
 		calllogModule,
 		attachmentModule,
 		activityModule,
+		mediaModule,
 	)
 
 	application := &app.Application{
