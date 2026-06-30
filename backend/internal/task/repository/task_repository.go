@@ -371,3 +371,34 @@ func (r *Repository) Delete(
 
 	return result.RowsAffected() > 0, nil
 }
+
+func (r *Repository) ExistsByIDAndOwner(
+	ctx context.Context,
+	id string,
+	ownerID string,
+) (bool, error) {
+
+	query := `
+	SELECT EXISTS(
+		SELECT 1
+		FROM tasks
+		WHERE id = $1
+		AND owner_id = $2
+	);
+	`
+
+	var exists bool
+
+	err := r.db.QueryRow(
+		ctx,
+		query,
+		id,
+		ownerID,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
