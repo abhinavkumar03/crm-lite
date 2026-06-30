@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
@@ -66,45 +68,130 @@ func (r *Repository) List(
 	ctx context.Context,
 	ownerID string,
 	req dto.ListTasksRequest,
-) ([]entity.Task, error) {
+) (*dto.ListTasksResponse, error) {
+
+	conditions := []string{
+		"owner_id = $1",
+	}
+
+	args := []interface{}{
+		ownerID,
+	}
+
+	argIndex := 2
+
+	if req.Search != "" {
+
+		conditions = append(
+			conditions,
+			fmt.Sprintf(`(
+LOWER(title) LIKE $%d
+OR LOWER(description) LIKE $%d
+)`,
+				argIndex,
+				argIndex,
+			),
+		)
+
+		args = append(
+			args,
+			"%"+strings.ToLower(req.Search)+"%",
+		)
+
+		argIndex++
+	}
+
+	if req.Status != "" {
+
+		conditions = append(
+			conditions,
+			fmt.Sprintf(
+				"status = $%d",
+				argIndex,
+			),
+		)
+
+		args = append(
+			args,
+			req.Status,
+		)
+
+		argIndex++
+	}
+
+	whereClause := strings.Join(
+		conditions,
+		" AND ",
+	)
+
+	countQuery := fmt.Sprintf(`
+SELECT COUNT(*)
+FROM tasks
+WHERE %s
+`, whereClause)
+
+	var total int64
+
+	err := r.db.QueryRow(
+		ctx,
+		countQuery,
+		args...,
+	).Scan(&total)
+
+	if err != nil {
+		return nil, err
+	}
+
+	allowedSorts := map[string]string{
+		"title":      "title",
+		"status":     "status",
+		"due_date":   "due_date",
+		"created_at": "created_at",
+	}
+
+	sortBy := "created_at"
+
+	if v, ok := allowedSorts[req.SortBy]; ok {
+		sortBy = v
+	}
+
+	order := "DESC"
+
+	if strings.ToUpper(req.SortOrder) == "ASC" {
+		order = "ASC"
+	}
 
 	offset := (req.Page - 1) * req.Limit
 
-	query := `
-	SELECT
-		id,
-		owner_id,
-		lead_id,
-		contact_id,
-		title,
-		description,
-		status,
-		due_date,
-		created_at,
-		updated_at
-	FROM tasks
-	WHERE owner_id = $1
-	AND (
-		$2 = ''
-		OR title ILIKE '%' || $2 || '%'
+	query := fmt.Sprintf(`
+SELECT
+	id,
+	title,
+	description,
+	status,
+	lead_id,
+	contact_id,
+	due_date,
+	owner_id,
+	created_at,
+	updated_at
+FROM tasks
+WHERE %s
+ORDER BY %s %s
+LIMIT %d
+OFFSET %d
+`,
+		whereClause,
+		sortBy,
+		order,
+		req.Limit,
+		offset,
 	)
-	AND (
-		$3 = ''
-		OR status = $3
-	)
-	ORDER BY created_at DESC
-	LIMIT $4
-	OFFSET $5;
-	`
 
 	rows, err := r.db.Query(
 		ctx,
 		query,
-		ownerID,
-		req.Search,
-		req.Status,
-		req.Limit,
-		offset,
+		args...,
 	)
 
 	if err != nil {
@@ -113,21 +200,21 @@ func (r *Repository) List(
 
 	defer rows.Close()
 
-	tasks := make([]entity.Task, 0)
+	tasks := make([]dto.TaskResponse, 0)
 
 	for rows.Next() {
 
-		var task entity.Task
+		var task dto.TaskResponse
 
 		err := rows.Scan(
 			&task.ID,
-			&task.OwnerID,
-			&task.LeadID,
-			&task.ContactID,
 			&task.Title,
 			&task.Description,
 			&task.Status,
+			&task.LeadID,
+			&task.ContactID,
 			&task.DueDate,
+			&task.OwnerID,
 			&task.CreatedAt,
 			&task.UpdatedAt,
 		)
@@ -136,10 +223,31 @@ func (r *Repository) List(
 			return nil, err
 		}
 
-		tasks = append(tasks, task)
+		tasks = append(
+			tasks,
+			task,
+		)
 	}
 
-	return tasks, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	totalPages := 0
+
+	if total > 0 {
+		totalPages = int(math.Ceil(
+			float64(total) / float64(req.Limit),
+		))
+	}
+
+	return &dto.ListTasksResponse{
+		Data:       tasks,
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (r *Repository) GetByID(

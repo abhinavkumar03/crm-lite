@@ -2,65 +2,32 @@
 
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import { Search, Command } from "lucide-react";
 
-import {
-  Search,
-  Command,
-} from "lucide-react";
+import useGlobalSearch from "../hooks/useGlobalSearch";
 
-import useGlobalSearch from "@/features/search/hooks/useGlobalSearch";
-import SearchDropdown from "@/features/search/components/SearchDropdown";
+import SearchDropdown from "./SearchDropdown";
 
 export default function SearchBar() {
-  const router = useRouter();
-
-  const wrapperRef =
-    useRef<HTMLDivElement>(null);
-
-  const inputRef =
-    useRef<HTMLInputElement>(null);
-
   const [query, setQuery] =
     useState("");
 
   const [open, setOpen] =
     useState(false);
 
-  const [activeIndex, setActiveIndex] =
-    useState(0);
+  const wrapperRef =
+    useRef<HTMLDivElement>(null);
 
   const {
     loading,
     results,
   } = useGlobalSearch(query);
 
-  const flatResults = useMemo(
-    () => [
-      ...results.leads.map((lead) => ({
-        href: "/leads",
-        ...lead,
-      })),
-
-      ...results.contacts.map(
-        (contact) => ({
-          href: "/contacts",
-          ...contact,
-        })
-      ),
-
-      ...results.tasks.map((task) => ({
-        href: "/tasks",
-        ...task,
-      })),
-    ],
-    [results]
-  );
+  // Close when clicking outside
 
   useEffect(() => {
     function handleClickOutside(
@@ -88,73 +55,14 @@ export default function SearchBar() {
       );
   }, []);
 
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
+  // ESC closes search
 
   useEffect(() => {
     function handleKeyDown(
       e: KeyboardEvent
     ) {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        e.key.toLowerCase() === "k"
-      ) {
-        e.preventDefault();
-
-        inputRef.current?.focus();
-
-        setOpen(true);
-
-        return;
-      }
-
-      if (!open) return;
-
-      switch (e.key) {
-        case "Escape":
-          setOpen(false);
-          break;
-
-        case "ArrowDown":
-          e.preventDefault();
-
-          setActiveIndex((prev) =>
-            Math.min(
-              flatResults.length - 1,
-              prev + 1
-            )
-          );
-
-          break;
-
-        case "ArrowUp":
-          e.preventDefault();
-
-          setActiveIndex((prev) =>
-            Math.max(
-              0,
-              prev - 1
-            )
-          );
-
-          break;
-
-        case "Enter":
-          e.preventDefault();
-
-          const selected =
-            flatResults[activeIndex];
-
-          if (selected) {
-            router.push(selected.href);
-
-            setOpen(false);
-
-            setQuery("");
-          }
-
-          break;
+      if (e.key === "Escape") {
+        setOpen(false);
       }
     }
 
@@ -168,15 +76,10 @@ export default function SearchBar() {
         "keydown",
         handleKeyDown
       );
-  }, [
-    open,
-    activeIndex,
-    flatResults,
-    router,
-  ]);
+  }, []);
 
   useEffect(() => {
-    setOpen(query.trim().length >= 2);
+    setOpen(query.length >= 2);
   }, [query]);
 
   return (
@@ -202,7 +105,6 @@ export default function SearchBar() {
       />
 
       <input
-        ref={inputRef}
         value={query}
         onChange={(e) =>
           setQuery(e.target.value)
@@ -228,6 +130,8 @@ export default function SearchBar() {
         "
       />
 
+      {/* Shortcut */}
+
       <div
         className="
         absolute
@@ -248,6 +152,7 @@ export default function SearchBar() {
         "
       >
         <Command size={12} />
+
         <span>K</span>
       </div>
 
@@ -255,7 +160,6 @@ export default function SearchBar() {
         loading={loading}
         results={results}
         open={open}
-        activeIndex={activeIndex}
         onClose={() => {
           setOpen(false);
           setQuery("");

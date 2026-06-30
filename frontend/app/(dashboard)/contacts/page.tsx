@@ -39,17 +39,17 @@ export default function ContactsPage() {
 
   useEffect(() => {
     loadContacts();
-  }, [page]);
+  }, [page, search]);
 
   async function loadContacts() {
-    const res =
-      await getContacts(
-        page,
-        search
-      );
+  const res = await getContacts({
+    page,
+    limit: 10,
+    search,
+  });
 
-    setContacts(res.data);
-  }
+  setContacts(res.data.data);
+}
 
   async function handleDelete(
     contact: Contact
@@ -86,20 +86,12 @@ export default function ContactsPage() {
         search={
           <SearchInput
             value={search}
-            onChange={setSearch}
-            placeholder="Search contacts..."
-          />
-        }
-        actions={
-          <button
-            onClick={() => {
-              setPage(1);
-              loadContacts();
+            onChange={(value) => {
+                setSearch(value);
+                setPage(1);
             }}
-            className="rounded-2xl bg-emerald-500 px-6 py-3 font-medium text-white transition hover:bg-emerald-600"
-          >
-            Search
-          </button>
+            placeholder="Search contacts..."
+            />
         }
       />
 

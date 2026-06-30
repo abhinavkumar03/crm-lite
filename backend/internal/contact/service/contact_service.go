@@ -55,33 +55,13 @@ func (s *Service) List(
 	ctx context.Context,
 	ownerID string,
 	req dto.ListContactsRequest,
-) ([]dto.ContactResponse, error) {
+) (*dto.ListContactsResponse, error) {
 
-	contacts, err := s.repository.List(
+	return s.repository.List(
 		ctx,
 		ownerID,
 		req,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	response := make([]dto.ContactResponse, 0, len(contacts))
-
-	for _, contact := range contacts {
-		response = append(response, dto.ContactResponse{
-			ID:        contact.ID,
-			FirstName: contact.FirstName,
-			LastName:  contact.LastName,
-			Email:     contact.Email,
-			Phone:     contact.Phone,
-			Company:   contact.Company,
-			JobTitle:  contact.JobTitle,
-			Notes:     contact.Notes,
-		})
-	}
-
-	return response, nil
 }
 
 func (s *Service) GetByID(

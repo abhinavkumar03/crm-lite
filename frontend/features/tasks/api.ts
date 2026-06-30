@@ -1,20 +1,19 @@
 import api from "@/services/api";
 import { CreateTaskPayload } from "./types";
 
-export async function getTasks(
-    page = 1,
-    search = "",
-    status = ""
-) {
-    const response = await api.get("/tasks", {
-        params: {
-            page,
-            search,
-            status,
-        },
-    });
+export async function getTasks(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+}) {
+  const response = await api.get("/tasks", {
+    params,
+  });
 
-    return response.data;
+  return response.data;
 }
 
 export async function createTask(

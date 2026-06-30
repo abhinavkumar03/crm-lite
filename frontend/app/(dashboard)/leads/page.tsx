@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 import {
-  createLead,
-  deleteLead,
-  getLeads,
-  updateLead,
+    createLead,
+    deleteLead,
+    getLeads,
+    updateLead,
 } from "@/features/leads/api";
 
 import { Lead } from "@/features/leads/types";
@@ -23,166 +23,150 @@ import CreateButton from "@/components/common/CreateButton";
 import { toast } from "sonner";
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+    const [leads, setLeads] = useState<Lead[]>([]);
 
-  const [page, setPage] = useState(1);
+    const [page, setPage] = useState(1);
 
-  const [search, setSearch] = useState("");
+    const [search, setSearch] = useState("");
 
-  const [editingLead, setEditingLead] =
-    useState<Lead | null>(null);
+    const [editingLead, setEditingLead] =
+        useState<Lead | null>(null);
 
-  const [open, setOpen] =
-    useState(false);
+    const [open, setOpen] =
+        useState(false);
 
-  useEffect(() => {
-    loadLeads();
-  }, [page]);
+    useEffect(() => {
+        loadLeads();
+    }, [page, search]);
 
-  async function loadLeads() {
-    const res = await getLeads(
-      page,
-      search
+    async function loadLeads() {
+        const res = await getLeads({
+            page,
+            limit: 10,
+            search,
+        });
+
+        setLeads(res.data.data);
+    }
+
+    async function handleDelete(
+        lead: Lead
+    ) {
+        const ok = window.confirm(
+            "Delete this lead?"
+        );
+
+        if (!ok) return;
+
+        await deleteLead(lead.id);
+        toast.success("Lead deleted.");
+
+        await loadLeads();
+    }
+
+    return (
+        <div className="space-y-8">
+            <PageHeader
+                // badge="CRM Module"
+                title="Leads"
+                description="Manage your sales pipeline, qualify prospects and track lead progress throughout the customer journey."
+                action={
+                    <CreateButton
+                        text="New Lead"
+                        onClick={() =>
+                            setOpen(true)
+                        }
+                    />
+                }
+            />
+
+            <Toolbar
+                search={
+                    <SearchInput
+                        value={search}
+                        onChange={(value) => {
+                            setSearch(value);
+                            setPage(1);
+                        }}
+                        placeholder="Search leads..."
+                    />
+                }
+            />
+
+            <LeadTable
+                leads={leads}
+                page={page}
+                setPage={setPage}
+                onEdit={setEditingLead}
+                onDelete={handleDelete}
+            />
+
+            {/* Create */}
+
+            <Modal
+                open={open}
+                title="Create Lead"
+                onClose={() =>
+                    setOpen(false)
+                }
+            >
+                <LeadForm
+                    submitText="Create Lead"
+                    onSubmit={async (
+                        values
+                    ) => {
+                        await createLead(values);
+                        toast.success("Lead created.");
+
+                        setOpen(false);
+
+                        loadLeads();
+                    }}
+                    onClose={() => setOpen(false)}
+                />
+            </Modal>
+
+            {/* Edit */}
+
+            <Modal
+                open={!!editingLead}
+                title="Edit Lead"
+                onClose={() =>
+                    setEditingLead(null)
+                }
+            >
+                {editingLead && (
+                    <LeadForm
+                        initialValues={{
+                            name: editingLead.name,
+                            email:
+                                editingLead.email,
+                            phone:
+                                editingLead.phone,
+                            company:
+                                editingLead.company,
+                            status:
+                                editingLead.status,
+                            notes:
+                                editingLead.notes,
+                        }}
+                        submitText="Update Lead"
+                        onSubmit={async (
+                            values
+                        ) => {
+                            await updateLead(editingLead.id, values);
+                            toast.success("Lead updated.");
+
+                            setEditingLead(
+                                null
+                            );
+
+                            loadLeads();
+                        }}
+                        onClose={() => setEditingLead(null)}
+                    />
+                )}
+            </Modal>
+        </div>
     );
-
-    setLeads(res.data);
-  }
-
-  async function handleDelete(
-    lead: Lead
-  ) {
-    const ok = window.confirm(
-      "Delete this lead?"
-    );
-
-    if (!ok) return;
-
-    await deleteLead(lead.id);
-    toast.success("Lead deleted.");
-
-    await loadLeads();
-  }
-
-  return (
-    <div className="space-y-8">
-      <PageHeader
-        // badge="CRM Module"
-        title="Leads"
-        description="Manage your sales pipeline, qualify prospects and track lead progress throughout the customer journey."
-        action={
-          <CreateButton
-            text="New Lead"
-            onClick={() =>
-              setOpen(true)
-            }
-          />
-        }
-      />
-
-      <Toolbar
-        search={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search leads..."
-          />
-        }
-        actions={
-          <button
-            onClick={() => {
-              setPage(1);
-              loadLeads();
-            }}
-            className="
-              rounded-2xl
-              bg-emerald-500
-              px-6
-              py-3
-              font-medium
-              text-white
-              transition
-              hover:bg-emerald-600
-            "
-          >
-            Search
-          </button>
-        }
-      />
-
-      <LeadTable
-        leads={leads}
-        page={page}
-        setPage={setPage}
-        onEdit={setEditingLead}
-        onDelete={handleDelete}
-      />
-
-      {/* Create */}
-
-      <Modal
-        open={open}
-        title="Create Lead"
-        onClose={() =>
-          setOpen(false)
-        }
-      >
-        <LeadForm
-          submitText="Create Lead"
-          onSubmit={async (
-            values
-          ) => {
-            await createLead(values);
-            toast.success("Lead created.");
-
-            setOpen(false);
-
-            loadLeads();
-          }}
-          onClose={() => setOpen(false)}
-        />
-      </Modal>
-
-      {/* Edit */}
-
-      <Modal
-        open={!!editingLead}
-        title="Edit Lead"
-        onClose={() =>
-          setEditingLead(null)
-        }
-      >
-        {editingLead && (
-          <LeadForm
-            initialValues={{
-              name: editingLead.name,
-              email:
-                editingLead.email,
-              phone:
-                editingLead.phone,
-              company:
-                editingLead.company,
-              status:
-                editingLead.status,
-              notes:
-                editingLead.notes,
-            }}
-            submitText="Update Lead"
-            onSubmit={async (
-              values
-            ) => {
-              await updateLead(editingLead.id,values);
-              toast.success("Lead updated.");
-
-              setEditingLead(
-                null
-              );
-
-              loadLeads();
-            }}
-            onClose={() => setEditingLead(null)}
-          />
-        )}
-      </Modal>
-    </div>
-  );
 }

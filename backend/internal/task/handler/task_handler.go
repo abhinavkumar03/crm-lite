@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/response"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/validation"
@@ -62,28 +63,31 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	userID := c.GetString("userID")
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
 	req := dto.ListTasksRequest{
-		Page:   1,
-		Limit:  10,
-		Search: c.DefaultQuery("search", ""),
-		Status: c.DefaultQuery("status", ""),
+		Page:      page,
+		Limit:     limit,
+		Search:    strings.TrimSpace(c.Query("search")),
+		Status:    strings.TrimSpace(c.Query("status")),
+		SortBy:    c.DefaultQuery("sort_by", "created_at"),
+		SortOrder: c.DefaultQuery("sort_order", "desc"),
 	}
 
-	if page := c.Query("page"); page != "" {
-
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			req.Page = p
-		}
-	}
-
-	if limit := c.Query("limit"); limit != "" {
-
-		if l, err := strconv.Atoi(limit); err == nil && l > 0 && l <= 100 {
-			req.Limit = l
-		}
-	}
-
-	tasks, err := h.service.List(
+	result, err := h.service.List(
 		c.Request.Context(),
 		userID,
 		req,
@@ -102,7 +106,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 	response.OK(
 		c,
 		"Tasks fetched successfully",
-		tasks,
+		result,
 	)
 }
 
