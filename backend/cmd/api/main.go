@@ -77,6 +77,7 @@ func main() {
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
 	searchModule := search.NewModule(db, authModule.Middleware())
 	noteModule := note.NewModule(db, authModule.Middleware())
+	calllogModule := note.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		healthModule,
@@ -87,6 +88,7 @@ func main() {
 		dashboardModule,
 		searchModule,
 		noteModule,
+		calllogModule,
 	)
 
 	application := &app.Application{
