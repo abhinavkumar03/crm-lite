@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type LeadResponse struct {
 	ID string `json:"id"`
 
@@ -14,4 +16,10 @@ type LeadResponse struct {
 	Status string `json:"status"`
 
 	Notes string `json:"notes"`
+
+	OwnerID string `json:"owner_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+
+	UpdatedAt time.Time `json:"updated_at"`
 }

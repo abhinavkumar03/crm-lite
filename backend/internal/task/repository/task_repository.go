@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/entity"
@@ -255,4 +256,99 @@ func (r *Repository) Delete(
 	}
 
 	return result.RowsAffected() > 0, nil
+}
+
+func (r *Repository) Search(
+	ctx context.Context,
+	ownerID string,
+	query string,
+) ([]dto.TaskResponse, error) {
+
+	search := "%" + strings.ToLower(query) + "%"
+
+	rows, err := r.db.Query(
+		ctx,
+		`
+SELECT
+
+id,
+
+title,
+
+description,
+
+status,
+
+due_date,
+
+lead_id,
+
+contact_id,
+
+owner_id,
+
+created_at,
+
+updated_at
+
+FROM tasks
+
+WHERE owner_id=$1
+
+AND (
+
+LOWER(title) LIKE $2
+
+OR LOWER(description) LIKE $2
+
+)
+
+ORDER BY created_at DESC
+
+LIMIT 10;
+`,
+		ownerID,
+		search,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	tasks := make([]dto.TaskResponse, 0)
+
+	for rows.Next() {
+
+		var task dto.TaskResponse
+
+		err := rows.Scan(
+			&task.ID,
+			&task.Title,
+			&task.Description,
+			&task.Status,
+			&task.DueDate,
+			&task.LeadID,
+			&task.ContactID,
+			&task.OwnerID,
+			&task.CreatedAt,
+			&task.UpdatedAt,
+		)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+		tasks = append(
+			tasks,
+			task,
+		)
+
+	}
+
+	return tasks, nil
+
 }

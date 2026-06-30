@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type TaskResponse struct {
 	ID string `json:"id"`
 
@@ -9,9 +11,15 @@ type TaskResponse struct {
 
 	Status string `json:"status"`
 
+	DueDate *time.Time `json:"due_date,omitempty"`
+
 	LeadID *string `json:"lead_id,omitempty"`
 
 	ContactID *string `json:"contact_id,omitempty"`
 
-	DueDate *string `json:"due_date,omitempty"`
+	OwnerID string `json:"owner_id"`
+
+	CreatedAt time.Time `json:"created_at"`
+
+	UpdatedAt time.Time `json:"updated_at"`
 }
