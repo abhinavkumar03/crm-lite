@@ -40,9 +40,6 @@ export default function MetricCard({
         </h2>
       </div>
 
-      <div className="mt-6 h-1 w-full overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 group-hover:w-full" />
-      </div>
     </div>
   );
 }

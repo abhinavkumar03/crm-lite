@@ -29,18 +29,20 @@ func New(
 func (s *Service) GetDashboard(
 	ctx context.Context,
 	ownerID string,
+	refresh bool,
 ) (*dto.DashboardResponse, error) {
 
 	key := "dashboard:" + ownerID
 
-	cached, err := s.redis.Get(ctx, key).Result()
+	if !refresh {
+		cached, err := s.redis.Get(ctx, key).Result()
 
-	if err == nil {
+		if err == nil {
+			var response dto.DashboardResponse
 
-		var response dto.DashboardResponse
-
-		if json.Unmarshal([]byte(cached), &response) == nil {
-			return &response, nil
+			if json.Unmarshal([]byte(cached), &response) == nil {
+				return &response, nil
+			}
 		}
 	}
 
