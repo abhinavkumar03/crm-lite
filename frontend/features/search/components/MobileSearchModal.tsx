@@ -84,6 +84,7 @@ export default function MobileSearchModal({
           loading={loading}
           results={results}
           open={query.length >= 2}
+          query={query}
           activeIndex={0}
           onClose={onClose}
         />

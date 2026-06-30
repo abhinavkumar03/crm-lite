@@ -16,6 +16,7 @@ type Props = {
   status?: string;
   onClick?: () => void;
   active?: boolean;
+  query: string;
 };
 
 export default function SearchResult({
@@ -26,6 +27,7 @@ export default function SearchResult({
   status,
   onClick,
   active = false,
+  query,
 }: Props) {
   const Icon =
     type === "lead"
@@ -64,12 +66,12 @@ export default function SearchResult({
 
         <div>
           <h4 className="font-medium text-slate-900">
-            {title}
+            {highlightText(title, query)}
           </h4>
 
           {subtitle && (
             <p className="text-sm text-slate-500">
-              {subtitle}
+              {highlightText(subtitle, query)}
             </p>
           )}
         </div>
@@ -99,4 +101,41 @@ export default function SearchResult({
       </div>
     </Link>
   );
+}
+
+function highlightText(
+  text: string,
+  query?: string
+) {
+  if (!text) return "";
+
+  if (!query?.trim()) {
+    return text;
+  }
+
+  const escapedQuery = query.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+
+  const regex = new RegExp(
+    `(${escapedQuery})`,
+    "gi"
+  );
+
+  return text
+    .split(regex)
+    .filter(Boolean)
+    .map((part, index) =>
+      regex.test(part) ? (
+        <mark
+          key={index}
+          className="rounded bg-emerald-200 px-0.5 text-inherit"
+        >
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
 }
