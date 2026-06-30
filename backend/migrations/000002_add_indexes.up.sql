@@ -51,3 +51,12 @@ ON call_logs(created_by);
 
 CREATE INDEX idx_call_logs_followup
 ON call_logs(follow_up_at);
+
+CREATE INDEX idx_attachment_entity
+ON attachments(entity_type, entity_id);
+
+CREATE INDEX idx_attachment_public_id
+ON attachments(public_id);
+
+CREATE INDEX idx_attachment_uploaded_by
+ON attachments(uploaded_by);
