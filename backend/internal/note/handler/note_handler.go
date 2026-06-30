@@ -20,14 +20,36 @@ func New(
 	}
 }
 
-func (h *NoteHandler) CreateLeadNote(
+func (h *NoteHandler) createEntityNote(
 	c *gin.Context,
+	entityType string,
+	entityID string,
 ) {
 
 	var req dto.CreateNoteRequest
 
-	if err := c.ShouldBindJSON(
-		&req,
+	if err := c.ShouldBindJSON(&req); err != nil {
+
+		c.JSON(
+			http.StatusBadRequest,
+			gin.H{
+				"success": false,
+				"message": err.Error(),
+			},
+		)
+
+		return
+	}
+
+	req.EntityType = entityType
+	req.EntityID = entityID
+
+	userID := c.GetString("userID")
+
+	if err := h.service.Create(
+		c.Request.Context(),
+		userID,
+		req,
 	); err != nil {
 
 		c.JSON(
@@ -39,33 +61,6 @@ func (h *NoteHandler) CreateLeadNote(
 		)
 
 		return
-
-	}
-
-	req.EntityType = "LEAD"
-
-	req.EntityID = c.Param("leadId")
-
-	userID := c.GetString("userID")
-
-	err := h.service.Create(
-		c.Request.Context(),
-		userID,
-		req,
-	)
-
-	if err != nil {
-
-		c.JSON(
-			http.StatusBadRequest,
-			gin.H{
-				"success": false,
-				"message": err.Error(),
-			},
-		)
-
-		return
-
 	}
 
 	c.JSON(
@@ -75,26 +70,21 @@ func (h *NoteHandler) CreateLeadNote(
 			"message": "Note created successfully",
 		},
 	)
-
 }
 
-func (h *NoteHandler) ListLeadNotes(
+func (h *NoteHandler) listEntityNotes(
 	c *gin.Context,
+	entityType string,
+	entityID string,
 ) {
 
-	userID := c.GetString(
-		"userID",
-	)
+	userID := c.GetString("userID")
 
 	notes, err := h.service.List(
-
 		c.Request.Context(),
-
 		userID,
-
-		"LEAD",
-
-		c.Param("leadId"),
+		entityType,
+		entityID,
 	)
 
 	if err != nil {
@@ -108,7 +98,6 @@ func (h *NoteHandler) ListLeadNotes(
 		)
 
 		return
-
 	}
 
 	c.JSON(
@@ -118,8 +107,68 @@ func (h *NoteHandler) ListLeadNotes(
 			"data":    notes,
 		},
 	)
-
 }
+
+func (h *NoteHandler) CreateLeadNote(
+	c *gin.Context,
+) {
+	h.createEntityNote(
+		c,
+		"LEAD",
+		c.Param("leadId"),
+	)
+}
+
+func (h *NoteHandler) ListLeadNotes(
+	c *gin.Context,
+) {
+	h.listEntityNotes(
+		c,
+		"LEAD",
+		c.Param("leadId"),
+	)
+}
+
+func (h *NoteHandler) CreateTaskNote(
+	c *gin.Context,
+) {
+	h.createEntityNote(
+		c,
+		"TASK",
+		c.Param("taskId"),
+	)
+}
+
+func (h *NoteHandler) ListTaskNotes(
+	c *gin.Context,
+) {
+	h.listEntityNotes(
+		c,
+		"TASK",
+		c.Param("taskId"),
+	)
+}
+
+func (h *NoteHandler) CreateContactNote(
+	c *gin.Context,
+) {
+	h.createEntityNote(
+		c,
+		"CONTACT",
+		c.Param("contactId"),
+	)
+}
+
+func (h *NoteHandler) ListContactNotes(
+	c *gin.Context,
+) {
+	h.listEntityNotes(
+		c,
+		"CONTACT",
+		c.Param("contactId"),
+	)
+}
+
 func (h *NoteHandler) UpdateNote(
 	c *gin.Context,
 ) {
