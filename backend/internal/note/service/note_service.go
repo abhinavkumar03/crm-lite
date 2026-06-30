@@ -11,8 +11,8 @@ import (
 	noteRepository "github.com/abhinavkumar03/crm-lite/backend/internal/note/repository"
 	taskRepository "github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note/dto"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/note/entity"
 	"github.com/google/uuid"
 )
 
