@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/attachment"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
@@ -77,7 +79,15 @@ func main() {
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
 	searchModule := search.NewModule(db, authModule.Middleware())
 	noteModule := note.NewModule(db, authModule.Middleware())
-	calllogModule := note.NewModule(db, authModule.Middleware())
+	calllogModule := calllog.NewModule(
+		db,
+		authModule.Middleware(),
+	)
+
+	attachmentModule := attachment.NewModule(
+		db,
+		authModule.Middleware(),
+	)
 	router := app.NewRouter(
 		log,
 		healthModule,
@@ -89,6 +99,7 @@ func main() {
 		searchModule,
 		noteModule,
 		calllogModule,
+		attachmentModule,
 	)
 
 	application := &app.Application{
