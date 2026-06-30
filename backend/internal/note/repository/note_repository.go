@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/note/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note/entity"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -58,22 +59,25 @@ func (r *Repository) List(
 	ctx context.Context,
 	entityType string,
 	entityID string,
-) ([]entity.Note, error) {
+) ([]dto.NoteResponse, error) {
 
 	query := `
 	SELECT
-		id,
-		entity_type,
-		entity_id,
-		note,
-		created_by,
-		updated_by,
-		created_at,
-		updated_at
-	FROM notes
-	WHERE entity_type=$1
-	AND entity_id=$2
-	ORDER BY created_at DESC
+		n.id,
+		n.entity_type,
+		n.entity_id,
+		n.note,
+		n.created_by,
+		u.name,
+		n.updated_by,
+		n.created_at,
+		n.updated_at
+	FROM notes n
+	INNER JOIN users u
+		ON u.id = n.created_by
+	WHERE n.entity_type = $1
+	AND n.entity_id = $2
+	ORDER BY n.created_at DESC;
 	`
 
 	rows, err := r.db.Query(
@@ -89,11 +93,11 @@ func (r *Repository) List(
 
 	defer rows.Close()
 
-	notes := make([]entity.Note, 0)
+	notes := make([]dto.NoteResponse, 0)
 
 	for rows.Next() {
 
-		var note entity.Note
+		var note dto.NoteResponse
 
 		err := rows.Scan(
 			&note.ID,
@@ -101,6 +105,7 @@ func (r *Repository) List(
 			&note.EntityID,
 			&note.Note,
 			&note.CreatedBy,
+			&note.User.Name,
 			&note.UpdatedBy,
 			&note.CreatedAt,
 			&note.UpdatedAt,
@@ -110,7 +115,12 @@ func (r *Repository) List(
 			return nil, err
 		}
 
-		notes = append(notes, note)
+		note.User.ID = note.CreatedBy
+
+		notes = append(
+			notes,
+			note,
+		)
 	}
 
 	if err := rows.Err(); err != nil {
