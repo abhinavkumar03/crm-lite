@@ -38,11 +38,11 @@ export default function DashboardPage() {
         loadDashboard();
     }, []);
 
-    async function loadDashboard() {
+    async function loadDashboard(refresh = false) {
         try {
             setLoading(true);
 
-            const data = await getDashboard();
+            const data = await getDashboard(refresh);
 
             setDashboard(data);
         } finally {
@@ -105,9 +105,7 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8">
-            <DashboardHeader
-                onRefresh={loadDashboard}
-            />
+            <DashboardHeader onRefresh={() => loadDashboard(true)}/>
 
             <MetricsGrid
                 dashboard={dashboard}
@@ -164,7 +162,7 @@ export default function DashboardPage() {
                         setTaskOpen(false)
                     }
                     onSuccess={() => {
-                        loadDashboard();
+                        loadDashboard(true);
                     }}
                 />
             </div>

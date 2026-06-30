@@ -2,12 +2,16 @@ import api from "@/services/api";
 
 import { DashboardResponse } from "./types";
 
-export async function getDashboard() {
+export async function getDashboard(
+  refresh = false
+) {
+  const response = await api.get<{
+    data: DashboardResponse;
+  }>("/dashboard", {
+    params: {
+      refresh,
+    },
+  });
 
-    const response =
-        await api.get<{
-            data: DashboardResponse;
-        }>("/dashboard");
-
-    return response.data.data;
+  return response.data.data;
 }
