@@ -33,3 +33,12 @@ ON tasks(contact_id);
 
 CREATE INDEX idx_activity_logs_lead
 ON activity_logs(lead_id);
+
+CREATE INDEX idx_notes_entity
+ON notes(entity_type, entity_id);
+
+CREATE INDEX idx_notes_created_by
+ON notes(created_by);
+
+CREATE INDEX idx_notes_created_at
+ON notes(created_at DESC);
