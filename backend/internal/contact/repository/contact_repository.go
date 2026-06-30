@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact/dto"
@@ -70,58 +72,135 @@ func (r *Repository) List(
 	ctx context.Context,
 	ownerID string,
 	req dto.ListContactsRequest,
-) ([]entity.Contact, error) {
+) (*dto.ListContactsResponse, error) {
+
+	conditions := []string{
+		"owner_id = $1",
+	}
+
+	args := []interface{}{
+		ownerID,
+	}
+
+	argIndex := 2
+
+	if req.Search != "" {
+
+		conditions = append(
+			conditions,
+			fmt.Sprintf(`(
+LOWER(first_name) LIKE $%d
+OR LOWER(last_name) LIKE $%d
+OR LOWER(email) LIKE $%d
+OR LOWER(phone) LIKE $%d
+OR LOWER(company) LIKE $%d
+)`,
+				argIndex,
+				argIndex,
+				argIndex,
+				argIndex,
+				argIndex,
+			),
+		)
+
+		args = append(
+			args,
+			"%"+strings.ToLower(req.Search)+"%",
+		)
+
+		argIndex++
+	}
+
+	whereClause := strings.Join(
+		conditions,
+		" AND ",
+	)
+
+	countQuery := fmt.Sprintf(`
+SELECT COUNT(*)
+FROM contacts
+WHERE %s
+`, whereClause)
+
+	var total int64
+
+	err := r.db.QueryRow(
+		ctx,
+		countQuery,
+		args...,
+	).Scan(&total)
+
+	if err != nil {
+		return nil, err
+	}
+
+	allowedSorts := map[string]string{
+		"first_name": "first_name",
+		"last_name":  "last_name",
+		"company":    "company",
+		"created_at": "created_at",
+	}
+
+	sortBy := "created_at"
+
+	if v, ok := allowedSorts[req.SortBy]; ok {
+		sortBy = v
+	}
+
+	order := "DESC"
+
+	if strings.ToUpper(req.SortOrder) == "ASC" {
+		order = "ASC"
+	}
 
 	offset := (req.Page - 1) * req.Limit
 
-	query := `
-	SELECT
-		id,
-		owner_id,
-		first_name,
-		last_name,
-		email,
-		phone,
-		company,
-		job_title,
-		notes,
-		created_at,
-		updated_at
-	FROM contacts
-	WHERE owner_id = $1
-	AND (
-		$2 = ''
-		OR first_name ILIKE '%' || $2 || '%'
-		OR last_name ILIKE '%' || $2 || '%'
-		OR email ILIKE '%' || $2 || '%'
-		OR company ILIKE '%' || $2 || '%'
+	query := fmt.Sprintf(`
+SELECT
+	id,
+	first_name,
+	last_name,
+	email,
+	phone,
+	company,
+	job_title,
+	notes,
+	owner_id,
+	created_at,
+	updated_at
+FROM contacts
+WHERE %s
+ORDER BY %s %s
+LIMIT %d
+OFFSET %d
+`,
+		whereClause,
+		sortBy,
+		order,
+		req.Limit,
+		offset,
 	)
-	ORDER BY created_at DESC
-	LIMIT $3
-	OFFSET $4;
-	`
 
 	rows, err := r.db.Query(
 		ctx,
 		query,
-		ownerID,
-		req.Search,
-		req.Limit,
-		offset,
+		args...,
 	)
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
-	contacts := make([]entity.Contact, 0)
+	contacts := make([]dto.ContactResponse, 0)
 
 	for rows.Next() {
-		var contact entity.Contact
 
-		if err := rows.Scan(
+		var contact dto.ContactResponse
+
+		err := rows.Scan(
 			&contact.ID,
-			&contact.OwnerID,
 			&contact.FirstName,
 			&contact.LastName,
 			&contact.Email,
@@ -129,20 +208,40 @@ func (r *Repository) List(
 			&contact.Company,
 			&contact.JobTitle,
 			&contact.Notes,
+			&contact.OwnerID,
 			&contact.CreatedAt,
 			&contact.UpdatedAt,
-		); err != nil {
+		)
+
+		if err != nil {
 			return nil, err
 		}
 
-		contacts = append(contacts, contact)
+		contacts = append(
+			contacts,
+			contact,
+		)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return contacts, nil
+	totalPages := 0
+
+	if total > 0 {
+		totalPages = int(math.Ceil(
+			float64(total) / float64(req.Limit),
+		))
+	}
+
+	return &dto.ListContactsResponse{
+		Data:       contacts,
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (r *Repository) GetByID(
@@ -263,83 +362,4 @@ func (r *Repository) Delete(
 	}
 
 	return result.RowsAffected() > 0, nil
-}
-
-func (r *Repository) Search(
-	ctx context.Context,
-	ownerID string,
-	query string,
-) ([]dto.ContactResponse, error) {
-
-	search := "%" + strings.ToLower(query) + "%"
-
-	rows, err := r.db.Query(
-		ctx, `SELECT
-			id,
-			first_name,
-			last_name,
-			email,
-			phone,
-			company,
-			job_title,
-			notes,
-			owner_id,
-			created_at,
-			updated_at
-		FROM contacts
-		WHERE owner_id = $1
-		AND (
-			LOWER(first_name) LIKE $2
-			OR LOWER(last_name) LIKE $2
-			OR LOWER(email) LIKE $2
-			OR LOWER(phone) LIKE $2
-			OR LOWER(company) LIKE $2
-		)
-		ORDER BY created_at DESC
-		LIMIT 10;`,
-		ownerID,
-		search,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	contacts := make([]dto.ContactResponse, 0)
-
-	for rows.Next() {
-
-		var contact dto.ContactResponse
-
-		err := rows.Scan(
-			&contact.ID,
-			&contact.FirstName,
-			&contact.LastName,
-			&contact.Email,
-			&contact.Phone,
-			&contact.Company,
-			&contact.JobTitle,
-			&contact.Notes,
-			&contact.OwnerID,
-			&contact.CreatedAt,
-			&contact.UpdatedAt,
-		)
-
-		if err != nil {
-
-			return nil, err
-
-		}
-
-		contacts = append(
-			contacts,
-			contact,
-		)
-
-	}
-
-	return contacts, nil
-
 }

@@ -55,7 +55,12 @@ export default function TasksPage() {
 
   useEffect(() => {
     loadData();
-  }, [page]);
+  }, [page, search]);
+
+  useEffect(() => {
+    loadLeads();
+    loadContacts();
+    }, []);
 
   async function loadData() {
     await Promise.all([
@@ -66,28 +71,32 @@ export default function TasksPage() {
   }
 
   async function loadTasks() {
-    const res =
-      await getTasks(
-        page,
-        search
-      );
+  const res = await getTasks({
+    page,
+    limit: 10,
+    search,
+  });
 
-    setTasks(res.data);
-  }
+  setTasks(res.data.data);
+}
 
-  async function loadLeads() {
-    const res =
-      await getLeads(1, "");
+ async function loadLeads() {
+  const res = await getLeads({
+    page: 1,
+    limit: 100,
+  });
 
-    setLeads(res.data);
-  }
+  setLeads(res.data.data);
+}
 
   async function loadContacts() {
-    const res =
-      await getContacts(1, "");
+  const res = await getContacts({
+    page: 1,
+    limit: 100,
+  });
 
-    setContacts(res.data);
-  }
+  setContacts(res.data.data);
+}
 
   async function handleDelete(
     task: Task
@@ -124,20 +133,12 @@ export default function TasksPage() {
         search={
           <SearchInput
             value={search}
-            onChange={setSearch}
-            placeholder="Search tasks..."
-          />
-        }
-        actions={
-          <button
-            onClick={() => {
-              setPage(1);
-              loadTasks();
+            onChange={(value) => {
+                setSearch(value);
+                setPage(1);
             }}
-            className="rounded-2xl bg-emerald-500 px-6 py-3 font-medium text-white transition hover:bg-emerald-600"
-          >
-            Search
-          </button>
+            placeholder="Search tasks..."
+            />
         }
       />
 

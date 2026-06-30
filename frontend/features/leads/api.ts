@@ -1,17 +1,18 @@
 import api from "@/services/api";
 
-export async function getLeads(
-    page = 1,
-    search = ""
-) {
-    const response = await api.get("/leads", {
-        params: {
-            page,
-            search,
-        },
-    });
+export async function getLeads(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+}) {
+  const response = await api.get("/leads", {
+    params,
+  });
 
-    return response.data;
+  return response.data;
 }
 
 export interface CreateLeadPayload {

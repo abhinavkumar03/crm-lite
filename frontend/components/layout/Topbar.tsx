@@ -33,23 +33,23 @@ export default function Topbar({
     >
       <div className="flex items-center gap-4 w-full">
         <button
-          onClick={onMenuClick}
-          className="
-          rounded-xl
-          border
-          border-slate-200
-          bg-white
-          p-2
-          transition
-          hover:bg-slate-100
-          lg:hidden
-          "
+            onClick={onMenuClick}
+            className="
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            p-2
+            transition
+            hover:bg-slate-100
+            lg:hidden
+            "
         >
-          <Menu size={20} />
+            <Menu size={20} />
         </button>
 
-        {/* <SearchBar /> */}
-      </div>
+        <SearchBar />
+        </div>
 
       <div className="flex items-center gap-3 lg:gap-4">
         <NotificationBell />
