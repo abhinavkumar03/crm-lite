@@ -41,9 +41,9 @@ func (s *Service) Search(
 	var (
 		wg sync.WaitGroup
 
-		leadResults    = make([]leadDto.LeadResponse, 0)
-		contactResults = make([]contactDto.ContactResponse, 0)
-		taskResults    = make([]taskDto.TaskResponse, 0)
+		leadResults    []leadDto.LeadResponse
+		contactResults []contactDto.ContactResponse
+		taskResults    []taskDto.TaskResponse
 
 		leadErr    error
 		contactErr error
@@ -55,31 +55,64 @@ func (s *Service) Search(
 	go func() {
 		defer wg.Done()
 
-		leadResults, leadErr = s.leadRepo.Search(
+		res, err := s.leadRepo.List(
 			ctx,
 			ownerID,
-			query,
+			leadDto.ListLeadRequest{
+				Page:   1,
+				Limit:  5,
+				Search: query,
+			},
 		)
+
+		if err != nil {
+			leadErr = err
+			return
+		}
+
+		leadResults = res.Data
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		contactResults, contactErr = s.contactRepo.Search(
+		res, err := s.contactRepo.List(
 			ctx,
 			ownerID,
-			query,
+			contactDto.ListContactsRequest{
+				Page:   1,
+				Limit:  5,
+				Search: query,
+			},
 		)
+
+		if err != nil {
+			contactErr = err
+			return
+		}
+
+		contactResults = res.Data
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		taskResults, taskErr = s.taskRepo.Search(
+		res, err := s.taskRepo.List(
 			ctx,
 			ownerID,
-			query,
+			taskDto.ListTasksRequest{
+				Page:   1,
+				Limit:  5,
+				Search: query,
+			},
 		)
+
+		if err != nil {
+			taskErr = err
+			return
+		}
+
+		taskResults = res.Data
 	}()
 
 	wg.Wait()

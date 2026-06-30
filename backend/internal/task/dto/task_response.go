@@ -11,7 +11,7 @@ type TaskResponse struct {
 
 	Status string `json:"status"`
 
-	DueDate *time.Time `json:"due_date,omitempty"`
+	DueDate *string `json:"due_date,omitempty"`
 
 	LeadID *string `json:"lead_id,omitempty"`
 
