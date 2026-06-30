@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/activity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/attachment"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
@@ -79,15 +80,9 @@ func main() {
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
 	searchModule := search.NewModule(db, authModule.Middleware())
 	noteModule := note.NewModule(db, authModule.Middleware())
-	calllogModule := calllog.NewModule(
-		db,
-		authModule.Middleware(),
-	)
-
-	attachmentModule := attachment.NewModule(
-		db,
-		authModule.Middleware(),
-	)
+	calllogModule := calllog.NewModule(db, authModule.Middleware())
+	attachmentModule := attachment.NewModule(db, authModule.Middleware())
+	activityModule := activity.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		healthModule,
@@ -100,6 +95,7 @@ func main() {
 		noteModule,
 		calllogModule,
 		attachmentModule,
+		activityModule,
 	)
 
 	application := &app.Application{
