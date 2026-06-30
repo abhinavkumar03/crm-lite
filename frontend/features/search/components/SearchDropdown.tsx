@@ -122,7 +122,6 @@ export default function SearchDropdown({
                     href="/tasks"
                     onClick={onClose}
                     query={query}
-                    query={query}
                     active={activeIndex === current}
                   />
                 );
