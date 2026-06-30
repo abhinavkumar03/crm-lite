@@ -173,3 +173,24 @@ CREATE TABLE attachments (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 
 );
+
+CREATE TABLE activities (
+
+    id UUID PRIMARY KEY,
+
+    entity_type VARCHAR(30) NOT NULL,
+
+    entity_id UUID NOT NULL,
+
+    action VARCHAR(100) NOT NULL,
+
+    description TEXT NOT NULL,
+
+    performed_by UUID NOT NULL,
+
+    metadata JSONB,
+
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+
+);
+
