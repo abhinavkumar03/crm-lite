@@ -4,10 +4,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	activityRepository "github.com/abhinavkumar03/crm-lite/backend/internal/activity/repository"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
+
+	contactRepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/service"
+	taskRepository "github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
 )
 
 type Module struct {
@@ -23,7 +28,23 @@ func NewModule(
 
 	repo := repository.New(db)
 
-	svc := service.New(repo, producer)
+	activityRepo := activityRepository.New(db)
+
+	contactRepo := contactRepository.New(db)
+	taskRepo := taskRepository.New(db)
+
+	activitySvc := activityService.New(
+		activityRepo,
+		repo,
+		contactRepo,
+		taskRepo,
+	)
+
+	svc := service.New(
+		repo,
+		producer,
+		activitySvc,
+	)
 
 	h := handler.New(svc)
 
