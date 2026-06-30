@@ -1,5 +1,11 @@
 package dto
 
+import (
+	contactDto "github.com/abhinavkumar03/crm-lite/backend/internal/contact/dto"
+	leadDto "github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
+	taskDto "github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
+)
+
 type LeadResult struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
@@ -21,7 +27,7 @@ type TaskResult struct {
 }
 
 type SearchResponse struct {
-	Leads    []LeadResult    `json:"leads"`
-	Contacts []ContactResult `json:"contacts"`
-	Tasks    []TaskResult    `json:"tasks"`
+	Leads    []leadDto.LeadResponse       `json:"leads"`
+	Contacts []contactDto.ContactResponse `json:"contacts"`
+	Tasks    []taskDto.TaskResponse       `json:"tasks"`
 }
