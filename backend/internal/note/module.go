@@ -4,8 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/abhinavkumar03/crm-lite/backend/internal/auth/middleware"
-
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note/handler"
 	noteRepo "github.com/abhinavkumar03/crm-lite/backend/internal/note/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note/service"
@@ -17,12 +15,12 @@ import (
 
 type Module struct {
 	handler *handler.NoteHandler
-	auth    *middleware.AuthMiddleware
+	auth    gin.HandlerFunc
 }
 
 func NewModule(
 	db *pgxpool.Pool,
-	auth *middleware.AuthMiddleware,
+	auth gin.HandlerFunc,
 ) *Module {
 
 	noteRepository := noteRepo.New(db)
@@ -54,7 +52,7 @@ func (m *Module) RegisterRoutes(
 
 	api := router.Group("")
 
-	api.Use(m.auth.Handle())
+	api.Use(m.auth)
 
 	api.POST(
 		"/leads/:leadId/notes",
