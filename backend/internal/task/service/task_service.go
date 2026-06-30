@@ -115,41 +115,13 @@ func (s *Service) List(
 	ctx context.Context,
 	ownerID string,
 	req dto.ListTasksRequest,
-) ([]dto.TaskResponse, error) {
+) (*dto.ListTasksResponse, error) {
 
-	tasks, err := s.taskRepository.List(
+	return s.taskRepository.List(
 		ctx,
 		ownerID,
 		req,
 	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	response := make([]dto.TaskResponse, 0, len(tasks))
-
-	for _, task := range tasks {
-
-		var dueDate *string
-
-		if task.DueDate != nil {
-			v := task.DueDate.Format(time.RFC3339)
-			dueDate = &v
-		}
-
-		response = append(response, dto.TaskResponse{
-			ID:          task.ID,
-			Title:       task.Title,
-			Description: task.Description,
-			Status:      task.Status,
-			LeadID:      task.LeadID,
-			ContactID:   task.ContactID,
-			DueDate:     dueDate,
-		})
-	}
-
-	return response, nil
 }
 
 func (s *Service) GetByID(
