@@ -51,20 +51,30 @@ export default function DashboardQuickActionModals({
   }, [taskOpen]);
 
   async function loadRelations() {
-    try {
-      const [leadRes, contactRes] =
-        await Promise.all([
-          getLeads(1, ""),
-          getContacts(1, ""),
-        ]);
+  try {
+    const [leadRes, contactRes] =
+      await Promise.all([
+        getLeads({
+          page: 1,
+          limit: 100,
+        }),
+        getContacts({
+          page: 1,
+          limit: 100,
+        }),
+      ]);
 
-      setLeads(leadRes.data);
+    setLeads(leadRes.data.data);
 
-      setContacts(contactRes.data);
-    } catch (err) {
-      console.error(err);
-    }
+    setContacts(contactRes.data.data);
+  } catch (err) {
+    console.error(err);
+
+    toast.error(
+      "Unable to load leads and contacts."
+    );
   }
+}
 
   return (
     <>
