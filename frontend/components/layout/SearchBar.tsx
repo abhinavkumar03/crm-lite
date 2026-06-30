@@ -255,6 +255,7 @@ export default function SearchBar() {
         loading={loading}
         results={results}
         open={open}
+        query={query}
         activeIndex={activeIndex}
         onClose={() => {
           setOpen(false);

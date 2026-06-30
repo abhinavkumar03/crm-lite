@@ -11,8 +11,8 @@ type Props = {
   results: SearchResponse;
   open: boolean;
   onClose: () => void;
-
   activeIndex: number;
+  query: string;
 };
 
 export default function SearchDropdown({
@@ -21,15 +21,17 @@ export default function SearchDropdown({
   open,
   onClose,
   activeIndex,
+  query,
 }: Props) {
   if (!open) return null;
 
   const hasResults =
-    results.leads.length ||
-    results.contacts.length ||
-    results.tasks.length;
+    results.leads.length > 0 ||
+    results.contacts.length > 0 ||
+    results.tasks.length > 0;
 
-let index = 0;
+  let index = 0;
+
   return (
     <div
       className="
@@ -69,7 +71,7 @@ let index = 0;
                 const current = index++;
 
                 return (
-                    <SearchResult
+                  <SearchResult
                     key={lead.id}
                     type="lead"
                     title={lead.name}
@@ -77,17 +79,20 @@ let index = 0;
                     status={lead.status}
                     href="/leads"
                     onClick={onClose}
+                    query={query}
                     active={activeIndex === current}
-                    />
+                  />
                 );
-                })}
+              })}
             </SearchSection>
           )}
 
           {results.contacts.length > 0 && (
             <SearchSection title="Contacts">
-              {results.contacts.map(
-                (contact) => (
+              {results.contacts.map((contact) => {
+                const current = index++;
+
+                return (
                   <SearchResult
                     key={contact.id}
                     type="contact"
@@ -95,16 +100,20 @@ let index = 0;
                     subtitle={contact.email}
                     href="/contacts"
                     onClick={onClose}
+                    query={query}
+                    active={activeIndex === current}
                   />
-                )
-              )}
+                );
+              })}
             </SearchSection>
           )}
 
           {results.tasks.length > 0 && (
             <SearchSection title="Tasks">
-              {results.tasks.map(
-                (task) => (
+              {results.tasks.map((task) => {
+                const current = index++;
+
+                return (
                   <SearchResult
                     key={task.id}
                     type="task"
@@ -112,9 +121,12 @@ let index = 0;
                     status={task.status}
                     href="/tasks"
                     onClick={onClose}
+                    query={query}
+                    query={query}
+                    active={activeIndex === current}
                   />
-                )
-              )}
+                );
+              })}
             </SearchSection>
           )}
         </div>
