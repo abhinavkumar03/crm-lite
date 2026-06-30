@@ -26,6 +26,11 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
+	CloudinaryFolder    string
+
 	JWTSecret string
 
 	FrontendURLs []string
@@ -54,6 +59,11 @@ func Load() *Config {
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 		RedisDB:       getEnvAsInt("REDIS_DB", 0),
+
+		CloudinaryCloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryAPIKey:    getEnv("CLOUDINARY_API_KEY", ""),
+		CloudinaryAPISecret: getEnv("CLOUDINARY_API_SECRET", ""),
+		CloudinaryFolder:    getEnv("CLOUDINARY_FOLDER", "crm-lite"),
 
 		JWTSecret: getEnv("JWT_SECRET", "change-me-in-production"),
 
