@@ -21,7 +21,7 @@ type UploadResult struct {
 
 	ResourceType string
 
-	Bytes int64
+	Bytes int
 
 	Format string
 }
