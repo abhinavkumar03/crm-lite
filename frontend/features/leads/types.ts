@@ -11,3 +11,23 @@ export interface Lead {
 export interface LeadListResponse {
     data: Lead[];
 }
+
+export interface LeadDetails {
+  id: string;
+
+  name: string;
+
+  email: string;
+
+  phone: string;
+
+  company: string;
+
+  status: string;
+
+  notes: string;
+
+  created_at: string;
+
+  updated_at: string;
+}

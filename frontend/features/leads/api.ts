@@ -15,6 +15,16 @@ export async function getLeads(params: {
   return response.data;
 }
 
+export async function getLeadDetails(
+  id: string
+) {
+  const res = await api.get(
+    `/leads/${id}`
+  );
+
+  return res.data.data;
+}
+
 export interface CreateLeadPayload {
     name: string;
     email: string;
