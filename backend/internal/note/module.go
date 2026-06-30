@@ -60,8 +60,8 @@ func (m *Module) RegisterRoutes(
 	api.POST("/notes/task/:taskId", m.handler.CreateTaskNote)
 	api.GET("/notes/task/:taskId", m.handler.ListTaskNotes)
 
-	api.POST("/notes/contact/:contactId", m.handler.CreateTaskNote)
-	api.GET("/notes/contact/:contactId", m.handler.ListTaskNotes)
+	api.POST("/notes/contact/:contactId", m.handler.CreateContactNote)
+	api.GET("/notes/contact/:contactId", m.handler.ListContactNotes)
 
 	api.PUT("/notes/:noteId", m.handler.UpdateNote)
 	api.DELETE("/notes/:noteId", m.handler.DeleteNote)
