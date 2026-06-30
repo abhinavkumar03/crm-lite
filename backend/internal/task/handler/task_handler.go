@@ -94,10 +94,11 @@ func (h *TaskHandler) List(c *gin.Context) {
 	)
 
 	if err != nil {
+		println(err.Error())
 
 		response.InternalServerError(
 			c,
-			"Unable to fetch tasks",
+			err.Error(),
 		)
 
 		return

@@ -38,16 +38,23 @@ func main() {
 		cfg.DBSSLMode,
 	)
 
+	log.Info("Connecting to PostgreSQL...")
+
 	db, err := database.New(dsn)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Sugar().Fatalf("Postgres connection failed: %v", err)
 	}
-	defer db.Close()
+
+	log.Info("PostgreSQL connected")
+
+	log.Info("Connecting to Redis...")
 
 	redisClient, err := redis.New(cfg)
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Sugar().Fatalf("Redis connection failed: %v", err)
 	}
+
+	log.Info("Redis connected")
 
 	producer := jobs.NewProducer(
 		redisClient,
