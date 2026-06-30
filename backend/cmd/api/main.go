@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
@@ -75,6 +76,7 @@ func main() {
 	taskModule := task.NewModule(db, authModule.Middleware())
 	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
 	searchModule := search.NewModule(db, authModule.Middleware())
+	noteModule := note.NewModule(db, authModule.Middleware())
 	router := app.NewRouter(
 		log,
 		healthModule,
@@ -84,6 +86,7 @@ func main() {
 		taskModule,
 		dashboardModule,
 		searchModule,
+		noteModule,
 	)
 
 	application := &app.Application{
