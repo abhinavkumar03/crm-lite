@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 	contactrepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	leadrepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
@@ -16,18 +18,21 @@ type Service struct {
 	taskRepository    *repository.Repository
 	leadRepository    *leadrepository.Repository
 	contactRepository *contactrepository.Repository
+	activityService   *activityService.Service
 }
 
 func New(
 	taskRepo *repository.Repository,
 	leadRepo *leadrepository.Repository,
 	contactRepo *contactrepository.Repository,
+	activityService *activityService.Service,
 ) *Service {
 
 	return &Service{
 		taskRepository:    taskRepo,
 		leadRepository:    leadRepo,
 		contactRepository: contactRepo,
+		activityService:   activityService,
 	}
 }
 
@@ -93,6 +98,16 @@ func (s *Service) Create(
 	if err := s.taskRepository.Create(ctx, task); err != nil {
 		return nil, err
 	}
+
+	_ = s.activityService.Create(
+		ctx,
+		"TASK",
+		task.ID,
+		activityEntity.ActionTaskCreated,
+		"Task created",
+		nil,
+		ownerID,
+	)
 
 	var dueDate *string
 	if task.DueDate != nil {
@@ -256,6 +271,16 @@ func (s *Service) Update(
 		return nil, err
 	}
 
+	_ = s.activityService.Create(
+		ctx,
+		"TASK",
+		task.ID,
+		activityEntity.ActionTaskUpdated,
+		"Task updated",
+		nil,
+		ownerID,
+	)
+
 	var dueDate *string
 
 	if task.DueDate != nil {
@@ -280,9 +305,27 @@ func (s *Service) Delete(
 	ownerID string,
 ) (bool, error) {
 
-	return s.taskRepository.Delete(
+	deleted, err := s.taskRepository.Delete(
 		ctx,
 		id,
 		ownerID,
 	)
+
+	if err != nil {
+		return false, err
+	}
+
+	if deleted {
+		_ = s.activityService.Create(
+			ctx,
+			"TASK",
+			id,
+			activityEntity.ActionTaskDeleted,
+			"Task deleted",
+			nil,
+			ownerID,
+		)
+	}
+
+	return deleted, nil
 }

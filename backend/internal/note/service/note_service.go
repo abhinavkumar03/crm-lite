@@ -2,9 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
+
+	activityEntity "github.com/abhinavkumar03/crm-lite/backend/internal/activity/entity"
+	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 
 	contactRepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	leadRepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
@@ -17,10 +21,11 @@ import (
 )
 
 type Service struct {
-	noteRepo    *noteRepository.Repository
-	leadRepo    *leadRepository.Repository
-	contactRepo *contactRepository.Repository
-	taskRepo    *taskRepository.Repository
+	noteRepo        *noteRepository.Repository
+	leadRepo        *leadRepository.Repository
+	contactRepo     *contactRepository.Repository
+	taskRepo        *taskRepository.Repository
+	activityService *activityService.Service
 }
 
 func New(
@@ -28,13 +33,15 @@ func New(
 	leadRepo *leadRepository.Repository,
 	contactRepo *contactRepository.Repository,
 	taskRepo *taskRepository.Repository,
+	activityService *activityService.Service,
 ) *Service {
 
 	return &Service{
-		noteRepo:    noteRepo,
-		leadRepo:    leadRepo,
-		contactRepo: contactRepo,
-		taskRepo:    taskRepo,
+		noteRepo:        noteRepo,
+		leadRepo:        leadRepo,
+		contactRepo:     contactRepo,
+		taskRepo:        taskRepo,
+		activityService: activityService,
 	}
 }
 
@@ -148,10 +155,25 @@ func (s *Service) Create(
 		UpdatedAt:  now,
 	}
 
-	return s.noteRepo.Create(
+	if err := s.noteRepo.Create(ctx, note); err != nil {
+		return err
+	}
+
+	metadata, _ := json.Marshal(map[string]any{
+		"preview": note.Note,
+	})
+
+	_ = s.activityService.Create(
 		ctx,
-		note,
+		req.EntityType,
+		req.EntityID,
+		activityEntity.ActionNoteAdded,
+		"Added a note",
+		metadata,
+		ownerID,
 	)
+
+	return nil
 }
 
 func (s *Service) List(
@@ -232,10 +254,24 @@ func (s *Service) Update(
 	note.UpdatedAt = time.Now().UTC()
 	note.UpdatedBy = &ownerID
 
-	return s.noteRepo.Update(
+	if err := s.noteRepo.Update(
 		ctx,
 		note,
+	); err != nil {
+		return err
+	}
+
+	_ = s.activityService.Create(
+		ctx,
+		string(note.EntityType),
+		note.EntityID,
+		activityEntity.ActionNoteUpdated,
+		"Updated a note",
+		nil,
+		ownerID,
 	)
+
+	return nil
 }
 
 func (s *Service) Delete(
@@ -262,8 +298,22 @@ func (s *Service) Delete(
 		return err
 	}
 
-	return s.noteRepo.Delete(
+	if err := s.noteRepo.Delete(
 		ctx,
 		noteID,
+	); err != nil {
+		return err
+	}
+
+	_ = s.activityService.Create(
+		ctx,
+		string(note.EntityType),
+		note.EntityID,
+		activityEntity.ActionNoteDeleted,
+		"Deleted a note",
+		nil,
+		ownerID,
 	)
+
+	return nil
 }
