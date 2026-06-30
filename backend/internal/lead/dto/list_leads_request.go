@@ -1,11 +1,10 @@
 package dto
 
-type ListLeadsRequest struct {
-	Page int
-
-	Limit int
-
-	Search string
-
-	Status string
+type ListLeadRequest struct {
+	Page      int
+	Limit     int
+	Search    string
+	Status    string
+	SortBy    string
+	SortOrder string
 }

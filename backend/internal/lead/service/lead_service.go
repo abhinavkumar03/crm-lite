@@ -92,35 +92,14 @@ func (s *Service) Create(
 func (s *Service) List(
 	ctx context.Context,
 	ownerID string,
-	req dto.ListLeadsRequest,
-) ([]dto.LeadResponse, error) {
+	req dto.ListLeadRequest,
+) (*dto.ListLeadResponse, error) {
 
-	leads, err := s.repository.List(
+	return s.repository.List(
 		ctx,
 		ownerID,
 		req,
 	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	response := make([]dto.LeadResponse, 0, len(leads))
-
-	for _, lead := range leads {
-
-		response = append(response, dto.LeadResponse{
-			ID:      lead.ID,
-			Name:    lead.Name,
-			Email:   lead.Email,
-			Phone:   lead.Phone,
-			Company: lead.Company,
-			Status:  lead.Status,
-			Notes:   lead.Notes,
-		})
-	}
-
-	return response, nil
 }
 
 func (s *Service) GetByID(
