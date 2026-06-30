@@ -19,10 +19,12 @@ func New(service *service.Service) *DashboardHandler {
 func (h *DashboardHandler) Dashboard(c *gin.Context) {
 
 	userID := c.GetString("userID")
+	refresh := c.Query("refresh") == "true"
 
 	data, err := h.service.GetDashboard(
 		c.Request.Context(),
 		userID,
+		refresh,
 	)
 
 	if err != nil {

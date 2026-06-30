@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/entity"
@@ -261,4 +262,100 @@ func (r *Repository) Delete(
 	}
 
 	return result.RowsAffected() > 0, nil
+}
+
+func (r *Repository) Search(
+	ctx context.Context,
+	ownerID string,
+	query string,
+) ([]dto.LeadResponse, error) {
+
+	search := "%" + strings.ToLower(query) + "%"
+
+	rows, err := r.db.Query(
+		ctx,
+		`
+SELECT
+	id,
+	name,
+	email,
+	phone,
+	company,
+	status,
+	notes,
+	owner_id,
+	created_at,
+	updated_at
+FROM leads
+WHERE owner_id=$1
+AND (
+
+	LOWER(name) LIKE $2
+
+	OR LOWER(email) LIKE $2
+
+	OR LOWER(phone) LIKE $2
+
+	OR LOWER(company) LIKE $2
+
+)
+
+ORDER BY created_at DESC
+
+LIMIT 10
+`,
+		ownerID,
+		search,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	leads := make([]dto.LeadResponse, 0)
+
+	for rows.Next() {
+
+		var lead dto.LeadResponse
+
+		err := rows.Scan(
+
+			&lead.ID,
+
+			&lead.Name,
+
+			&lead.Email,
+
+			&lead.Phone,
+
+			&lead.Company,
+
+			&lead.Status,
+
+			&lead.Notes,
+
+			&lead.OwnerID,
+
+			&lead.CreatedAt,
+
+			&lead.UpdatedAt,
+		)
+
+		if err != nil {
+
+			return nil, err
+
+		}
+
+		leads = append(
+			leads,
+			lead,
+		)
+
+	}
+
+	return leads, nil
+
 }
