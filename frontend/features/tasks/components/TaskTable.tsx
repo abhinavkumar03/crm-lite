@@ -12,6 +12,7 @@ import TableActionMenu from "@/components/common/table/TableActionMenu";
 import TablePagination from "@/components/common/table/TablePagination";
 import EmptyTable from "@/components/common/table/EmptyTable";
 import TaskCardList from "./TaskCardList";
+import Link from "next/link";
 
 type Props = {
     tasks: Task[];
@@ -125,17 +126,29 @@ export default function TaskTable({
                             {/* Related Entity */}
 
                             <td className="px-6 py-5">
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <div className="flex items-center gap-2 text-sm">
                                     <Link2
                                         size={16}
                                         className="text-slate-400"
                                     />
 
-                                    {task.lead_id
-                                        ? `Lead #${task.lead_id}`
-                                        : task.contact_id
-                                            ? `Contact #${task.contact_id}`
-                                            : "-"}
+                                    {task.lead_id ? (
+                                        <Link
+                                            href={`/leads/${task.lead_id}`}
+                                            className="font-medium text-emerald-600 transition hover:text-emerald-700 hover:underline"
+                                        >
+                                            View Lead
+                                        </Link>
+                                    ) : task.contact_id ? (
+                                        <Link
+                                            href={`/contacts/${task.contact_id}`}
+                                            className="font-medium text-emerald-600 transition hover:text-emerald-700 hover:underline"
+                                        >
+                                            View Contact
+                                        </Link>
+                                    ) : (
+                                        <span className="text-slate-500">-</span>
+                                    )}
                                 </div>
                             </td>
 
