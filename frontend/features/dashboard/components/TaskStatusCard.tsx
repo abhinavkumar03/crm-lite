@@ -63,7 +63,7 @@ export default function TaskStatusCard({
           </h2>
         </div>
 
-        <div className="rounded-2xl bg-blue-50 px-4 py-2 text-right">
+        {/* <div className="rounded-2xl bg-blue-50 px-4 py-2 text-right">
           <p className="text-xs text-slate-500">
             Completion
           </p>
@@ -71,7 +71,7 @@ export default function TaskStatusCard({
           <p className="text-2xl font-bold text-blue-600">
             {completion}%
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Overall Progress */}

@@ -15,12 +15,14 @@ type Props = {
   onSubmit: (
     values: CreateContactPayload
   ) => Promise<void>;
+  onClose?: () => void;
 };
 
 export default function ContactForm({
   initialValues,
   submitText,
   onSubmit,
+  onClose,
 }: Props) {
   const [loading, setLoading] =
     useState(false);
@@ -145,6 +147,7 @@ export default function ContactForm({
         <FormActions
           loading={loading}
           submitText={submitText}
+          onCancel={onClose}
         />
       </FormCard>
     </form>

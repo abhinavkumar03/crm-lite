@@ -4,6 +4,8 @@ import {
   UserRound,
 } from "lucide-react";
 
+import Link from "next/link";
+
 import { Lead } from "../types";
 
 type Props = {
@@ -28,9 +30,12 @@ export default function RecentLeadsCard({
           </h2>
         </div>
 
-        <button className="text-sm font-semibold text-emerald-600 transition hover:text-emerald-700">
+        <Link
+          href="/leads"
+          className="text-sm font-semibold text-emerald-600 transition hover:text-emerald-700"
+        >
           View All
-        </button>
+        </Link>
       </div>
 
       {/* Empty State */}
@@ -120,14 +125,32 @@ export default function RecentLeadsCard({
       {/* Footer */}
 
       {(leads ?? []).length > 0 && (
-        <div className="border-slate-100 p-5">
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 font-medium text-slate-700 transition hover:bg-slate-100">
-            View Complete Lead List
+  <div className="p-5">
+    <Link
+      href="/leads"
+      className="
+      flex
+      w-full
+      items-center
+      justify-center
+      gap-2
+      rounded-xl
+      border
+      border-slate-200
+      bg-white
+      py-3
+      font-medium
+      text-slate-700
+      transition
+      hover:bg-slate-100
+      "
+    >
+      View Complete Lead List
 
-            <ArrowRight size={18} />
-          </button>
-        </div>
-      )}
+      <ArrowRight size={18} />
+    </Link>
+  </div>
+)}
     </section>
   );
 }

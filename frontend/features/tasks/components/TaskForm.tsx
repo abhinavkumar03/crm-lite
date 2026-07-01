@@ -22,6 +22,7 @@ type Props = {
   onSubmit: (
     values: CreateTaskPayload
   ) => Promise<void>;
+  onClose?: () => void;
 };
 
 export default function TaskForm({
@@ -30,6 +31,7 @@ export default function TaskForm({
   leads,
   contacts,
   onSubmit,
+  onClose,
 }: Props) {
   const [loading, setLoading] =
     useState(false);
@@ -227,6 +229,7 @@ export default function TaskForm({
         <FormActions
           loading={loading}
           submitText={submitText}
+          onCancel={onClose}
         />
       </FormCard>
     </form>

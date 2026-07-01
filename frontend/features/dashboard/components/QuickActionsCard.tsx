@@ -44,15 +44,7 @@ const actions = [
       "Schedule follow-up work",
     icon: ClipboardList,
     color: "bg-violet-500",
-  },
-  {
-    type: "call" as const,
-    title: "Log Call",
-    description:
-      "Record customer interaction",
-    icon: PhoneCall,
-    color: "bg-amber-500",
-  },
+  }
 ];
 
 export default function QuickActionsCard({
