@@ -23,7 +23,7 @@ export default function AuthCard({
     >
       {/* Body */}
 
-      <div className="p-8 sm:p-10">
+      <div className="px-4 py-2 sm:p-8">
         {children}
       </div>
 

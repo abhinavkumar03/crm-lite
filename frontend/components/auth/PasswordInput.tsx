@@ -24,7 +24,7 @@ export default function PasswordInput({
     useState(false);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <label className="block text-sm font-semibold text-slate-700">
         {label}
       </label>
@@ -65,7 +65,7 @@ export default function PasswordInput({
           border
           border-slate-200
           bg-white
-          py-3.5
+          py-3
           pl-12
           pr-12
           text-sm
