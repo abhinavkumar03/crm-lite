@@ -208,3 +208,62 @@ func (r *Repository) UpcomingTasks(
 
 	return tasks, nil
 }
+
+func (r *Repository) RecentActivities(
+	ctx context.Context,
+	ownerID string,
+) ([]dto.RecentActivityResponse, error) {
+
+	query := `
+	SELECT
+		id,
+		entity_type,
+		entity_id,
+		action,
+		description,
+		metadata,
+		performed_by,
+		created_at
+	FROM activities
+	WHERE performed_by = $1
+	ORDER BY created_at DESC
+	LIMIT 10;
+	`
+
+	rows, err := r.db.Query(
+		ctx,
+		query,
+		ownerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	activities := make([]dto.RecentActivityResponse, 0)
+
+	for rows.Next() {
+		var activity dto.RecentActivityResponse
+
+		if err := rows.Scan(
+			&activity.ID,
+			&activity.EntityType,
+			&activity.EntityID,
+			&activity.Action,
+			&activity.Description,
+			&activity.Metadata,
+			&activity.PerformedBy,
+			&activity.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+
+		activities = append(activities, activity)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return activities, nil
+}

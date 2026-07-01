@@ -73,6 +73,15 @@ func (s *Service) GetDashboard(
 		return nil, err
 	}
 
+	data.RecentActivities, err = s.repository.RecentActivities(
+		ctx,
+		ownerID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
 	bytes, _ := json.Marshal(data)
 
 	_ = s.redis.Set(
