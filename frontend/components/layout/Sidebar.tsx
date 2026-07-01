@@ -220,7 +220,7 @@ export default function Sidebar({
 
         {/* Footer */}
 
-        <div className="border-t border-slate-200 p-5">
+        <div className="border-slate-200 p-5">
           <div
             className="
             rounded-2xl
@@ -230,10 +230,6 @@ export default function Sidebar({
             p-5
             "
           >
-            <h4 className="font-semibold text-slate-900">
-              CRM Lite
-            </h4>
-
             <p className="mt-2 text-sm leading-6 text-slate-500">
               Built with Go, PostgreSQL, Redis and
               Next.js for modern CRM workflows.
