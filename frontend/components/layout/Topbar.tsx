@@ -20,52 +20,85 @@ export default function Topbar({
       sticky
       top-0
       z-30
-      flex
-      h-20
-      items-center
-      justify-between
       border-b
       border-slate-200
       bg-white/80
-      px-4
       backdrop-blur-xl
-      lg:px-8
       "
     >
-      <div className="flex w-full items-center gap-4">
-  <button
-    onClick={onMenuClick}
-    className="
-    rounded-xl
-    border
-    border-slate-200
-    bg-white
-    p-2
-    transition
-    hover:bg-slate-100
-    lg:hidden
-    "
-  >
-    <Menu size={20} />
-  </button>
+      <div
+        className="
+        flex
+        h-20
+        items-center
+        justify-between
+        gap-4
+        px-4
+        lg:px-8
+        "
+      >
+        {/* Left */}
 
-  {/* Desktop */}
+        <div
+          className="
+          flex
+          min-w-0
+          flex-1
+          items-center
+          gap-4
+          "
+        >
+          {/* Mobile Menu */}
 
-  <div className="hidden flex-1 lg:block">
-    <SearchBar />
-  </div>
+          <button
+            onClick={onMenuClick}
+            className="
+            flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            transition
 
-  {/* Mobile */}
+            hover:bg-slate-100
 
-  <div className="flex-1 lg:hidden">
-    <MobileSearch />
-  </div>
-</div>
+            lg:hidden
+            "
+          >
+            <Menu size={20} />
+          </button>
 
-      <div className="flex items-center gap-3 lg:gap-4">
-        <NotificationBell />
+          {/* Desktop Search */}
 
-        <UserMenu />
+          <div className="hidden flex-1 lg:block">
+            <SearchBar />
+          </div>
+
+          {/* Mobile Search */}
+
+          <div className="flex-1 lg:hidden">
+            <MobileSearch />
+          </div>
+        </div>
+
+        {/* Right */}
+
+        <div
+          className="
+          flex
+          flex-shrink-0
+          items-center
+          gap-3
+          "
+        >
+          <NotificationBell />
+
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

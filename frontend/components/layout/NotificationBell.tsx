@@ -8,8 +8,6 @@ export default function NotificationBell() {
       className="
       relative
       rounded-2xl
-      border
-      border-slate-200
       bg-white
       p-3
       transition

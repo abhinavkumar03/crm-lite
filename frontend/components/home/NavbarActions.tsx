@@ -9,7 +9,7 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 
-import ProfileDropdown from "./ProfileDropdown";
+import UserMenu from "@/components/layout/UserMenu";
 
 type Props = {
   mobile?: boolean;
@@ -62,10 +62,10 @@ export default function NavbarActions({
               Dashboard
             </Link>
 
-            <ProfileDropdown mobile />
+            <UserMenu mobile />
           </>
         ) : (
-          <ProfileDropdown />
+          <UserMenu showDashboard />
         )}
       </div>
     );

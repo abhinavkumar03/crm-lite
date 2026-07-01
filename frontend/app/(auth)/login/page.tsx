@@ -170,7 +170,7 @@ export default function LoginPage() {
               Remember me
             </label>
 
-            <button
+            {/* <button
               type="button"
               className="
               text-sm
@@ -180,7 +180,7 @@ export default function LoginPage() {
               "
             >
               Forgot password?
-            </button>
+            </button> */}
           </div>
 
           {/* Button */}
