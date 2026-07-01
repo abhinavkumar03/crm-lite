@@ -19,11 +19,8 @@ export default function DashboardHeader({ onRefresh }: Props) {
       {/* Left */}
 
       <div>
-        <div className="inline-flex items-center rounded-full bg-emerald-50 px-4 py-1 text-sm font-medium text-emerald-700">
-          CRM Dashboard
-        </div>
 
-        <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-4xl font-bold tracking-tight text-slate-900">
           Welcome back 👋
         </h1>
 
