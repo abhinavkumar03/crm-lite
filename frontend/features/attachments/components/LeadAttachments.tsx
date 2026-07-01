@@ -98,36 +98,6 @@ export default function LeadAttachments({
           <h2 className="text-xl font-semibold">
             Attachments
           </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Upload proposals,
-            quotations,
-            contracts and
-            documents.
-          </p>
-          <button
-            onClick={() =>
-                setOpen(true)
-            }
-            className="
-            mt-8
-            inline-flex
-            items-center
-            gap-2
-            rounded-2xl
-            bg-emerald-500
-            px-5
-            py-3
-            font-medium
-            text-white
-            transition
-            hover:bg-emerald-600
-            "
-            >
-            <Plus size={18} />
-
-            Upload First File
-            </button>
         </div>
 
         <button
