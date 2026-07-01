@@ -12,6 +12,8 @@ import LeadDetailsHeader from "@/features/leads/components/details/LeadDetailsHe
 import LeadDetailsTabs from "@/features/leads/components/details/LeadDetailsTabs";
 import LeadOverviewTab from "@/features/leads/components/details/LeadOverviewTab";
 import LeadAttachments from "@/features/attachments/components/LeadAttachments";
+import LeadCallLogs from "@/features/calls/components/LeadCallLogs";
+import LeadActivityTimeline from "@/features/activity/components/LeadActivityTimeline";
 
 export default function LeadDetailsPage() {
     const params = useParams();
@@ -86,6 +88,19 @@ export default function LeadDetailsPage() {
             <LeadAttachments
                 leadId={lead.id}
             />
+            )}
+
+            {activeTab === "calls" && (
+            <LeadCallLogs
+                leadId={lead.id}
+            />
+            )}
+
+
+            {activeTab === "activity" && (
+                <LeadActivityTimeline
+                    leadId={lead.id}
+                />
             )}
             </div>
         </div>
