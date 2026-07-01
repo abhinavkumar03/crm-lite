@@ -60,7 +60,7 @@ const [open, setOpen] =
 ) {
     const ok =
         window.confirm(
-            `Delete "${call.subject}"?`
+    `Delete this ${call.direction.toLowerCase()} call log?`
         );
 
     if (!ok) {
