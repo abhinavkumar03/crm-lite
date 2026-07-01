@@ -92,7 +92,7 @@ export default function Sidebar({
       >
         {/* Header */}
 
-        <div className="relative border-b border-slate-200 px-6 py-5">
+        <div className="relative border-b border-slate-200 px-6 py-4">
           <button
             onClick={onClose}
             className="
