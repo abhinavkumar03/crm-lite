@@ -15,6 +15,7 @@ import UpcomingTasksCard from "@/features/dashboard/components/UpcomingTasksCard
 import QuickActionsCard, { QuickActionType } from "@/features/dashboard/components/QuickActionsCard";
 import { useRouter } from "next/navigation";
 import DashboardQuickActionModals from "@/features/dashboard/components/DashboardQuickActionModals";
+import RecentActivityCard from "@/features/dashboard/components/RecentActivityCard";
 
 export default function DashboardPage() {
     const [dashboard, setDashboard] =
@@ -107,9 +108,7 @@ export default function DashboardPage() {
         <div className="space-y-8">
             <DashboardHeader onRefresh={() => loadDashboard(true)}/>
 
-            <MetricsGrid
-                dashboard={dashboard}
-            />
+            <MetricsGrid dashboard={dashboard}/>
 
             <div className="grid gap-6 xl:grid-cols-2">
                 <LeadStatusCard
@@ -135,15 +134,11 @@ export default function DashboardPage() {
 
             <div className="grid gap-6 xl:grid-cols-3">
                 <div className="xl:col-span-2">
-                    <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
-                        <h3 className="text-xl font-bold">
-                            Recent Activity
-                        </h3>
-
-                        <p className="mt-2 text-slate-500">
-                            Coming in the next phase.
-                        </p>
-                    </div>
+                    <RecentActivityCard
+                        activities={
+                            dashboard.recent_activities
+                        }
+                    />
                 </div>
 
                 <QuickActionsCard onAction={handleQuickAction} />

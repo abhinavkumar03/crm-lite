@@ -227,7 +227,7 @@ func (r *Repository) RecentActivities(
 	FROM activities
 	WHERE performed_by = $1
 	ORDER BY created_at DESC
-	LIMIT 10;
+	LIMIT 5;
 	`
 
 	rows, err := r.db.Query(

@@ -39,4 +39,25 @@ export interface DashboardResponse {
     recent_leads: Lead[];
 
     upcoming_tasks: Task[];
+
+    recent_activities: DashboardActivity[];
+}
+
+export interface DashboardActivity {
+  id: string;
+
+  entity_type:
+    | "LEAD"
+    | "CONTACT"
+    | "TASK";
+
+  entity_id: string;
+
+  action: string;
+
+  description: string;
+
+  metadata: string | null;
+
+  created_at: string;
 }
