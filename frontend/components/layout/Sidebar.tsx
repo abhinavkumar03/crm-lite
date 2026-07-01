@@ -220,7 +220,7 @@ export default function Sidebar({
 
         {/* Footer */}
 
-        <div className="border-slate-200 p-5">
+        {/* <div className="border-slate-200 p-5">
           <div
             className="
             rounded-2xl
@@ -253,7 +253,7 @@ export default function Sidebar({
               </span>
             </div>
           </div>
-        </div>
+        </div> */}
       </aside>
     </>
   );
