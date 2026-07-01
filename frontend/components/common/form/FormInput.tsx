@@ -14,7 +14,7 @@ export default function FormInput({
   ...props
 }: Props) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <label className="block text-sm font-semibold text-slate-700">
         {label}
 

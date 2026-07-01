@@ -86,11 +86,11 @@ export default function LoginPage() {
       >
         <form
           onSubmit={handleLogin}
-          className="space-y-6"
+          className="space-y-4"
         >
           {/* Email */}
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="block text-sm font-semibold text-slate-700">
               Email Address
             </label>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 rounded-2xl
                 border
                 border-slate-200
-                py-3.5
+                py-3
                 pl-12
                 pr-4
                 text-sm
@@ -195,7 +195,7 @@ export default function LoginPage() {
             gap-2
             rounded-2xl
             bg-emerald-500
-            py-3.5
+            py-3
             font-semibold
             text-white
             transition

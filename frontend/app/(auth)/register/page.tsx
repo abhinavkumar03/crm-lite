@@ -16,6 +16,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import AuthCard from "@/components/auth/AuthCard";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { toast } from "sonner";
+import PasswordStrength from "@/components/auth/PasswordStrength";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -105,8 +106,10 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create Account"
-      subtitle="Start managing leads, contacts and tasks with CRM Lite."
+      // title="Create Account"
+      // subtitle="Start managing leads, contacts and tasks with CRM Lite."
+      title=""
+      subtitle=""
     >
       <AuthCard
         footer={
@@ -127,11 +130,11 @@ export default function RegisterPage() {
       >
         <form
           onSubmit={handleSubmit}
-          className="space-y-6"
+          className="space-y-4"
         >
           {/* Name */}
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="text-sm font-semibold text-slate-700">
               Full Name
             </label>
@@ -163,7 +166,7 @@ export default function RegisterPage() {
                 rounded-2xl
                 border
                 border-slate-200
-                py-3.5
+                py-3
                 pl-12
                 pr-4
                 text-sm
@@ -179,7 +182,7 @@ export default function RegisterPage() {
 
           {/* Email */}
 
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="text-sm font-semibold text-slate-700">
               Email Address
             </label>
@@ -212,7 +215,7 @@ export default function RegisterPage() {
                 rounded-2xl
                 border
                 border-slate-200
-                py-3.5
+                py-3
                 pl-12
                 pr-4
                 text-sm
@@ -248,18 +251,25 @@ export default function RegisterPage() {
             required
           />
 
+          {confirmPassword.length > 0 && (
+            <div
+              className={`rounded-xl px-4 py-3 text-sm ${
+                password === confirmPassword
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {password === confirmPassword
+                ? "✓ Passwords match"
+                : "✗ Passwords do not match"}
+            </div>
+          )}
+
           {/* Password Helper */}
 
-          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-            Password must contain:
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>8+ characters</li>
-              <li>One uppercase letter</li>
-              <li>One lowercase letter</li>
-              <li>One number</li>
-              <li>One special character</li>
-            </ul>
-          </div>
+          <PasswordStrength
+            password={password}
+          />
 
           {/* Error */}
 
@@ -281,7 +291,7 @@ export default function RegisterPage() {
             gap-2
             rounded-2xl
             bg-emerald-500
-            py-3.5
+            py-3
             font-semibold
             text-white
             transition
