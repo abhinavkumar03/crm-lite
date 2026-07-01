@@ -31,4 +31,6 @@ type DashboardResponse struct {
 	RecentLeads []leadDto.LeadResponse `json:"recent_leads"`
 
 	UpcomingTasks []taskDto.TaskResponse `json:"upcoming_tasks"`
+
+	RecentActivities []RecentActivityResponse `json:"recent_activities"`
 }
