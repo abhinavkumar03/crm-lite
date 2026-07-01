@@ -6,6 +6,8 @@ import {
   Clock3,
 } from "lucide-react";
 
+import Link from "next/link";
+
 import { Task } from "../types";
 
 type Props = {
@@ -36,9 +38,12 @@ export default function UpcomingTasksCard({
           </h2>
         </div>
 
-        <button className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+        <Link
+          href="/tasks"
+          className="text-sm font-semibold text-emerald-600 transition hover:text-emerald-700"
+        >
           View All
-        </button>
+        </Link>
       </div>
 
       {/* Empty State */}
@@ -77,7 +82,8 @@ export default function UpcomingTasksCard({
             status === "completed";
 
           return (
-            <div
+            <Link
+              href={`/tasks`}
               key={task.id}
               className="group flex items-center justify-between p-5 transition-all duration-300 hover:bg-slate-50"
             >
@@ -131,7 +137,7 @@ export default function UpcomingTasksCard({
                 size={18}
                 className="text-slate-400 transition group-hover:translate-x-1"
               />
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -140,11 +146,29 @@ export default function UpcomingTasksCard({
 
       {(tasks ?? []).length > 0 && (
         <div className="border-slate-100 p-5">
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 font-medium text-slate-700 transition hover:bg-slate-100">
-            View Task Board
+          <Link
+  href="/tasks"
+  className="
+    flex
+    w-full
+    items-center
+    justify-center
+    gap-2
+    rounded-xl
+    border
+    border-slate-200
+    bg-white
+    py-3
+    font-medium
+    text-slate-700
+    transition
+    hover:bg-slate-100
+  "
+>
+  View Task Board
 
-            <ArrowRight size={18} />
-          </button>
+  <ArrowRight size={18} />
+</Link>
         </div>
       )}
     </section>

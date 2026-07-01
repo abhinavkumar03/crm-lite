@@ -100,6 +100,7 @@ export default function DashboardQuickActionModals({
 
             onSuccess();
           }}
+          onClose={onCloseLead}
         />
       </Modal>
 
@@ -125,6 +126,7 @@ export default function DashboardQuickActionModals({
 
             onSuccess();
           }}
+          onClose={onCloseContact}
         />
       </Modal>
 
@@ -152,6 +154,7 @@ export default function DashboardQuickActionModals({
 
             onSuccess();
           }}
+          onClose={onCloseTask}
         />
       </Modal>
     </>

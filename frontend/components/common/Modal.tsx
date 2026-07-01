@@ -1,46 +1,58 @@
 "use client";
 
+import { X } from "lucide-react";
+
 interface ModalProps {
-    open: boolean;
-    title: string;
-    onClose: () => void;
-    children: React.ReactNode;
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
 }
 
 export default function Modal({
-    open,
-    title,
-    onClose,
-    children,
+  open,
+  title,
+  onClose,
+  children,
 }: ModalProps) {
+  if (!open) return null;
 
-    if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+        {/* Header */}
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <h2 className="text-xl font-semibold text-slate-900">
+            {title}
+          </h2>
 
-            <div className="w-full max-w-lg rounded-lg bg-white shadow-lg">
-
-                <div className="flex items-center justify-between border-b p-4">
-
-                    <h2 className="text-lg font-semibold">
-                        {title}
-                    </h2>
-
-                    <button onClick={onClose}>
-                        ✕
-                    </button>
-
-                </div>
-
-                <div className="p-6">
-
-                    {children}
-
-                </div>
-
-            </div>
-
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              text-slate-500
+              transition
+              hover:bg-red-50
+              hover:text-red-500
+            "
+          >
+            <X size={20} />
+          </button>
         </div>
-    );
+
+        {/* Body */}
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -68,7 +68,7 @@ export default function LeadStatusCard({
           </h2>
         </div>
 
-        <div className="rounded-2xl bg-emerald-50 px-4 py-2 text-right">
+        {/* <div className="rounded-2xl bg-emerald-50 px-4 py-2 text-right">
           <p className="text-xs text-slate-500">
             Total Leads
           </p>
@@ -76,7 +76,7 @@ export default function LeadStatusCard({
           <p className="text-2xl font-bold text-emerald-600">
             {total}
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Status */}

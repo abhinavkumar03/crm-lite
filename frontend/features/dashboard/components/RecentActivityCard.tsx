@@ -64,7 +64,7 @@ export default function RecentActivityCard({
 
       {/* Footer */}
 
-      <div className="border-t border-slate-100 p-4">
+      {/* <div className="border-t border-slate-100 p-4">
         <Link
           href="/activity"
           className="
@@ -85,7 +85,7 @@ export default function RecentActivityCard({
 
           <ArrowRight size={16} />
         </Link>
-      </div>
+      </div> */}
     </div>
   );
 }

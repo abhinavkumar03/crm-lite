@@ -75,7 +75,7 @@ export default function LeadForm({
       <FormCard>
         {/* Header */}
 
-        <div className="mb-8 flex items-start justify-between">
+        {/* <div className="mb-8 flex items-start justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
               Create Lead
@@ -110,7 +110,7 @@ export default function LeadForm({
               <X size={20} />
             </button>
           )}
-        </div>
+        </div> */}
 
         {/* Basic Information */}
 
@@ -232,6 +232,7 @@ export default function LeadForm({
         <FormActions
           loading={loading}
           submitText={submitText}
+          onCancel={onClose}
         />
       </FormCard>
     </form>
