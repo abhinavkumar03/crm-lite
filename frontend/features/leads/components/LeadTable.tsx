@@ -70,73 +70,47 @@ export default function LeadTable({
                     }
                 >
                     {leads.map((lead) => (
-                        <tr
-  key={lead.id}
-  className="transition-colors hover:bg-slate-50"
->
-  <td className="px-6 py-5">
-    <Link
-      href={`/leads/${lead.id}`}
-      className="block rounded-xl hover:opacity-80"
-    >
-      <AvatarCell
-        name={lead.name}
-        subtitle={lead.company}
-      />
-    </Link>
-  </td>
+                        <tr key={lead.id} className="transition-colors hover:bg-slate-50">
+                          <td className="px-6 py-5">
+                            <Link href={`/leads/${lead.id}`} className="block rounded-xl hover:opacity-80">
+                              <AvatarCell name={lead.name} subtitle={lead.company}/>
+                            </Link>
+                          </td>
 
-  <td className="px-6 py-5">
-    <Link
-      href={`/leads/${lead.id}`}
-      className="block rounded-xl hover:opacity-80"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-slate-700">
-          <Mail
-            size={15}
-            className="text-slate-400"
-          />
-          <span className="truncate">
-            {lead.email}
-          </span>
-        </div>
+                          <td className="px-6 py-5">
+                            <Link href={`/leads/${lead.id}`} className="block rounded-xl hover:opacity-80">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-slate-700">
+                                  <Mail size={15} className="text-slate-400"/>
+                                  <span className="truncate">
+                                    {lead.email}
+                                  </span>
+                                </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Phone
-            size={15}
-            className="text-slate-400"
-          />
-          {lead.phone || "-"}
-        </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                  <Phone size={15} className="text-slate-400"/> {lead.phone || "-"}
+                                </div>
 
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Building2
-            size={15}
-            className="text-slate-400"
-          />
-          {lead.company || "-"}
-        </div>
-      </div>
-    </Link>
-  </td>
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                  <Building2 size={15} className="text-slate-400" /> {lead.company || "-"}
+                                </div>
+                              </div>
+                            </Link>
+                          </td>
 
-  <td className="px-6 py-5">
-    <Link
-      href={`/leads/${lead.id}`}
-      className="block rounded-xl hover:opacity-80"
-    >
-      <StatusBadge status={lead.status} />
-    </Link>
-  </td>
+                          <td className="px-6 py-5">
+                            <Link href={`/leads/${lead.id}`} className="block rounded-xl hover:opacity-80">
+                              <StatusBadge status={lead.status} />
+                            </Link>
+                          </td>
 
-  <td className="px-6 py-5 text-right">
-    <TableActionMenu
-      onEdit={() => onEdit(lead)}
-      onDelete={() => onDelete(lead)}
-    />
-  </td>
-</tr>
+                          <td className="px-6 py-5 text-right">
+                            <TableActionMenu
+                              onEdit={() => onEdit(lead)}
+                              onDelete={() => onDelete(lead)}
+                            />
+                          </td>
+                        </tr>
                     ))}
                 </DataTable>
             </div>
