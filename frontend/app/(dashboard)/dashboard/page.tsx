@@ -127,20 +127,6 @@ export default function DashboardPage() {
                     />
                 </div>
 
-                <UpcomingTasksCard
-                    tasks={dashboard.upcoming_tasks}
-                />
-            </div>
-
-            <div className="grid gap-6 xl:grid-cols-3">
-                <div className="xl:col-span-2">
-                    <RecentActivityCard
-                        activities={
-                            dashboard.recent_activities
-                        }
-                    />
-                </div>
-
                 <QuickActionsCard onAction={handleQuickAction} />
 
                 <DashboardQuickActionModals
@@ -160,6 +146,22 @@ export default function DashboardPage() {
                         loadDashboard(true);
                     }}
                 />
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-3">
+                <div className="xl:col-span-2">
+                    <RecentActivityCard
+                        activities={
+                            dashboard.recent_activities
+                        }
+                    />
+                </div>
+
+
+                <UpcomingTasksCard
+                    tasks={dashboard.upcoming_tasks}
+                />
+                
             </div>
         </div>
     );

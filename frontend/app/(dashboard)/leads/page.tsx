@@ -128,27 +128,16 @@ export default function LeadsPage() {
 
             {/* Edit */}
 
-            <Modal
-                open={!!editingLead}
-                title="Edit Lead"
-                onClose={() =>
-                    setEditingLead(null)
-                }
-            >
+            <Modal open={!!editingLead} title="Edit Lead" onClose={() => setEditingLead(null)}>
                 {editingLead && (
                     <LeadForm
                         initialValues={{
                             name: editingLead.name,
-                            email:
-                                editingLead.email,
-                            phone:
-                                editingLead.phone,
-                            company:
-                                editingLead.company,
-                            status:
-                                editingLead.status,
-                            notes:
-                                editingLead.notes,
+                            email: editingLead.email,
+                            phone: editingLead.phone,
+                            company: editingLead.company,
+                            status: editingLead.status,
+                            notes: editingLead.notes,
                         }}
                         submitText="Update Lead"
                         onSubmit={async (

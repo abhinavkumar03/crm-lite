@@ -26,8 +26,8 @@ export default function MetricCard({
       shadow-sm
       transition-all
       duration-300
-      hover:-translate-y-1
-      hover:shadow-lg
+      hover:-translate-y-0.5
+      hover:shadow-md
       "
     >
       <div className="flex items-center justify-between">
