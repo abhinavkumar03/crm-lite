@@ -216,7 +216,7 @@ export default function LeadForm({
           <div className="mt-5">
             <FormTextarea
               label="Notes"
-              rows={5}
+              rows={2}
               placeholder="Add meeting notes, follow-up reminders or important customer information..."
               value={form.notes}
               onChange={(e) =>
