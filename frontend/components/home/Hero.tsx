@@ -3,6 +3,7 @@ import {
   ArrowRight,
   PlayCircle,
   CheckCircle2,
+  MonitorPlay
 } from "lucide-react";
 
 import DashboardPreview from "./DashboardPreview";
@@ -63,13 +64,24 @@ export default function Hero() {
                 <ArrowRight size={18} />
               </Link>
 
-              <Link
+              {/* <Link
                 href="#architecture"
                 className="secondary-btn"
               >
                 <PlayCircle size={18} />
 
                 Explore Architecture
+              </Link> */}
+
+              <Link
+                href="/crm_lite_walkthrough.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="secondary-btn"
+              >
+                <MonitorPlay size={18} />
+
+                Product Walkthrough
               </Link>
             </div>
 
