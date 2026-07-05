@@ -8,6 +8,7 @@ import {
   ArrowRight,
   LayoutDashboard,
   Cpu,
+  MonitorPlay,
   Activity,
   ExternalLink,
 } from "lucide-react";
@@ -15,20 +16,25 @@ import NavbarActions from "./NavbarActions";
 import NavbarMobile from "./NavbarMobile";
 
 const navigation = [
+  // {
+  //   name: "Features",
+  //   href: "#features",
+  //   icon: LayoutDashboard,
+  // },
+  // {
+  //   name: "Architecture",
+  //   href: "#architecture",
+  //   icon: Cpu,
+  // },
+  // {
+  //   name: "Performance",
+  //   href: "#performance",
+  //   icon: Activity,
+  // },
   {
-    name: "Features",
-    href: "#features",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Architecture",
-    href: "#architecture",
-    icon: Cpu,
-  },
-  {
-    name: "Performance",
-    href: "#performance",
-    icon: Activity,
+    name: "Product Walkthrough",
+    href: "/crm_lite_walkthrough.html",
+    icon: MonitorPlay,
   },
 ];
 
