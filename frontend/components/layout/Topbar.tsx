@@ -74,7 +74,10 @@ export default function Topbar({
 
           {/* Desktop Search */}
 
-          <div className="hidden flex-1 lg:block">
+          <div
+            data-tour="global-search"
+            className="hidden flex-1 lg:block"
+          >
             <SearchBar />
           </div>
 
@@ -95,9 +98,13 @@ export default function Topbar({
           gap-3
           "
         >
-          <NotificationBell />
+          <div data-tour="notification-bell">
+            <NotificationBell />
+          </div>
 
-          <UserMenu />
+          <div data-tour="user-menu">
+            <UserMenu />
+          </div>
         </div>
       </div>
     </header>

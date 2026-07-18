@@ -193,7 +193,10 @@ export default function Sidebar({
             Workspace
           </p>
 
-          <nav className="space-y-2">
+          <nav
+            data-tour="sidebar-nav"
+            className="space-y-2"
+          >
             {navigation.map((item) => {
               const Icon = item.icon;
 
@@ -204,6 +207,7 @@ export default function Sidebar({
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={`nav-${item.href.slice(1)}`}
                   onClick={onClose}
                   className={`
                   group

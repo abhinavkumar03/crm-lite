@@ -750,3 +750,60 @@ Implementation:
 > filters/search/sort/expansion are the Phase 10 engine — the export never
 > reimplements querying. The same `Build` method powers both the synchronous
 > endpoint and the asynchronous worker job.
+
+---
+
+## 18. Guided CRM Tour (Onboarding)
+
+An interactive, spotlight-style product tour that walks a new user through the
+workspace. The **step catalogue lives on the client**; the backend persists only
+lightweight **per-user progress** so the tour **resumes across devices/sessions**
+and can be **restarted** on demand. Progress is scoped to
+`(organization, user, tour_key)` — `tour_key` leaves room for feature-specific
+tours later; the app ships one, `app`. Organization-scoped. Requires migration
+`000007` (`make migrate-up`).
+
+### Tour API
+
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /tour?key=app` | Read current progress; a brand-new user gets a synthesized `active` default (not persisted). | Boot the tour / auto-resume. |
+| `PUT /tour` | Single write path: advance, complete or skip. Partial body — send only what changed. | Persist advancement. |
+| `POST /tour/restart` | Reset to the first step (`status=active`, `current_step=0`). | "Take a tour" again. |
+
+**`PUT /tour` body** (all optional): `tour_key`, `status`
+(`active`/`completed`/`skipped`), `current_step` (int), `completed_steps`
+(string keys). `completed_at` is stamped automatically on completion and cleared
+if the tour returns to `active`.
+
+```bash
+# Read progress
+curl "http://localhost:8080/api/v1/tour?key=app" -H "Authorization: Bearer $TOKEN"
+
+# Advance to step 3
+curl -X PUT http://localhost:8080/api/v1/tour \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"current_step":3,"completed_steps":["welcome","navigation","leads"]}'
+
+# Finish, then later restart
+curl -X PUT http://localhost:8080/api/v1/tour -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"status":"completed"}'
+curl -X POST http://localhost:8080/api/v1/tour/restart -H "Authorization: Bearer $TOKEN"
+```
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Engine (API) | `internal/tour/` | Read / save / restart progress; `Get` synthesizes an `active` default for first-time users. |
+| Persistence | migration `000007` (`tour_progress`) | Idempotent `UNIQUE(organization_id, user_id, tour_key)` upsert; `completed_steps` JSONB. |
+| Step manager | `frontend/features/tour/TourProvider.tsx` + `steps.ts` | Context controller (next/back/goTo/skip/finish/start/restart), auto-resume, route navigation per step. |
+| Spotlight UI | `frontend/features/tour/TourOverlay.tsx` | Measures the target via `data-tour` selectors, dims the page with the box-shadow "hole" trick, positions the step card, keyboard shortcuts (Esc/←/→). |
+| Anchors | `Sidebar.tsx`, `Topbar.tsx` (`data-tour="…"`) | Stable hooks the tour highlights (nav items, search, notifications, profile). |
+| Restart entry | `components/layout/UserMenu.tsx` | "Take a tour" re-runs it anytime; `useTour()` is null-safe on public pages. |
+
+> No worker: the tour has no async jobs. The engine is a small, per-user
+> preference store; all interaction logic (highlighting, navigation, step order)
+> is client-side, keeping the step catalogue versioned with the UI it describes.
