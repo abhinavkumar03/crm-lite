@@ -11,6 +11,7 @@ import {
   CheckSquare,
   LayoutTemplate,
   Table2,
+  Upload,
   MessageCircle,
   ChevronRight,
 } from "lucide-react";
@@ -45,6 +46,11 @@ const navigation = [
     name: "Dynamic Tables",
     href: "/tables",
     icon: Table2,
+  },
+  {
+    name: "Import",
+    href: "/imports",
+    icon: Upload,
   },
   {
     name: "Notifications",

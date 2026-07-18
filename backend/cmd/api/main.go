@@ -17,6 +17,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/importer"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/media"
@@ -91,6 +92,7 @@ func main() {
 	validationEngine := validationengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	viewEngine := view.NewModule(db, authModule.Middleware(), orgMiddleware)
 	recordEngine := record.NewModule(db, authModule.Middleware(), orgMiddleware)
+	importEngine := importer.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
@@ -116,6 +118,7 @@ func main() {
 		validationEngine,
 		viewEngine,
 		recordEngine,
+		importEngine,
 		notificationModule,
 		leadModule,
 		contactModule,

@@ -26,11 +26,24 @@ type NotificationProcessor interface {
 	Process(ctx context.Context, orgID, notificationID string) error
 }
 
+// ImportProcessor executes a staged import job identified by its id. It is
+// implemented in the importer package; jobs defines the interface to avoid an
+// import cycle (the importer package imports jobs to enqueue).
+type ImportProcessor interface {
+	Process(ctx context.Context, orgID, importID string) error
+}
+
 // NewServer wires the asynq server and routes each JobType to a handler. The
 // notification-oriented jobs are delegated to the shared notify.Dispatcher so
 // email and WhatsApp travel the same pipeline. The optional processor handles
 // persisted notifications (status lifecycle + activity logging).
-func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.Dispatcher, processor NotificationProcessor) *Server {
+func NewServer(
+	opt asynq.RedisClientOpt,
+	logger *zap.Logger,
+	dispatcher *notify.Dispatcher,
+	processor NotificationProcessor,
+	importProcessor ImportProcessor,
+) *Server {
 	srv := asynq.NewServer(opt, asynq.Config{
 		Concurrency: 10,
 		Queues: map[string]int{
@@ -39,7 +52,7 @@ func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.
 		Logger: newZapLogger(logger),
 	})
 
-	h := &handlers{logger: logger, dispatcher: dispatcher, processor: processor}
+	h := &handlers{logger: logger, dispatcher: dispatcher, processor: processor, importProcessor: importProcessor}
 
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(string(JobLeadCreated), h.handleLeadEvent)
@@ -47,6 +60,7 @@ func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.
 	mux.HandleFunc(string(JobSendEmail), h.handleSendEmail)
 	mux.HandleFunc(string(JobSendWhatsApp), h.handleSendWhatsApp)
 	mux.HandleFunc(string(JobSendNotification), h.handleSendNotification)
+	mux.HandleFunc(string(JobImportProcess), h.handleImportProcess)
 
 	return &Server{srv: srv, mux: mux, logger: logger}
 }
@@ -60,9 +74,10 @@ func (s *Server) Run() error {
 
 // handlers holds dependencies shared by all job handlers.
 type handlers struct {
-	logger     *zap.Logger
-	dispatcher *notify.Dispatcher
-	processor  NotificationProcessor
+	logger          *zap.Logger
+	dispatcher      *notify.Dispatcher
+	processor       NotificationProcessor
+	importProcessor ImportProcessor
 }
 
 func decode(t *asynq.Task) (Job, error) {
@@ -135,6 +150,25 @@ func (h *handlers) handleSendNotification(ctx context.Context, t *asynq.Task) er
 	}
 
 	return h.processor.Process(ctx, orgID, id)
+}
+
+func (h *handlers) handleImportProcess(ctx context.Context, t *asynq.Task) error {
+	job, err := decode(t)
+	if err != nil {
+		return err
+	}
+	if h.importProcessor == nil {
+		h.logger.Warn("jobs: no import processor configured; skipping")
+		return nil
+	}
+
+	id := stringField(job.Payload, "import_id")
+	orgID := stringField(job.Payload, "org_id")
+	if id == "" || orgID == "" {
+		return fmt.Errorf("jobs: import.process missing ids: %w", asynq.SkipRetry)
+	}
+
+	return h.importProcessor.Process(ctx, orgID, id)
 }
 
 func stringField(payload map[string]interface{}, key string) string {
