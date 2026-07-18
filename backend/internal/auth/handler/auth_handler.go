@@ -72,11 +72,6 @@ func (h *AuthHandler) Login(
 	c *gin.Context,
 ) {
 
-	response.OK(
-		c,
-		"Login successful",
-		nil,
-	)
 	var req dto.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {

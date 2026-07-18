@@ -596,3 +596,84 @@ Implementation:
 > Activity logging: each delivery writes an `activities` row
 > (`WHATSAPP_SENT` / `EMAIL_SENT` / `NOTIFICATION_FAILED`) referencing the
 > notification, so sends appear in the audit trail alongside CRM actions.
+
+## 16. Import Engine (CSV / Excel)
+
+Bulk-load records into any **dynamic** module from a CSV or `.xlsx` file:
+**upload → analyze → map columns → enqueue → worker validates + inserts each row
+→ progress + error report**. The uploaded file is parsed at request time and its
+rows are staged in `import_jobs.source_rows` (JSONB), so the worker is stateless
+with respect to the file and the job is fully auditable. Every row runs through
+the **same Phase 7 validation engine** and is persisted via the **Phase 10 record
+repository**, so an import obeys exactly the rules of an API-created record.
+Organization-scoped. Requires migration `000005` (`make migrate-up`).
+
+### Import API
+
+Base URL: `http://localhost:8080/api/v1`. Uploads are `multipart/form-data`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `POST /modules/:id/imports/analyze` | Parse the file (no persistence); return columns, a sample and an auto-suggested mapping. | Power the mapping UI. |
+| `POST /modules/:id/imports` | Stage the file with a chosen mapping and enqueue it. | Start an import. |
+| `GET /modules/:id/imports` | List import jobs (`status` filter + pagination). | Import history. |
+| `GET /modules/:id/imports/:importId` | Fetch one job: status, counters and per-row error report. | Track progress / debug. |
+
+`analyze`/create accept the multipart field **`file`** (`.csv` or `.xlsx`, ≤ 10 MiB,
+≤ 5000 rows). Create also accepts **`mapping`** (JSON object of *source column →
+field api_name*) and optional **`options`** (JSON object). Columns are matched to
+fields by a normalized name compare (`"First Name"`, `first_name`, `firstName` all
+collapse to one key); the client-supplied mapping is re-sanitized server-side so
+only real, writable fields can be targeted (read-only/system/formula excluded).
+
+**Analyze a file (suggests a mapping):**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/$MODULE_ID/imports/analyze \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@leads.csv"
+# => { "headers": ["First Name","Email"], "suggested_mapping": {"First Name":"first_name"}, "row_count": 42, "sample_rows": [...] }
+```
+
+**Start the import with an explicit mapping:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/$MODULE_ID/imports \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@leads.csv" \
+  -F 'mapping={"First Name":"first_name","Email":"email"}'
+# => { "id": "...", "status": "pending", "total_rows": 42 }
+```
+
+**Watch progress / read the error report:**
+```bash
+curl "http://localhost:8080/api/v1/modules/$MODULE_ID/imports/$IMPORT_ID" \
+  -H "Authorization: Bearer $TOKEN"
+# => { "status": "completed", "success_rows": 40, "error_rows": 2,
+#      "errors": [{ "row": 7, "field": "email", "message": "Must be a valid email" }] }
+```
+
+### Running the pipeline
+
+```bash
+# 1) apply the migration and start the worker (it consumes import.process jobs)
+make migrate-up
+make run-worker
+
+# 2) start the API, POST an import, then GET the job (or use the /imports page).
+#    The worker maps + validates + inserts each row, then flips the job
+#    pending -> processing -> completed (or failed if no row succeeds).
+```
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Parser | `internal/importer/parser/` | Format-agnostic CSV + `.xlsx` → header-keyed rows (BOM/dupe-header safe). |
+| Engine (API) | `internal/importer/` | Analyze/create/list/get vertical slice; suggests + sanitizes the mapping, stages rows, enqueues. |
+| Queue | `internal/jobs/{jobs,server}.go` | `import.process` job type + worker handler + `ImportProcessor` interface. |
+| Processor (worker) | `internal/importer/processor/` | Coerces cells to field types, validates (Phase 7), inserts (Phase 10), records counters + errors. |
+| Frontend | `frontend/features/import/` + `app/(dashboard)/imports/page.tsx` | Upload → mapping wizard + live history with error report. Route: `/imports`. |
+
+> Type coercion: cells are converted to the target field's type before
+> validation (numbers/currency → float, boolean/checkbox → bool, multiselect →
+> list). A failed conversion keeps the raw value so the validator surfaces a
+> clear, field-specific error instead of silently dropping data.

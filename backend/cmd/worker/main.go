@@ -2,13 +2,19 @@ package main
 
 import (
 	activityrepo "github.com/abhinavkumar03/crm-lite/backend/internal/activity/repository"
+	fieldrepo "github.com/abhinavkumar03/crm-lite/backend/internal/field/repository"
+	importprocessor "github.com/abhinavkumar03/crm-lite/backend/internal/importer/processor"
+	importrepo "github.com/abhinavkumar03/crm-lite/backend/internal/importer/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	notificationprocessor "github.com/abhinavkumar03/crm-lite/backend/internal/notification/processor"
 	notificationrepo "github.com/abhinavkumar03/crm-lite/backend/internal/notification/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notify"
+	recordrepo "github.com/abhinavkumar03/crm-lite/backend/internal/record/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
+	vrepo "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/repository"
+	vservice "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/service"
 )
 
 // The worker is a separate process from the API so async processing scales
@@ -50,6 +56,18 @@ func main() {
 		log,
 	)
 
+	// The import processor maps, validates (Phase 7 engine) and inserts (Phase 10
+	// record repository) each staged row — an import obeys the same rules as an
+	// API-created record.
+	fieldRepo := fieldrepo.New(db)
+	importProcessor := importprocessor.New(
+		importrepo.New(db),
+		recordrepo.New(db),
+		fieldRepo,
+		vservice.New(vrepo.New(db), fieldRepo),
+		log,
+	)
+
 	server := jobs.NewServer(
 		jobs.RedisOpt(
 			cfg.RedisHost,
@@ -60,6 +78,7 @@ func main() {
 		log,
 		dispatcher,
 		processor,
+		importProcessor,
 	)
 
 	if err := server.Run(); err != nil {
