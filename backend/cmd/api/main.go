@@ -19,6 +19,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/media"
+	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
@@ -26,6 +27,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 )
 
 func main() {
@@ -73,8 +75,13 @@ func main() {
 	))
 	defer producer.Close()
 
+	// Resolves the authenticated user's organization; shared by all
+	// organization-scoped (metadata-driven) modules.
+	orgMiddleware := tenant.Middleware(tenant.NewResolver(db))
+
 	healthModule := health.NewModule()
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
+	moduleEngine := moduleengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -94,6 +101,7 @@ func main() {
 		cfg,
 		healthModule,
 		authModule,
+		moduleEngine,
 		leadModule,
 		contactModule,
 		taskModule,
