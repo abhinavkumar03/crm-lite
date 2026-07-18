@@ -1,12 +1,13 @@
 package dashboard
 
 import (
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard/service"
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 )
 
 type Module struct {
@@ -16,14 +17,11 @@ type Module struct {
 
 func NewModule(
 	db *pgxpool.Pool,
-	redis *redis.Client,
+	c *cache.Cache,
 	auth gin.HandlerFunc,
 ) *Module {
-
 	repo := repository.New(db)
-
-	svc := service.New(repo, redis)
-
+	svc := service.New(repo, c)
 	h := handler.New(svc)
 
 	return &Module{
@@ -33,10 +31,7 @@ func NewModule(
 }
 
 func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
-
 	dashboard := api.Group("/dashboard")
-
 	dashboard.Use(m.auth)
-
 	dashboard.GET("", m.Handler.Dashboard)
 }

@@ -21,9 +21,9 @@ func NewProducer(opt asynq.RedisClientOpt) *Producer {
 	}
 }
 
-// Publish serializes the job and enqueues it as an asynq task. Callers may pass
-// asynq options (e.g. asynq.MaxRetry, asynq.ProcessIn, asynq.Queue) to control
-// scheduling and retry behaviour.
+// Publish serializes the job and enqueues it as an asynq task. DefaultOpts
+// (queue, MaxRetry, Timeout) are applied first; callers may pass extra asynq
+// options to override or extend them (e.g. ProcessIn).
 func (p *Producer) Publish(ctx context.Context, job Job, opts ...asynq.Option) error {
 	payload, err := json.Marshal(job)
 	if err != nil {
@@ -31,8 +31,9 @@ func (p *Producer) Publish(ctx context.Context, job Job, opts ...asynq.Option) e
 	}
 
 	task := asynq.NewTask(string(job.Type), payload)
+	merged := append(DefaultOpts(job.Type), opts...)
 
-	if _, err := p.client.EnqueueContext(ctx, task, opts...); err != nil {
+	if _, err := p.client.EnqueueContext(ctx, task, merged...); err != nil {
 		return fmt.Errorf("jobs: enqueue %q: %w", job.Type, err)
 	}
 

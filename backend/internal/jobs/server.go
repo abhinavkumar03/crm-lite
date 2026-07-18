@@ -54,8 +54,12 @@ func NewServer(
 ) *Server {
 	srv := asynq.NewServer(opt, asynq.Config{
 		Concurrency: 10,
+		// Weighted queues: critical (notify) > default (lead events) > bulk
+		// (import/export). Weights are relative poll priorities.
 		Queues: map[string]int{
-			"default": 1,
+			QueueCritical: 6,
+			QueueDefault:  3,
+			QueueBulk:     1,
 		},
 		Logger: newZapLogger(logger),
 	})

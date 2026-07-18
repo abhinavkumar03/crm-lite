@@ -28,9 +28,9 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 		}
 	}()
 
-	moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	view.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
+	moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	view.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
 }

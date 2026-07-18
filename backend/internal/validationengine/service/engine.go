@@ -9,34 +9,52 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/entity"
 )
 
-// Validate evaluates a data payload against a module's fields and active,
-// database-driven validation rules. It returns structured, field-keyed errors
-// with custom messages. This engine is reused by the record runtime (Phase 10)
-// and exposed directly via a dry-run endpoint.
-func (s *Service) Validate(ctx context.Context, orgID, moduleID string, data map[string]any) (dto.ValidateResult, error) {
+// Spec is a preloaded validation snapshot for a module. Import jobs load it
+// once and reuse ValidateWithSpec per row so field/rule queries are not
+// repeated thousands of times.
+type Spec struct {
+	Fields      []fieldentity.Field
+	byField     map[string][]entity.ValidationRule
+	moduleRules []entity.ValidationRule
+}
+
+// LoadSpec fetches fields + active rules for a module once.
+func (s *Service) LoadSpec(ctx context.Context, orgID, moduleID string) (*Spec, error) {
 	fields, rules, err := s.load(ctx, orgID, moduleID)
 	if err != nil {
-		return dto.ValidateResult{}, err
+		return nil, err
 	}
-
 	byField, moduleRules := groupRules(rules)
+	return &Spec{Fields: fields, byField: byField, moduleRules: moduleRules}, nil
+}
 
+// ValidateWithSpec evaluates a payload against an already-loaded Spec.
+func (s *Service) ValidateWithSpec(spec *Spec, data map[string]any) dto.ValidateResult {
 	errsList := make([]dto.FieldError, 0)
 	addErr := func(field, message string) {
 		errsList = append(errsList, dto.FieldError{Field: field, Message: message})
 	}
 
-	for i := range fields {
-		f := fields[i]
-		value := data[f.APIName]
-		s.validateField(f, value, byField[f.ID], addErr)
+	for i := range spec.Fields {
+		f := spec.Fields[i]
+		s.validateField(f, data[f.APIName], spec.byField[f.ID], addErr)
 	}
-
-	for i := range moduleRules {
-		evalModuleRule(moduleRules[i], data, addErr)
+	for i := range spec.moduleRules {
+		evalModuleRule(spec.moduleRules[i], data, addErr)
 	}
+	return dto.ValidateResult{Valid: len(errsList) == 0, Errors: errsList}
+}
 
-	return dto.ValidateResult{Valid: len(errsList) == 0, Errors: errsList}, nil
+// Validate evaluates a data payload against a module's fields and active,
+// database-driven validation rules. It returns structured, field-keyed errors
+// with custom messages. This engine is reused by the record runtime (Phase 10)
+// and exposed directly via a dry-run endpoint.
+func (s *Service) Validate(ctx context.Context, orgID, moduleID string, data map[string]any) (dto.ValidateResult, error) {
+	spec, err := s.LoadSpec(ctx, orgID, moduleID)
+	if err != nil {
+		return dto.ValidateResult{}, err
+	}
+	return s.ValidateWithSpec(spec, data), nil
 }
 
 // Schema compiles a frontend-consumable constraint set per field, merging field

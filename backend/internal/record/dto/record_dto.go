@@ -30,6 +30,9 @@ type ListQuery struct {
 	Order    string
 	Filters  []FilterClause
 	Expand   bool
+	// SkipTotal omits the COUNT(*) query. Used by export paging where only
+	// "is there another page?" matters (short page = done).
+	SkipTotal bool
 }
 
 // RelationRef is a resolved lookup/user reference (id + human label).

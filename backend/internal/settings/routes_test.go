@@ -23,5 +23,5 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 		}
 	}()
 
-	NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
@@ -76,6 +77,8 @@ func main() {
 
 	log.Info("Redis connected")
 
+	appCache := cache.New(redisClient)
+
 	// The producer enqueues async work onto the asynq queue; the worker that
 	// consumes it runs as a separate process (cmd/worker).
 	producer := jobs.NewProducer(jobs.RedisOpt(
@@ -89,8 +92,9 @@ func main() {
 	// Resolves the authenticated user's organization; shared by all
 	// organization-scoped (metadata-driven) modules. rbac.Load attaches the
 	// role's permission keys so Require()/RequireModule() can enforce them.
-	orgMiddleware := tenant.Middleware(tenant.NewResolver(db))
-	guard := rbac.New(db)
+	// Membership + RBAC grants are cached briefly in Redis (Phase 17).
+	orgMiddleware := tenant.Middleware(tenant.NewResolver(db, appCache))
+	guard := rbac.New(db, appCache)
 	rbacLoad := guard.Load()
 
 	healthModule := health.NewModule()
@@ -107,11 +111,11 @@ func main() {
 	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	tourModule := tour.NewModule(db, authMW, orgMiddleware)
 	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
-	rolesModule := roles.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
-	leadModule := lead.NewModule(db, authMW, producer)
+	rolesModule := roles.NewModule(db, appCache, authMW, orgMiddleware, rbacLoad, guard)
+	leadModule := lead.NewModule(db, authMW, producer, appCache)
 	contactModule := contact.NewModule(db, authMW)
-	taskModule := task.NewModule(db, authMW)
-	dashboardModule := dashboard.NewModule(db, redisClient, authMW)
+	taskModule := task.NewModule(db, authMW, appCache)
+	dashboardModule := dashboard.NewModule(db, appCache, authMW)
 	searchModule := search.NewModule(db, authMW)
 	noteModule := note.NewModule(db, authMW)
 	calllogModule := calllog.NewModule(db, authMW)

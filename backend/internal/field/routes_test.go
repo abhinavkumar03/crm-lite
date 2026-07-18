@@ -18,8 +18,8 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	noop := func(c *gin.Context) { c.Next() }
-	fieldModule := NewModule(nil, noop, noop, noop, rbac.New(nil))
-	moduleModule := moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil))
+	fieldModule := NewModule(nil, noop, noop, noop, rbac.New(nil, nil))
+	moduleModule := moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil))
 
 	router := gin.New()
 	api := router.Group("/api/v1")

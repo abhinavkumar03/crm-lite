@@ -16,15 +16,20 @@ import (
 	importrepo "github.com/abhinavkumar03/crm-lite/backend/internal/importer/repository"
 	recordentity "github.com/abhinavkumar03/crm-lite/backend/internal/record/entity"
 	vdto "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/dto"
+	vservice "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/service"
 )
 
 // maxErrors bounds the persisted error report so a pathological file cannot
 // bloat the JSONB column. Counters still reflect the true totals.
 const maxErrors = 500
 
-// RecordWriter persists a record (satisfied by the record engine's repository).
+// insertBatchSize is how many validated rows are flushed per COPY.
+const insertBatchSize = 100
+
+// RecordWriter persists records (satisfied by the record engine's repository).
 type RecordWriter interface {
 	Create(ctx context.Context, rec *recordentity.Record) error
+	CreateBatch(ctx context.Context, recs []*recordentity.Record) error
 }
 
 // FieldReader exposes a module's field metadata (satisfied by the field repo).
@@ -32,9 +37,11 @@ type FieldReader interface {
 	List(ctx context.Context, orgID, moduleID string) ([]fieldentity.Field, error)
 }
 
-// Validator evaluates a payload against a module's schema (the Phase 7 engine).
+// Validator evaluates payloads against a module's schema. LoadSpec is called
+// once per job; ValidateWithSpec runs per row without re-querying Postgres.
 type Validator interface {
-	Validate(ctx context.Context, orgID, moduleID string, data map[string]any) (vdto.ValidateResult, error)
+	LoadSpec(ctx context.Context, orgID, moduleID string) (*vservice.Spec, error)
+	ValidateWithSpec(spec *vservice.Spec, data map[string]any) vdto.ValidateResult
 }
 
 type Processor struct {
@@ -88,10 +95,41 @@ func (p *Processor) Process(ctx context.Context, orgID, id string) error {
 		return nil
 	}
 
+	spec, err := p.validator.LoadSpec(ctx, orgID, job.ModuleID)
+	if err != nil {
+		p.finishFailed(ctx, id, "failed to load validation: "+err.Error())
+		return nil
+	}
+
 	var (
 		processed, success int
 		rowErrors          []importentity.RowError
+		batch              []*recordentity.Record
+		batchLines         []int
 	)
+
+	flush := func() {
+		if len(batch) == 0 {
+			return
+		}
+		if err := p.records.CreateBatch(ctx, batch); err != nil {
+			// Fall back to single inserts so one bad row does not discard the batch.
+			for i, rec := range batch {
+				if cerr := p.records.Create(ctx, rec); cerr != nil {
+					appendError(&rowErrors, importentity.RowError{
+						Row:     batchLines[i],
+						Message: "failed to save: " + cerr.Error(),
+					})
+					continue
+				}
+				success++
+			}
+		} else {
+			success += len(batch)
+		}
+		batch = batch[:0]
+		batchLines = batchLines[:0]
+	}
 
 	for i, row := range rows {
 		lineNo := i + 1 // 1-based data row (header excluded)
@@ -99,11 +137,7 @@ func (p *Processor) Process(ctx context.Context, orgID, id string) error {
 
 		data := buildData(row, mapping, byAPIName)
 
-		result, verr := p.validator.Validate(ctx, orgID, job.ModuleID, data)
-		if verr != nil {
-			appendError(&rowErrors, importentity.RowError{Row: lineNo, Message: "validation error: " + verr.Error()})
-			continue
-		}
+		result := p.validator.ValidateWithSpec(spec, data)
 		if !result.Valid {
 			for _, fe := range result.Errors {
 				appendError(&rowErrors, importentity.RowError{Row: lineNo, Field: fe.Field, Message: fe.Message})
@@ -111,12 +145,18 @@ func (p *Processor) Process(ctx context.Context, orgID, id string) error {
 			continue
 		}
 
-		if err := p.insert(ctx, orgID, job, data); err != nil {
-			appendError(&rowErrors, importentity.RowError{Row: lineNo, Message: "failed to save: " + err.Error()})
+		rec, err := buildRecord(orgID, job, data)
+		if err != nil {
+			appendError(&rowErrors, importentity.RowError{Row: lineNo, Message: "failed to encode: " + err.Error()})
 			continue
 		}
-		success++
+		batch = append(batch, rec)
+		batchLines = append(batchLines, lineNo)
+		if len(batch) >= insertBatchSize {
+			flush()
+		}
 	}
+	flush()
 
 	errorRows := processed - success
 	status := importentity.StatusCompleted
@@ -198,20 +238,19 @@ func buildData(
 	return data
 }
 
-func (p *Processor) insert(ctx context.Context, orgID string, job *importentity.ImportJob, data map[string]any) error {
+func buildRecord(orgID string, job *importentity.ImportJob, data map[string]any) (*recordentity.Record, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rec := &recordentity.Record{
+	return &recordentity.Record{
 		OrganizationID: orgID,
 		ModuleID:       job.ModuleID,
 		Data:           b,
 		OwnerID:        job.CreatedBy,
 		CreatedBy:      job.CreatedBy,
 		UpdatedBy:      job.CreatedBy,
-	}
-	return p.records.Create(ctx, rec)
+	}, nil
 }
 
 func (p *Processor) finishFailed(ctx context.Context, id, message string) {

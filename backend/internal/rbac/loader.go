@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/response"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 )
@@ -13,11 +14,12 @@ import (
 // Guard loads a role's permission keys and answers ACL queries. It is the
 // single composition root for RBAC middleware and access checks.
 type Guard struct {
-	db *pgxpool.Pool
+	db    *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func New(db *pgxpool.Pool) *Guard {
-	return &Guard{db: db}
+func New(db *pgxpool.Pool, c *cache.Cache) *Guard {
+	return &Guard{db: db, cache: c}
 }
 
 // Load is middleware that must run after tenant.Middleware. It fetches the
@@ -43,7 +45,14 @@ func (g *Guard) Load() gin.HandlerFunc {
 }
 
 // PermissionsForRole returns every permission key granted to the role.
+// Results are cached for a short TTL and invalidated when the matrix changes.
 func (g *Guard) PermissionsForRole(ctx context.Context, roleID string) ([]string, error) {
+	key := cache.PermissionsKey(roleID)
+	var cached []string
+	if g.cache.GetJSON(ctx, key, &cached) {
+		return cached, nil
+	}
+
 	rows, err := g.db.Query(ctx, `
 		SELECT p.key
 		FROM role_permissions rp
@@ -58,13 +67,18 @@ func (g *Guard) PermissionsForRole(ctx context.Context, roleID string) ([]string
 
 	keys := make([]string, 0)
 	for rows.Next() {
-		var key string
-		if err := rows.Scan(&key); err != nil {
+		var k string
+		if err := rows.Scan(&k); err != nil {
 			return nil, err
 		}
-		keys = append(keys, key)
+		keys = append(keys, k)
 	}
-	return keys, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	g.cache.SetJSON(ctx, key, keys, cache.TTLShort)
+	return keys, nil
 }
 
 // Permissions reads the loaded keys from context (empty if Load was not run).

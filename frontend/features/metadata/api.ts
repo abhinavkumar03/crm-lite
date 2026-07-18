@@ -1,5 +1,6 @@
 import api from "@/services/api";
 
+import { cached, invalidateMetadataCache } from "./cache";
 import {
   FormValues,
   ModuleField,
@@ -13,23 +14,31 @@ import {
   ValidationSchema,
 } from "./types";
 
+export { invalidateMetadataCache };
+
 export async function getModules(): Promise<ModuleSummary[]> {
-  const res = await api.get("/modules");
-  return res.data.data;
+  return cached("modules", async () => {
+    const res = await api.get("/modules");
+    return res.data.data;
+  });
 }
 
 export async function getModuleFields(
   moduleId: string
 ): Promise<ModuleField[]> {
-  const res = await api.get(`/modules/${moduleId}/fields`);
-  return res.data.data;
+  return cached(`fields:${moduleId}`, async () => {
+    const res = await api.get(`/modules/${moduleId}/fields`);
+    return res.data.data;
+  });
 }
 
 export async function getValidationSchema(
   moduleId: string
 ): Promise<ValidationSchema> {
-  const res = await api.get(`/modules/${moduleId}/validation-schema`);
-  return res.data.data;
+  return cached(`validation:${moduleId}`, async () => {
+    const res = await api.get(`/modules/${moduleId}/validation-schema`);
+    return res.data.data;
+  });
 }
 
 export async function validateRecord(

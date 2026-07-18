@@ -11,6 +11,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles/entity"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 )
 
 var (
@@ -48,10 +49,11 @@ type AccessReader interface {
 type Service struct {
 	repo   Repository
 	access AccessReader
+	cache  *cache.Cache
 }
 
-func New(repo Repository, access AccessReader) *Service {
-	return &Service{repo: repo, access: access}
+func New(repo Repository, access AccessReader, c *cache.Cache) *Service {
+	return &Service{repo: repo, access: access, cache: c}
 }
 
 func (s *Service) ListPermissions(ctx context.Context) ([]dto.PermissionResponse, error) {
@@ -154,12 +156,18 @@ func (s *Service) Delete(ctx context.Context, orgID, roleID string) error {
 	if n > 0 {
 		return ErrHasMembers
 	}
+	oldModules, _ := s.access.ListModuleAccess(ctx, roleID)
+	oldFields, _ := s.access.ListFieldAccess(ctx, roleID)
+
 	if err := s.repo.Delete(ctx, orgID, roleID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
 		}
 		return err
 	}
+	s.cache.InvalidateRole(ctx, roleID)
+	s.invalidateModuleACL(ctx, roleID, oldModules, nil)
+	s.invalidateFieldACL(ctx, roleID, oldFields, nil)
 	return nil
 }
 
@@ -174,6 +182,7 @@ func (s *Service) SetPermissions(ctx context.Context, orgID, roleID string, req 
 	if err := s.repo.SetPermissions(ctx, roleID, req.Permissions); err != nil {
 		return nil, err
 	}
+	s.cache.Delete(ctx, cache.PermissionsKey(roleID))
 	return s.detail(ctx, role)
 }
 
@@ -185,9 +194,12 @@ func (s *Service) SetModuleAccess(ctx context.Context, orgID, roleID string, req
 	if role == nil {
 		return nil, ErrNotFound
 	}
+
+	old, _ := s.access.ListModuleAccess(ctx, roleID)
 	if err := s.repo.SetModuleAccess(ctx, roleID, req.Access); err != nil {
 		return nil, err
 	}
+	s.invalidateModuleACL(ctx, roleID, old, req.Access)
 	return s.detail(ctx, role)
 }
 
@@ -199,10 +211,47 @@ func (s *Service) SetFieldAccess(ctx context.Context, orgID, roleID string, req 
 	if role == nil {
 		return nil, ErrNotFound
 	}
+
+	old, _ := s.access.ListFieldAccess(ctx, roleID)
 	if err := s.repo.SetFieldAccess(ctx, roleID, req.Access); err != nil {
 		return nil, err
 	}
+	neu, _ := s.access.ListFieldAccess(ctx, roleID)
+	s.invalidateFieldACL(ctx, roleID, old, neu)
 	return s.detail(ctx, role)
+}
+
+func (s *Service) invalidateModuleACL(ctx context.Context, roleID string, old, neu []rbac.ModuleAccess) {
+	seen := map[string]struct{}{}
+	keys := make([]string, 0, len(old)+len(neu))
+	for _, list := range [][]rbac.ModuleAccess{old, neu} {
+		for _, a := range list {
+			if _, ok := seen[a.ModuleID]; ok {
+				continue
+			}
+			seen[a.ModuleID] = struct{}{}
+			keys = append(keys, cache.Key("rbac", "module", roleID, a.ModuleID))
+		}
+	}
+	s.cache.Delete(ctx, keys...)
+}
+
+func (s *Service) invalidateFieldACL(ctx context.Context, roleID string, old, neu []rbac.FieldAccess) {
+	seen := map[string]struct{}{}
+	ids := make([]string, 0)
+	for _, list := range [][]rbac.FieldAccess{old, neu} {
+		for _, a := range list {
+			if a.ModuleID == "" {
+				continue
+			}
+			if _, ok := seen[a.ModuleID]; ok {
+				continue
+			}
+			seen[a.ModuleID] = struct{}{}
+			ids = append(ids, a.ModuleID)
+		}
+	}
+	s.cache.InvalidateRoleFieldAccess(ctx, roleID, ids...)
 }
 
 // Me returns the caller's effective RBAC context.

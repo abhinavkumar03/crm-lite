@@ -955,3 +955,62 @@ Implementation:
 > Tenant middleware still resolves org + role; `rbac.Load` attaches permission
 > keys once per request. Handlers stay thin — the guard answers "may this role
 > do X?" without each service re-querying the catalog.
+
+---
+
+## 21. Performance & Optimization
+
+Phase 17 hardens the hot paths without changing public API contracts.
+
+### Caching (Redis)
+
+Shared package: `internal/shared/cache` (`GetJSON` / `SetJSON` / `Delete`, short TTLs).
+
+| Key family | TTL | Invalidated when |
+| --- | --- | --- |
+| `dashboard:{userID}` | 5m | Lead / task CUD |
+| `tenant:membership:{userID}` | 2m | (short TTL; membership changes rare) |
+| `rbac:perms:{roleID}` | 2m | `PUT /roles/:id/permissions`, role delete |
+| `rbac:module:{roleID}:{moduleID}` | 2m | `PUT …/module-access`, role delete |
+| `rbac:field:{roleID}:{moduleID}` | 2m | `PUT …/field-access`, role delete |
+
+Dashboard, tenant resolver, and RBAC guard all take `*cache.Cache`. A nil/miss is transparent — Postgres remains the source of truth.
+
+### Query / indexes
+
+Migration `000009_perf_indexes` (`make migrate-up`):
+
+- `records (organization_id, module_id, created_at DESC)` — list + export paging
+- `notifications (organization_id, created_at DESC)` — inbox / history
+
+Export paging sets `ListQuery.SkipTotal` so each page skips `COUNT(*)`.
+
+### Bulk import
+
+Worker import processor:
+
+1. `LoadSpec` once per job (fields + rules)
+2. `ValidateWithSpec` per row (no re-query)
+3. `CreateBatch` via Postgres `COPY` (flush every 100 rows; falls back to single insert on batch error)
+
+### asynq queues
+
+| Queue | Weight | Job types | MaxRetry | Timeout |
+| --- | --- | --- | --- | --- |
+| `critical` | 6 | email / WhatsApp / notification | 5 | 30s |
+| `default` | 3 | lead events | 3 | 60s |
+| `bulk` | 1 | import / export | 3 | 10m |
+
+`Producer.Publish` applies `DefaultOpts(job.Type)` automatically.
+
+### Frontend metadata cache
+
+`features/metadata/cache.ts` — 60s in-memory TTL around `getModules` / `getModuleFields` / `getValidationSchema`. Settings mutations call `invalidateMetadataCache`.
+
+### Verify
+
+```bash
+cd backend && make migrate-up   # applies 000009
+go test ./...
+cd ../frontend && npm run lint # optional
+```

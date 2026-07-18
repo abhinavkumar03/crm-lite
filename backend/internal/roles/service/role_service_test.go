@@ -70,7 +70,7 @@ func (fakeAccess) ListFieldAccess(context.Context, string) ([]rbac.FieldAccess, 
 
 func TestCreateAndSetPermissions(t *testing.T) {
 	repo := newFake()
-	svc := New(repo, fakeAccess{})
+	svc := New(repo, fakeAccess{}, nil)
 
 	created, err := svc.Create(context.Background(), "org1", dto.CreateRoleRequest{
 		Name: "Custom",
@@ -95,7 +95,7 @@ func TestCreateAndSetPermissions(t *testing.T) {
 }
 
 func TestCreateRejectsBadSlug(t *testing.T) {
-	svc := New(newFake(), fakeAccess{})
+	svc := New(newFake(), fakeAccess{}, nil)
 	_, err := svc.Create(context.Background(), "org1", dto.CreateRoleRequest{
 		Name: "Bad",
 		Slug: "NOT VALID",
@@ -108,7 +108,7 @@ func TestCreateRejectsBadSlug(t *testing.T) {
 func TestDeleteSystemRole(t *testing.T) {
 	repo := newFake()
 	repo.roles["sys"] = &entity.Role{ID: "sys", OrganizationID: "org1", IsSystem: true}
-	svc := New(repo, fakeAccess{})
+	svc := New(repo, fakeAccess{}, nil)
 
 	if err := svc.Delete(context.Background(), "org1", "sys"); err != ErrSystemRole {
 		t.Fatalf("expected ErrSystemRole, got %v", err)

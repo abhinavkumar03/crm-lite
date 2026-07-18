@@ -30,5 +30,5 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	producer := jobs.NewProducer(jobs.RedisOpt("localhost", "6379", "", 0))
 	defer producer.Close()
 
-	NewModule(nil, noop, noop, noop, rbac.New(nil), producer).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
 }

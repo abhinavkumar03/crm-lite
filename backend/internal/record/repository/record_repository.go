@@ -42,6 +42,28 @@ func (r *Repository) Create(ctx context.Context, rec *entity.Record) error {
 	).Scan(&rec.ID, &rec.CreatedAt, &rec.UpdatedAt)
 }
 
+// CreateBatch inserts many records in one COPY. IDs are assigned by the DB
+// default and are not populated on the input structs (import does not need them).
+func (r *Repository) CreateBatch(ctx context.Context, recs []*entity.Record) error {
+	if len(recs) == 0 {
+		return nil
+	}
+	rows := make([][]any, len(recs))
+	for i, rec := range recs {
+		rows[i] = []any{
+			rec.OrganizationID, rec.ModuleID, rec.Data,
+			rec.OwnerID, rec.CreatedBy, rec.UpdatedBy,
+		}
+	}
+	_, err := r.db.CopyFrom(
+		ctx,
+		pgx.Identifier{"records"},
+		[]string{"organization_id", "module_id", "data", "owner_id", "created_by", "updated_by"},
+		pgx.CopyFromRows(rows),
+	)
+	return err
+}
+
 func (r *Repository) GetByID(ctx context.Context, orgID, moduleID, id string) (*entity.Record, error) {
 	var rec entity.Record
 	err := scanRecord(r.db.QueryRow(ctx, `
@@ -84,7 +106,8 @@ func (r *Repository) Delete(ctx context.Context, orgID, moduleID, id string) (bo
 }
 
 // List runs the dynamic query (search + filters + sort + pagination) and returns
-// the page of records plus the total count for the same filter set.
+// the page of records plus the total count for the same filter set. When
+// q.SkipTotal is set, COUNT(*) is skipped and total is 0.
 func (r *Repository) List(
 	ctx context.Context,
 	orgID, moduleID string,
@@ -95,10 +118,12 @@ func (r *Repository) List(
 	order := BuildOrderBy(q.Sort, q.Order, meta)
 
 	var total int
-	if err := r.db.QueryRow(ctx,
-		"SELECT COUNT(*) FROM records WHERE "+where.SQL, where.Args...,
-	).Scan(&total); err != nil {
-		return nil, 0, err
+	if !q.SkipTotal {
+		if err := r.db.QueryRow(ctx,
+			"SELECT COUNT(*) FROM records WHERE "+where.SQL, where.Args...,
+		).Scan(&total); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	limitPH := fmt.Sprintf("$%d", len(where.Args)+1)

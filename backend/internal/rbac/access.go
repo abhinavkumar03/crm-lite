@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 )
 
@@ -21,8 +22,19 @@ type ModuleAccess struct {
 
 // FieldAccess is one row of role_field_access.
 type FieldAccess struct {
-	FieldID string `json:"field_id"`
-	Access  string `json:"access"` // hidden | read | write
+	FieldID  string `json:"field_id"`
+	ModuleID string `json:"module_id,omitempty"`
+	Access   string `json:"access"` // hidden | read | write
+}
+
+// moduleACLEntry is the cached shape for a single role+module ACL lookup.
+// Found=false means "no row" (unrestricted).
+type moduleACLEntry struct {
+	Found     bool `json:"found"`
+	CanView   bool `json:"can_view"`
+	CanCreate bool `json:"can_create"`
+	CanUpdate bool `json:"can_update"`
+	CanDelete bool `json:"can_delete"`
 }
 
 // ModuleAllowed reports whether the caller's role may perform action on the
@@ -33,32 +45,53 @@ func (g *Guard) ModuleAllowed(ctx context.Context, c *gin.Context, moduleID stri
 		return true, nil
 	}
 
-	var canView, canCreate, canUpdate, canDelete bool
-	err := g.db.QueryRow(ctx, `
-		SELECT can_view, can_create, can_update, can_delete
-		FROM role_module_access
-		WHERE role_id = $1 AND module_id = $2
-	`, roleID, moduleID).Scan(&canView, &canCreate, &canUpdate, &canDelete)
-
-	if errors.Is(err, pgx.ErrNoRows) {
-		return true, nil
-	}
+	entry, err := g.moduleACL(ctx, roleID, moduleID)
 	if err != nil {
 		return false, err
+	}
+	if !entry.Found {
+		return true, nil
 	}
 
 	switch action {
 	case ActionView:
-		return canView, nil
+		return entry.CanView, nil
 	case ActionCreate:
-		return canCreate, nil
+		return entry.CanCreate, nil
 	case ActionUpdate:
-		return canUpdate, nil
+		return entry.CanUpdate, nil
 	case ActionDelete:
-		return canDelete, nil
+		return entry.CanDelete, nil
 	default:
 		return false, nil
 	}
+}
+
+func (g *Guard) moduleACL(ctx context.Context, roleID, moduleID string) (moduleACLEntry, error) {
+	key := cache.Key("rbac", "module", roleID, moduleID)
+	var cached moduleACLEntry
+	if g.cache.GetJSON(ctx, key, &cached) {
+		return cached, nil
+	}
+
+	var entry moduleACLEntry
+	err := g.db.QueryRow(ctx, `
+		SELECT can_view, can_create, can_update, can_delete
+		FROM role_module_access
+		WHERE role_id = $1 AND module_id = $2
+	`, roleID, moduleID).Scan(&entry.CanView, &entry.CanCreate, &entry.CanUpdate, &entry.CanDelete)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		entry.Found = false
+		g.cache.SetJSON(ctx, key, entry, cache.TTLShort)
+		return entry, nil
+	}
+	if err != nil {
+		return entry, err
+	}
+	entry.Found = true
+	g.cache.SetJSON(ctx, key, entry, cache.TTLShort)
+	return entry, nil
 }
 
 // FieldAccessMap returns field_id → access for the caller's role within a
@@ -91,10 +124,16 @@ func (g *Guard) FieldAccessMap(ctx context.Context, roleID, moduleID string) (ma
 }
 
 // FieldAccessByAPIName returns api_name → access for the caller's role within a
-// module. Used to strip/reject payload keys on create/update.
+// module. Used to strip/reject payload keys on create/update. Cached per
+// (role, module).
 func (g *Guard) FieldAccessByAPIName(ctx context.Context, roleID, moduleID string) (map[string]string, error) {
 	out := map[string]string{}
 	if roleID == "" {
+		return out, nil
+	}
+
+	key := cache.FieldAccessKey(roleID, moduleID)
+	if g.cache.GetJSON(ctx, key, &out) {
 		return out, nil
 	}
 
@@ -116,7 +155,12 @@ func (g *Guard) FieldAccessByAPIName(ctx context.Context, roleID, moduleID strin
 		}
 		out[apiName] = access
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	g.cache.SetJSON(ctx, key, out, cache.TTLShort)
+	return out, nil
 }
 
 // ListModuleAccess returns every explicit module ACL row for a role.
@@ -146,10 +190,11 @@ func (g *Guard) ListModuleAccess(ctx context.Context, roleID string) ([]ModuleAc
 // ListFieldAccess returns every explicit field ACL row for a role.
 func (g *Guard) ListFieldAccess(ctx context.Context, roleID string) ([]FieldAccess, error) {
 	rows, err := g.db.Query(ctx, `
-		SELECT field_id::text, access
-		FROM role_field_access
-		WHERE role_id = $1
-		ORDER BY field_id
+		SELECT rfa.field_id::text, f.module_id::text, rfa.access
+		FROM role_field_access rfa
+		JOIN fields f ON f.id = rfa.field_id
+		WHERE rfa.role_id = $1
+		ORDER BY rfa.field_id
 	`, roleID)
 	if err != nil {
 		return nil, err
@@ -159,7 +204,7 @@ func (g *Guard) ListFieldAccess(ctx context.Context, roleID string) ([]FieldAcce
 	items := make([]FieldAccess, 0)
 	for rows.Next() {
 		var f FieldAccess
-		if err := rows.Scan(&f.FieldID, &f.Access); err != nil {
+		if err := rows.Scan(&f.FieldID, &f.ModuleID, &f.Access); err != nil {
 			return nil, err
 		}
 		items = append(items, f)

@@ -11,25 +11,28 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 )
 
 type Service struct {
 	repository      *repository.Repository
 	producer        *jobs.Producer
 	activityService *activityService.Service
+	cache           *cache.Cache
 }
 
 func New(
 	repo *repository.Repository,
 	producer *jobs.Producer,
 	activityService *activityService.Service,
-
+	c *cache.Cache,
 ) *Service {
 
 	return &Service{
 		repository:      repo,
 		producer:        producer,
 		activityService: activityService,
+		cache:           c,
 	}
 }
 
@@ -95,6 +98,8 @@ func (s *Service) Create(
 			},
 		)
 	}
+
+	s.cache.InvalidateDashboard(ctx, ownerID)
 
 	return &dto.LeadResponse{
 		ID:      lead.ID,
@@ -235,6 +240,8 @@ func (s *Service) Update(
 		)
 	}
 
+	s.cache.InvalidateDashboard(ctx, ownerID)
+
 	return &dto.LeadResponse{
 		ID:      lead.ID,
 		Name:    lead.Name,
@@ -272,6 +279,7 @@ func (s *Service) Delete(
 			nil,
 			ownerID,
 		)
+		s.cache.InvalidateDashboard(ctx, ownerID)
 	}
 
 	return deleted, nil

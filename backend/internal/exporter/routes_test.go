@@ -38,11 +38,11 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	producer := jobs.NewProducer(jobs.RedisOpt("localhost", "6379", "", 0))
 	defer producer.Close()
 
-	moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	view.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	record.NewModule(nil, noop, noop, noop, rbac.New(nil)).RegisterRoutes(api)
-	importer.NewModule(nil, noop, noop, noop, rbac.New(nil), producer).RegisterRoutes(api)
-	NewModule(nil, noop, noop, noop, rbac.New(nil), producer).RegisterRoutes(api)
+	moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	view.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	record.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	importer.NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
 }

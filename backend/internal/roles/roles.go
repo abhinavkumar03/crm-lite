@@ -8,6 +8,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles/service"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 )
 
 // Module is the roles & permissions composition root. It exposes the permission
@@ -20,9 +21,9 @@ type Module struct {
 	guard   *rbac.Guard
 }
 
-func NewModule(db *pgxpool.Pool, auth, org, load gin.HandlerFunc, guard *rbac.Guard) *Module {
+func NewModule(db *pgxpool.Pool, c *cache.Cache, auth, org, load gin.HandlerFunc, guard *rbac.Guard) *Module {
 	repo := repository.New(db)
-	svc := service.New(repo, guard)
+	svc := service.New(repo, guard, c)
 	h := handler.New(svc)
 
 	return &Module{
