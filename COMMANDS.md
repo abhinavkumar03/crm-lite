@@ -330,3 +330,124 @@ curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/validate \
   -d '{"data":{"name":"Al","email":"nope","amount":-5}}'
 # => {"valid":false,"errors":[{"field":"name","message":"Value is too short"}, ...]}
 ```
+
+---
+
+## 12. Dynamic Forms (frontend)
+
+Metadata-driven forms rendered entirely from the backend field metadata + the
+compiled validation schema — no form is hand-coded. Lives under
+`frontend/features/metadata/`.
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| `DynamicForm` | `features/metadata/components/DynamicForm.tsx` | Renders a full form from `ModuleField[]`, handles layout, visibility, validation, submit. |
+| `DynamicField` | `features/metadata/components/DynamicField.tsx` | Maps a single `field_type` to the right shared input primitive. |
+| `useDynamicForm` | `features/metadata/hooks/useDynamicForm.ts` | Form state, computed visibility, validation. |
+| `lib/conditions.ts` | `features/metadata/lib/conditions.ts` | Conditional-rendering engine (`VisibilityRule[]`). |
+| `lib/validation.ts` | `features/metadata/lib/validation.ts` | Client-side validation derived from the Phase 7 schema. |
+| `api.ts` | `features/metadata/api.ts` | `getModules`, `getModuleFields`, `getValidationSchema`, `validateRecord`. |
+| Playground page | `app/(dashboard)/forms/page.tsx` | Pick a module → generate its form → server-validate. Route: `/forms`. |
+
+Run the frontend and open the page:
+```bash
+cd frontend
+npm run dev
+# then visit http://localhost:3000/forms  (also linked in the sidebar)
+```
+
+Reuse the renderer for any module:
+```tsx
+import DynamicForm from "@/features/metadata/components/DynamicForm";
+import { getModuleFields, getValidationSchema } from "@/features/metadata/api";
+
+// fields = await getModuleFields(moduleId); schema = await getValidationSchema(moduleId);
+<DynamicForm
+  fields={fields}
+  schema={schema}
+  submitText="Save"
+  visibilityRules={[
+    { when: { field: "type", operator: "equals", value: "company" },
+      effect: "show", targets: ["company_name"] },
+  ]}
+  onSubmit={async (values) => { /* persist via record runtime (Phase 10) */ }}
+/>
+```
+
+---
+
+## 13. Dynamic Tables & Saved Views
+
+Metadata-driven tables with client-side sorting, filtering and pagination, plus
+**saved views** persisted per module in the backend. Columns are derived from
+field metadata and each cell is rendered by its `field_type` (badges for choices,
+links for urls/emails, formatted dates/currency, check marks for booleans).
+
+### Saved Views API (backend)
+
+Views store a table configuration (visible columns, filter clauses, sort) scoped
+to an organization + module. A view is either **public** (shared with the org) or
+**private** to its owner; one view per module can be the org **default**.
+Organization-scoped (same auth as the other engines).
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules/:id/views` | List views visible to the user (public + own), default first. | Populate the view switcher. |
+| `POST /modules/:id/views` | Save the current table config as a new view. | "Save view" button. |
+| `GET /modules/:id/views/:viewId` | Fetch one view. | Load a view's config. |
+| `PUT /modules/:id/views/:viewId` | Update a view (owner only). | Rename / re-configure. |
+| `DELETE /modules/:id/views/:viewId` | Delete a view (owner only). | Remove a saved view. |
+| `POST /modules/:id/views/:viewId/default` | Make this the module default (clears others). | Star a default view. |
+
+View payload shape (`columns`, `filters`, `sort` are stored as JSONB):
+
+```jsonc
+{
+  "name": "Open high-value",
+  "columns": ["name", "amount", "stage"],
+  "filters": [{ "field": "stage", "operator": "equals", "value": "open" }],
+  "sort": { "field": "amount", "order": "desc" },
+  "is_public": true
+}
+```
+
+Filter `operator` values: `contains`, `equals`, `not_equals`, `gt`, `lt`, `in`.
+
+**Save a view:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/views \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Open high-value","columns":["name","amount","stage"],"filters":[{"field":"stage","operator":"equals","value":"open"}],"sort":{"field":"amount","order":"desc"},"is_public":true}'
+```
+
+**List / set default:**
+```bash
+curl http://localhost:8080/api/v1/modules/<moduleId>/views -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/views/<viewId>/default -H "Authorization: Bearer $TOKEN"
+```
+
+### Dynamic table (frontend)
+
+Lives under `frontend/features/metadata/`, reusing the Phase 8 form primitives.
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| `DynamicTable` | `features/metadata/components/DynamicTable.tsx` | Presentational table: sortable headers, per-column filters, pagination. |
+| `TableCell` | `features/metadata/components/TableCell.tsx` | Renders one value by `field_type`. |
+| `ViewBar` | `features/metadata/components/ViewBar.tsx` | Saved-view switcher: apply / save / default / delete. |
+| `useDynamicTable` | `features/metadata/hooks/useDynamicTable.ts` | Owns columns/filters/sort/pagination state and derives visible rows. |
+| `lib/table.ts` | `features/metadata/lib/table.ts` | Pure `sortRows` / `filterRows` / `paginate` (type-aware). |
+| `api.ts` | `features/metadata/api.ts` | `getViews`, `createView`, `updateView`, `deleteView`, `setDefaultView`. |
+| Playground page | `app/(dashboard)/tables/page.tsx` | Pick a module → table + saved views; add rows via the dynamic form. Route: `/tables`. |
+
+```bash
+cd frontend
+npm run dev
+# then visit http://localhost:3000/tables  (also linked in the sidebar)
+```
+
+> Note: the playground seeds sample rows and lets you add records via the dynamic
+> form. The table is data-source-agnostic — in Phase 10 (Module Runtime) the
+> in-memory rows are swapped for the generic records query API without touching
+> `DynamicTable`.

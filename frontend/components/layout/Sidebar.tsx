@@ -9,6 +9,8 @@ import {
   Users,
   ContactRound,
   CheckSquare,
+  LayoutTemplate,
+  Table2,
   ChevronRight,
 } from "lucide-react";
 
@@ -32,6 +34,16 @@ const navigation = [
     name: "Tasks",
     href: "/tasks",
     icon: CheckSquare,
+  },
+  {
+    name: "Dynamic Forms",
+    href: "/forms",
+    icon: LayoutTemplate,
+  },
+  {
+    name: "Dynamic Tables",
+    href: "/tables",
+    icon: Table2,
   },
 ];
 
