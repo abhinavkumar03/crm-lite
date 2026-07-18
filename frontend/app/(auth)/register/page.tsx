@@ -88,7 +88,9 @@ export default function RegisterPage() {
         password,
       });
 
-      toast.success("Account created successfully.");
+      toast.success(
+        "Account created. Sign in to set up your workspace."
+      );
 
       router.replace("/login");
     } catch (err: any) {
@@ -270,6 +272,11 @@ export default function RegisterPage() {
           <PasswordStrength
             password={password}
           />
+
+          <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+            After you sign in, we&apos;ll guide you through creating your
+            organization workspace (roles and modules are set up automatically).
+          </p>
 
           {/* Error */}
 

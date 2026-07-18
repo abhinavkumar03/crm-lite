@@ -39,7 +39,7 @@ export default function SearchBar() {
   const flatResults = useMemo(
     () =>
       (results.results ?? []).map((hit) => ({
-        href: `/tables?module=${hit.module_id}`,
+        href: `/tables/${hit.module_id}/${hit.id}`,
         ...hit,
       })),
     [results]

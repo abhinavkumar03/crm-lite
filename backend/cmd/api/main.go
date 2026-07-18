@@ -37,6 +37,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tour"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/view"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/workspace"
 )
 
 func main() {
@@ -106,6 +107,8 @@ func main() {
 	validationEngine := validationengine.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	viewEngine := view.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	recordEngine := record.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, appCache) // cache: invalidate org dashboard on CUD
+	workspaceModule := workspace.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	recordEngine.Service.SetActivityLogger(workspaceModule.Service)
 	importEngine := importer.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
@@ -135,6 +138,7 @@ func main() {
 		validationEngine,
 		viewEngine,
 		recordEngine,
+		workspaceModule,
 		importEngine,
 		exportEngine,
 		notificationModule,

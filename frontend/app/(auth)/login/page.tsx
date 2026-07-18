@@ -11,6 +11,7 @@ import {
 
 import { login } from "@/features/auth/api";
 import { useAuth } from "@/context/AuthContext";
+import { resolveHomePath } from "@/features/organization/api";
 
 import AuthCard from "@/components/auth/AuthCard";
 import PasswordInput from "@/components/auth/PasswordInput";
@@ -51,7 +52,8 @@ export default function LoginPage() {
         res.data.access_token
       );
       toast.success("Welcome back!");
-      router.replace("/dashboard");
+      const dest = await resolveHomePath();
+      router.replace(dest);
     } catch (err) {
       console.error(err);
 

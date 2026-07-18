@@ -45,3 +45,21 @@ export interface StructureItem {
   location?: string | null;
   department_id?: string | null;
 }
+
+export interface CreateOrganizationPayload {
+  name: string;
+  slug?: string;
+  industry?: string;
+  company_size?: string;
+  country?: string;
+  logo_url?: string;
+  general?: {
+    timezone?: string;
+    currency?: string;
+    locale?: string;
+  };
+}
+
+export interface CreateOrganizationResult {
+  id: string;
+}

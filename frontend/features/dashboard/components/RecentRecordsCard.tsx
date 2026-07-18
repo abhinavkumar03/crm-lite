@@ -28,7 +28,7 @@ export default function RecentRecordsCard({ records }: Props) {
           records.map((r) => (
             <Link
               key={r.id}
-              href={`/tables?module=${r.module_id}`}
+              href={`/tables/${r.module_id}/${r.id}`}
               className="flex items-center justify-between px-6 py-4 transition hover:bg-slate-50"
             >
               <div>

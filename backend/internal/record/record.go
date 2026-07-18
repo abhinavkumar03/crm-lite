@@ -18,6 +18,7 @@ import (
 
 type Module struct {
 	Handler *handler.RecordHandler
+	Service *service.Service
 	auth    gin.HandlerFunc
 	org     gin.HandlerFunc
 	load    gin.HandlerFunc
@@ -35,6 +36,7 @@ func NewModule(db *pgxpool.Pool, auth, org, load gin.HandlerFunc, guard *rbac.Gu
 
 	return &Module{
 		Handler: h,
+		Service: svc,
 		auth:    auth,
 		org:     org,
 		load:    load,

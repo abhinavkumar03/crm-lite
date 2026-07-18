@@ -2,10 +2,14 @@ package bootstrap
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	settingsentity "github.com/abhinavkumar03/crm-lite/backend/internal/settings/entity"
@@ -13,12 +17,12 @@ import (
 
 // RoleSpec describes a system role seeded for every new organization.
 type RoleSpec struct {
-	Slug            string
-	Name            string
-	Description     string
-	HierarchyLevel  int
-	AllPermissions  bool
-	PermissionKeys  []string
+	Slug           string
+	Name           string
+	Description    string
+	HierarchyLevel int
+	AllPermissions bool
+	PermissionKeys []string
 }
 
 var DefaultRoles = []RoleSpec{
@@ -37,6 +41,19 @@ var DefaultRoles = []RoleSpec{
 	}},
 }
 
+// CreateOptions carries optional profile + locale prefs for a new workspace.
+type CreateOptions struct {
+	Name        string
+	Slug        string
+	Industry    string
+	CompanySize string
+	Country     string
+	LogoURL     string
+	Timezone    string
+	Currency    string
+	Locale      string
+}
+
 type Service struct {
 	db *pgxpool.Pool
 }
@@ -45,29 +62,91 @@ func New(db *pgxpool.Pool) *Service {
 	return &Service{db: db}
 }
 
+// HasMembership reports whether the user already belongs to any organization.
+func (s *Service) HasMembership(ctx context.Context, userID string) (bool, error) {
+	var exists bool
+	err := s.db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM organization_members
+			WHERE user_id = $1 AND status = 'active'
+		)
+	`, userID).Scan(&exists)
+	return exists, err
+}
+
 // CreateOrganization inserts the org, seeds roles/settings/modules, and adds
 // the creator as Owner with active_organization_id set.
-func (s *Service) CreateOrganization(ctx context.Context, name, slug, creatorUserID string) (orgID string, err error) {
-	slug = normalizeSlug(slug)
+func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, creatorUserID string) (orgID string, err error) {
+	name := strings.TrimSpace(opts.Name)
+	if name == "" {
+		return "", errors.New("name required")
+	}
+
+	slug := normalizeSlug(opts.Slug)
 	if slug == "" {
 		slug = normalizeSlug(name)
 	}
+	if slug == "" {
+		slug = "workspace"
+	}
+
+	general := settingsentity.DefaultGeneral()
+	if tz := strings.TrimSpace(opts.Timezone); tz != "" {
+		general.Timezone = tz
+	}
+	if cur := strings.TrimSpace(opts.Currency); cur != "" {
+		general.Currency = cur
+	}
+	if loc := strings.TrimSpace(opts.Locale); loc != "" {
+		general.Locale = loc
+	}
 
 	settings, err := json.Marshal(map[string]any{
-		"general":    settingsentity.DefaultGeneral(),
+		"general":    general,
 		"automation": settingsentity.DefaultAutomation(),
 	})
 	if err != nil {
 		return "", err
 	}
 
-	err = s.db.QueryRow(ctx, `
-		INSERT INTO organizations (name, slug, plan, status, created_by, settings)
-		VALUES ($1, $2, 'free', 'active', $3, $4)
-		RETURNING id
-	`, name, slug, creatorUserID, settings).Scan(&orgID)
-	if err != nil {
+	var industry, companySize, country, logoURL *string
+	if v := strings.TrimSpace(opts.Industry); v != "" {
+		industry = &v
+	}
+	if v := strings.TrimSpace(opts.CompanySize); v != "" {
+		companySize = &v
+	}
+	if v := strings.TrimSpace(opts.Country); v != "" {
+		country = &v
+	}
+	if v := strings.TrimSpace(opts.LogoURL); v != "" {
+		logoURL = &v
+	}
+
+	for attempt := 0; attempt < 5; attempt++ {
+		candidate := slug
+		if attempt > 0 {
+			candidate = slug + "-" + shortSuffix()
+		}
+		err = s.db.QueryRow(ctx, `
+			INSERT INTO organizations (
+				name, slug, plan, status, created_by, settings,
+				industry, company_size, country, logo_url
+			)
+			VALUES ($1, $2, 'free', 'active', $3, $4, $5, $6, $7, $8)
+			RETURNING id
+		`, name, candidate, creatorUserID, settings, industry, companySize, country, logoURL).Scan(&orgID)
+		if err == nil {
+			break
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			continue
+		}
 		return "", fmt.Errorf("create organization: %w", err)
+	}
+	if orgID == "" {
+		return "", fmt.Errorf("create organization: slug unavailable")
 	}
 
 	roleIDs, err := s.seedRoles(ctx, orgID)
@@ -205,4 +284,10 @@ func normalizeSlug(s string) string {
 		out = out[:80]
 	}
 	return out
+}
+
+func shortSuffix() string {
+	var b [3]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
 }

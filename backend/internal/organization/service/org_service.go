@@ -35,11 +35,26 @@ func (s *Service) SwitchOrg(ctx context.Context, userID, orgID string) error {
 }
 
 func (s *Service) CreateOrg(ctx context.Context, userID string, req dto.CreateOrgRequest) (string, error) {
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		return "", errors.New("name required")
+	opts := bootstrap.CreateOptions{
+		Name:        req.Name,
+		Slug:        req.Slug,
+		Industry:    req.Industry,
+		CompanySize: req.CompanySize,
+		Country:     req.Country,
+		LogoURL:     req.LogoURL,
 	}
-	return s.bootstrap.CreateOrganization(ctx, name, req.Slug, userID)
+	if req.General != nil {
+		opts.Timezone = req.General.Timezone
+		opts.Currency = req.General.Currency
+		opts.Locale = req.General.Locale
+	}
+	orgID, err := s.bootstrap.CreateOrganization(ctx, opts, userID)
+	if err != nil {
+		return "", err
+	}
+	// Ensure tenant cache does not keep a pre-create miss.
+	_ = s.tenant.SetActiveOrganization(ctx, userID, orgID)
+	return orgID, nil
 }
 
 func (s *Service) ListMembers(ctx context.Context, orgID string) ([]dto.MemberResponse, error) {

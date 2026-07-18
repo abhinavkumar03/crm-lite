@@ -32,6 +32,7 @@ interface Props {
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
   onDeleteRow?: (row: TableRow) => void;
+  onRowClick?: (row: TableRow) => void;
 }
 
 const PAGE_SIZES = [5, 10, 25, 50];
@@ -116,6 +117,7 @@ export default function DynamicTable({
   onPage,
   onPageSize,
   onDeleteRow,
+  onRowClick,
 }: Props) {
   const fieldByName = new Map(fields.map((f) => [f.api_name, f]));
   const visible = columns
@@ -177,7 +179,10 @@ export default function DynamicTable({
               rows.map((row, idx) => (
                 <tr
                   key={(row.id as string) ?? idx}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60"
+                  onClick={() => onRowClick?.(row)}
+                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/60 ${
+                    onRowClick ? "cursor-pointer" : ""
+                  }`}
                 >
                   {visible.map((field) => (
                     <td key={field.api_name} className="px-4 py-3 text-slate-700">
@@ -188,7 +193,10 @@ export default function DynamicTable({
                     <td className="px-4 py-3 text-right">
                       <button
                         type="button"
-                        onClick={() => onDeleteRow(row)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteRow(row);
+                        }}
                         className="text-slate-300 transition hover:text-red-500"
                         aria-label="Delete record"
                       >

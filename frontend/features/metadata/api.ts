@@ -97,6 +97,17 @@ export async function listRecords(
   return res.data.data;
 }
 
+export async function getRecord(
+  moduleId: string,
+  recordId: string,
+  expand = true
+): Promise<RecordResponse> {
+  const res = await api.get(`/modules/${moduleId}/records/${recordId}`, {
+    params: expand ? { expand: true } : undefined,
+  });
+  return res.data.data;
+}
+
 export async function createRecord(
   moduleId: string,
   data: FormValues,
