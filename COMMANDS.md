@@ -330,3 +330,46 @@ curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/validate \
   -d '{"data":{"name":"Al","email":"nope","amount":-5}}'
 # => {"valid":false,"errors":[{"field":"name","message":"Value is too short"}, ...]}
 ```
+
+---
+
+## 12. Dynamic Forms (frontend)
+
+Metadata-driven forms rendered entirely from the backend field metadata + the
+compiled validation schema — no form is hand-coded. Lives under
+`frontend/features/metadata/`.
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| `DynamicForm` | `features/metadata/components/DynamicForm.tsx` | Renders a full form from `ModuleField[]`, handles layout, visibility, validation, submit. |
+| `DynamicField` | `features/metadata/components/DynamicField.tsx` | Maps a single `field_type` to the right shared input primitive. |
+| `useDynamicForm` | `features/metadata/hooks/useDynamicForm.ts` | Form state, computed visibility, validation. |
+| `lib/conditions.ts` | `features/metadata/lib/conditions.ts` | Conditional-rendering engine (`VisibilityRule[]`). |
+| `lib/validation.ts` | `features/metadata/lib/validation.ts` | Client-side validation derived from the Phase 7 schema. |
+| `api.ts` | `features/metadata/api.ts` | `getModules`, `getModuleFields`, `getValidationSchema`, `validateRecord`. |
+| Playground page | `app/(dashboard)/forms/page.tsx` | Pick a module → generate its form → server-validate. Route: `/forms`. |
+
+Run the frontend and open the page:
+```bash
+cd frontend
+npm run dev
+# then visit http://localhost:3000/forms  (also linked in the sidebar)
+```
+
+Reuse the renderer for any module:
+```tsx
+import DynamicForm from "@/features/metadata/components/DynamicForm";
+import { getModuleFields, getValidationSchema } from "@/features/metadata/api";
+
+// fields = await getModuleFields(moduleId); schema = await getValidationSchema(moduleId);
+<DynamicForm
+  fields={fields}
+  schema={schema}
+  submitText="Save"
+  visibilityRules={[
+    { when: { field: "type", operator: "equals", value: "company" },
+      effect: "show", targets: ["company_name"] },
+  ]}
+  onSubmit={async (values) => { /* persist via record runtime (Phase 10) */ }}
+/>
+```
