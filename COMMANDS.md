@@ -1014,3 +1014,58 @@ cd backend && make migrate-up   # applies 000009
 go test ./...
 cd ../frontend && npm run lint # optional
 ```
+
+---
+
+## 22. API & Swagger (OpenAPI 3)
+
+Phase 18 publishes a complete OpenAPI 3.0 specification for every `/api/v1`
+route, with request/response examples and the shared error envelope.
+
+### Browse
+
+| URL | What |
+| --- | --- |
+| `http://localhost:8080/api/v1/docs` | Interactive Swagger UI (Try it out + Authorize) |
+| `http://localhost:8080/api/v1/openapi.yaml` | Raw OpenAPI 3 YAML |
+
+No auth is required to load the docs. Click **Authorize** in Swagger UI and
+paste a JWT from `POST /auth/login` to call protected endpoints.
+
+### Error envelope (documented on every operation)
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    { "field": "email", "message": "Must be a valid email" }
+  ]
+}
+```
+
+App-level codes use `{ "code": "NOT_FOUND" }` (see `BAD_REQUEST`, `UNAUTHORIZED`,
+`FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `VALIDATION_ERROR`, `INTERNAL_SERVER_ERROR`).
+Field validation failures are returned as **HTTP 400** with `{field,message}[]`.
+
+### Regenerate the spec
+
+The YAML is generated (not hand-annotated with swaggo) so it stays aligned with
+the route inventory without touching every handler:
+
+```bash
+cd backend
+make openapi          # needs: pip install pyyaml
+# edits: internal/docs/generate_openapi.py + schemas_data.py
+```
+
+Embedded at build time via `//go:embed` in `internal/docs`.
+
+### Implementation
+
+| Piece | Path |
+| --- | --- |
+| Spec + generator | `backend/internal/docs/openapi.yaml`, `generate_openapi.py`, `schemas_data.py` |
+| Swagger UI | `backend/internal/docs/swagger.html` |
+| Gin module | `backend/internal/docs/docs.go` |
+

@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/docs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
@@ -98,6 +99,7 @@ func main() {
 	rbacLoad := guard.Load()
 
 	healthModule := health.NewModule()
+	docsModule := docs.NewModule()
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
 	authMW := authModule.Middleware()
 
@@ -130,6 +132,7 @@ func main() {
 		log,
 		cfg,
 		healthModule,
+		docsModule,
 		authModule,
 		moduleEngine,
 		fieldEngine,
