@@ -29,6 +29,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 )
 
 func main() {
@@ -84,6 +85,7 @@ func main() {
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
 	moduleEngine := moduleengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	fieldEngine := field.NewModule(db, authModule.Middleware(), orgMiddleware)
+	validationEngine := validationengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -105,6 +107,7 @@ func main() {
 		authModule,
 		moduleEngine,
 		fieldEngine,
+		validationEngine,
 		leadModule,
 		contactModule,
 		taskModule,
