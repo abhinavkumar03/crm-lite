@@ -10,6 +10,8 @@ const (
 	EntityContact EntityType = "CONTACT"
 
 	EntityTask EntityType = "TASK"
+
+	EntityNotification EntityType = "NOTIFICATION"
 )
 
 const (
@@ -50,6 +52,10 @@ const (
 	ActionTaskDeleted = "TASK_DELETED"
 
 	ActionTaskCompleted = "TASK_COMPLETED"
+
+	ActionWhatsAppSent       = "WHATSAPP_SENT"
+	ActionEmailSent          = "EMAIL_SENT"
+	ActionNotificationFailed = "NOTIFICATION_FAILED"
 )
 
 type Activity struct {

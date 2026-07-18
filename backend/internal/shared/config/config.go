@@ -48,6 +48,14 @@ type Config struct {
 	CloudinaryAPISecret string
 	CloudinaryFolder    string
 
+	// WhatsApp / notification provider selection. Defaults keep the app fully
+	// functional offline via the simulation provider; setting WhatsAppProvider
+	// to "meta" and supplying credentials switches to real delivery.
+	WhatsAppProvider string
+	WhatsAppAPIURL   string
+	WhatsAppToken    string
+	WhatsAppPhoneID  string
+
 	JWTSecret     string
 	JWTExpiration time.Duration
 
@@ -85,6 +93,11 @@ func Load() *Config {
 		CloudinaryAPIKey:    getEnv("CLOUDINARY_API_KEY", ""),
 		CloudinaryAPISecret: getEnv("CLOUDINARY_API_SECRET", ""),
 		CloudinaryFolder:    getEnv("CLOUDINARY_FOLDER", "crm-lite"),
+
+		WhatsAppProvider: getEnv("WHATSAPP_PROVIDER", "simulation"),
+		WhatsAppAPIURL:   getEnv("WHATSAPP_API_URL", "https://graph.facebook.com/v20.0"),
+		WhatsAppToken:    getEnv("WHATSAPP_TOKEN", ""),
+		WhatsAppPhoneID:  getEnv("WHATSAPP_PHONE_ID", ""),
 
 		JWTSecret:     getEnv("JWT_SECRET", defaultJWTSecret),
 		JWTExpiration: getEnvAsDuration("JWT_EXPIRATION", 24*time.Hour),

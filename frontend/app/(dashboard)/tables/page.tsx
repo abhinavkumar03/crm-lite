@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 
@@ -14,20 +14,24 @@ import ViewBar from "@/features/metadata/components/ViewBar";
 import { useDynamicTable } from "@/features/metadata/hooks/useDynamicTable";
 
 import {
+  createRecord,
   createView,
+  deleteRecord,
   deleteView,
   getModuleFields,
   getModules,
   getValidationSchema,
   getViews,
+  listRecords,
   setDefaultView,
-  validateRecord,
 } from "@/features/metadata/api";
 
 import {
+  FieldError,
   FormValues,
   ModuleField,
   ModuleSummary,
+  RecordResponse,
   SavedView,
   TableRow,
   ValidationSchema,
@@ -35,46 +39,19 @@ import {
 
 import { errorListToMap } from "@/features/metadata/lib/validation";
 
-// Builds a few illustrative rows so the table has data to sort/filter/paginate
-// before the record runtime (Phase 10) is wired up.
-function makeSampleRows(fields: ModuleField[], count: number): TableRow[] {
-  return Array.from({ length: count }, (_, i) => {
-    const row: TableRow = { id: `sample-${i + 1}` };
-    for (const field of fields) {
-      switch (field.field_type) {
-        case "number":
-        case "currency":
-          row[field.api_name] = (i + 1) * 100;
-          break;
-        case "boolean":
-        case "checkbox":
-          row[field.api_name] = i % 2 === 0;
-          break;
-        case "email":
-          row[field.api_name] = `user${i + 1}@example.com`;
-          break;
-        case "date":
-        case "datetime":
-          row[field.api_name] = new Date(
-            Date.now() - i * 86400000
-          ).toISOString();
-          break;
-        case "dropdown":
-        case "radio":
-        case "user":
-        case "lookup":
-          row[field.api_name] =
-            field.options[i % Math.max(1, field.options.length)]?.value ?? "";
-          break;
-        case "multiselect":
-          row[field.api_name] = field.options.slice(0, 1).map((o) => o.value);
-          break;
-        default:
-          row[field.api_name] = `${field.label} ${i + 1}`;
-      }
+// Flattens a record into a table row: field values plus resolved relation labels
+// (so lookup/user columns show a name instead of a raw id).
+function recordToRow(rec: RecordResponse, moduleFields: ModuleField[]): TableRow {
+  const row: TableRow = { id: rec.id };
+  for (const field of moduleFields) {
+    row[field.api_name] = rec.data[field.api_name] ?? null;
+  }
+  if (rec.relations) {
+    for (const [key, ref] of Object.entries(rec.relations)) {
+      row[key] = ref.label;
     }
-    return row;
-  });
+  }
+  return row;
 }
 
 interface WorkspaceProps {
@@ -94,11 +71,36 @@ function RecordsWorkspace({
   schema,
   initialViews,
 }: WorkspaceProps) {
-  const [rows, setRows] = useState<TableRow[]>(() => makeSampleRows(fields, 8));
+  const [records, setRecords] = useState<RecordResponse[]>([]);
   const [views, setViews] = useState<SavedView[]>(initialViews);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        // Fetch a generous page and let the table handle in-view sort/filter.
+        const result = await listRecords(moduleId, {
+          page_size: 100,
+          expand: true,
+        });
+        if (active) setRecords(result.records);
+      } catch {
+        toast.error("Failed to load records");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [moduleId, reloadKey]);
+
+  const rows = useMemo(
+    () => records.map((rec) => recordToRow(rec, fields)),
+    [records, fields]
+  );
 
   const table = useDynamicTable({ rows, fields });
 
@@ -149,19 +151,32 @@ function RecordsWorkspace({
   }
 
   async function handleAddRecord(values: FormValues) {
-    const result = await validateRecord(moduleId, values);
-    if (!result.valid) {
-      setAddErrors(errorListToMap(result.errors));
-      toast.error("Server validation failed.");
-      return;
+    try {
+      await createRecord(moduleId, values);
+      setAddErrors({});
+      setAdding(false);
+      setReloadKey((k) => k + 1);
+      toast.success("Record created");
+    } catch (err: unknown) {
+      const fieldErrors = extractFieldErrors(err);
+      if (fieldErrors) {
+        setAddErrors(errorListToMap(fieldErrors));
+        toast.error("Server validation failed.");
+      } else {
+        toast.error("Failed to create record");
+      }
     }
-    setAddErrors({});
-    setRows((prev) => [
-      { id: crypto.randomUUID(), ...(values as TableRow) },
-      ...prev,
-    ]);
-    setAdding(false);
-    toast.success("Record added");
+  }
+
+  async function handleDeleteRecord(row: TableRow) {
+    const id = row.id as string;
+    try {
+      await deleteRecord(moduleId, id);
+      setReloadKey((k) => k + 1);
+      toast.success("Record deleted");
+    } catch {
+      toast.error("Failed to delete record");
+    }
   }
 
   return (
@@ -196,7 +211,7 @@ function RecordsWorkspace({
             schema={schema}
             submitText="Add record"
             sectionTitle={`New ${moduleLabel}`}
-            sectionDescription="Validated by the backend before it is added to the table."
+            sectionDescription="Validated by the backend, then persisted via the record runtime."
             externalErrors={addErrors}
             onSubmit={handleAddRecord}
           />
@@ -217,9 +232,25 @@ function RecordsWorkspace({
         pageSize={table.pageSize}
         onPage={table.setPage}
         onPageSize={table.setPageSize}
+        onDeleteRow={handleDeleteRecord}
       />
     </div>
   );
+}
+
+function extractFieldErrors(err: unknown): FieldError[] | null {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "response" in err &&
+    typeof (err as { response?: unknown }).response === "object"
+  ) {
+    const response = (err as { response?: { data?: { errors?: unknown } } })
+      .response;
+    const errors = response?.data?.errors;
+    if (Array.isArray(errors)) return errors as FieldError[];
+  }
+  return null;
 }
 
 export default function DynamicTablesPage() {
@@ -236,7 +267,10 @@ export default function DynamicTablesPage() {
   useEffect(() => {
     (async () => {
       try {
-        setModules(await getModules());
+        const all = await getModules();
+        // The record runtime only serves modules backed by dynamic (JSONB)
+        // storage; native modules keep their first-class endpoints.
+        setModules(all.filter((m) => m.storage_strategy === "dynamic"));
       } catch {
         toast.error("Failed to load modules");
       }
@@ -270,13 +304,13 @@ export default function DynamicTablesPage() {
       <PageHeader
         badge="Metadata Engine"
         title="Dynamic Tables"
-        description="Metadata-driven tables with client-side sorting, filtering and pagination, plus saved views persisted per module. No table is hand-coded."
+        description="Metadata-driven tables backed by the generic record runtime: create, query and delete records that live entirely in JSONB, with saved views per module."
       />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <FormSelect
           label="Module"
-          helperText="Pick any module to render its records table from metadata."
+          helperText="Dynamic (JSONB-backed) modules are served by the record runtime."
           value={moduleId}
           onChange={(e) => setModuleId(e.target.value)}
         >
