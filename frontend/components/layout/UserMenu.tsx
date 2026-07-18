@@ -293,6 +293,19 @@ export default function UserMenu({
 
           <div className="p-2">
 
+    {orgs.length === 0 && (
+      <div className="mb-1 border-b border-slate-100 px-2 pb-2">
+        <Link
+          href="/onboarding/organization"
+          onClick={() => setOpen(false)}
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-emerald-700 transition hover:bg-emerald-50"
+        >
+          <Building2 size={18} />
+          <span className="text-sm font-semibold">Create workspace</span>
+        </Link>
+      </div>
+    )}
+
     {orgs.length > 1 && (
       <div className="mb-1 border-b border-slate-100 px-2 pb-2">
         <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400">

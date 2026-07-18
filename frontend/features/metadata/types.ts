@@ -200,6 +200,10 @@ export interface RecordResponse {
   module_id: string;
   data: Record<string, FieldValue>;
   owner_id: string | null;
+  assigned_to?: string | null;
+  team_id?: string | null;
+  department_id?: string | null;
+  visibility?: string;
   created_by: string | null;
   updated_by: string | null;
   relations?: Record<string, RelationRef>;
@@ -222,4 +226,8 @@ export interface RecordListParams {
   sort?: string;
   order?: SortDirection;
   expand?: boolean;
+  /** JSON array of FilterClause */
+  filters?: string;
+  /** Equality shorthands: filter.<field>=value (passed through axios params) */
+  [key: string]: string | number | boolean | undefined;
 }

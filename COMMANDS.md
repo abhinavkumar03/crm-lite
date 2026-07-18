@@ -1145,3 +1145,31 @@ curl -X POST http://localhost:8080/api/v1/organizations/invitations \
 
 Canonical product order: [`docs/roadmap.md`](./docs/roadmap.md).
 
+---
+
+## 25. Record Workspace (metadata-driven detail)
+
+Schema: migration **`000012_record_workspace`**. Apply with `cd backend && make migrate-up`.
+
+UI: `/tables/:moduleId/:recordId` (row click from Tables, search, recent records).
+
+| Concern | Endpoints |
+| --- | --- |
+| Detail layout | `GET /modules/:id/layouts/detail` |
+| Related modules | `GET /modules/:id/related` |
+| Notes | `GET/POST /modules/:id/records/:rid/notes`, `DELETE …/notes/:noteId` |
+| Attachments | `GET/POST …/attachments`, `DELETE …/attachments/:id` |
+| Timeline | `GET …/activities` |
+| Record CRUD | existing `/modules/:id/records` (CUD emits timeline events) |
+
+```bash
+# Open a record workspace API surface
+curl "http://localhost:8080/api/v1/modules/$MODULE_ID/records/$RECORD_ID?expand=true" \
+  -H "Authorization: Bearer $TOKEN"
+curl "http://localhost:8080/api/v1/modules/$MODULE_ID/layouts/detail" \
+  -H "Authorization: Bearer $TOKEN"
+curl -X POST "http://localhost:8080/api/v1/modules/$MODULE_ID/records/$RECORD_ID/notes" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"body":"Followed up with customer"}'
+```
+

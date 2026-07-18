@@ -72,6 +72,7 @@ function RecordsWorkspace({
   schema,
   initialViews,
 }: WorkspaceProps) {
+  const router = useRouter();
   const [records, setRecords] = useState<RecordResponse[]>([]);
   const [views, setViews] = useState<SavedView[]>(initialViews);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
@@ -234,6 +235,10 @@ function RecordsWorkspace({
         onPage={table.setPage}
         onPageSize={table.setPageSize}
         onDeleteRow={handleDeleteRecord}
+        onRowClick={(row) => {
+          const id = row.id as string;
+          if (id) router.push(`/tables/${moduleId}/${id}`);
+        }}
       />
     </div>
   );

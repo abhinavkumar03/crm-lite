@@ -17,4 +17,25 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (typeof window !== "undefined") {
+            const message = error?.response?.data?.message as string | undefined;
+            const status = error?.response?.status;
+            const path = window.location.pathname;
+            if (
+                status === 403 &&
+                message === "User does not belong to an organization" &&
+                !path.startsWith("/onboarding") &&
+                !path.startsWith("/login") &&
+                !path.startsWith("/register")
+            ) {
+                window.location.replace("/onboarding/organization");
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

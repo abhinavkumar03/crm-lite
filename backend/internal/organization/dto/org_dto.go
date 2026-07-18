@@ -10,9 +10,22 @@ type OrgSummary struct {
 	IsActive bool   `json:"is_active"`
 }
 
+// CreateOrgGeneralPrefs are locale defaults applied into settings.general on create.
+type CreateOrgGeneralPrefs struct {
+	Timezone string `json:"timezone" validate:"omitempty,max=80"`
+	Currency string `json:"currency" validate:"omitempty,max=10"`
+	Locale   string `json:"locale" validate:"omitempty,max=20"`
+}
+
+// CreateOrgRequest creates a workspace and bootstraps roles/modules for the caller.
 type CreateOrgRequest struct {
-	Name string `json:"name" validate:"required,min=2,max=200"`
-	Slug string `json:"slug" validate:"omitempty,max=120"`
+	Name        string                 `json:"name" validate:"required,min=2,max=200"`
+	Slug        string                 `json:"slug" validate:"omitempty,max=120"`
+	Industry    string                 `json:"industry" validate:"omitempty,max=120"`
+	CompanySize string                 `json:"company_size" validate:"omitempty,max=40"`
+	Country     string                 `json:"country" validate:"omitempty,max=80"`
+	LogoURL     string                 `json:"logo_url" validate:"omitempty,max=500"`
+	General     *CreateOrgGeneralPrefs `json:"general"`
 }
 
 type SwitchOrgRequest struct {
@@ -20,11 +33,11 @@ type SwitchOrgRequest struct {
 }
 
 type CreateInviteRequest struct {
-	Email          string  `json:"email" validate:"required,email"`
-	RoleID         string  `json:"role_id" validate:"required,uuid"`
-	ManagerUserID  *string `json:"manager_user_id" validate:"omitempty,uuid"`
-	DepartmentID   *string `json:"department_id" validate:"omitempty,uuid"`
-	TeamID         *string `json:"team_id" validate:"omitempty,uuid"`
+	Email         string  `json:"email" validate:"required,email"`
+	RoleID        string  `json:"role_id" validate:"required,uuid"`
+	ManagerUserID *string `json:"manager_user_id" validate:"omitempty,uuid"`
+	DepartmentID  *string `json:"department_id" validate:"omitempty,uuid"`
+	TeamID        *string `json:"team_id" validate:"omitempty,uuid"`
 }
 
 type InviteResponse struct {
@@ -59,10 +72,10 @@ type MemberResponse struct {
 }
 
 type StructureItem struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Location    *string `json:"location,omitempty"`
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	Description  *string `json:"description,omitempty"`
+	Location     *string `json:"location,omitempty"`
 	DepartmentID *string `json:"department_id,omitempty"`
 }
 

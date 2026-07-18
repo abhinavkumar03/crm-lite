@@ -59,16 +59,33 @@ type Validator interface {
 	Validate(ctx context.Context, orgID, moduleID string, data map[string]any) (vdto.ValidateResult, error)
 }
 
+// ActivityLogger writes timeline events for the Record Workspace.
+type ActivityLogger interface {
+	LogRecordActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) error
+}
+
 type Service struct {
 	repo      RecordRepository
 	fields    FieldReader
 	validator Validator
 	cache     *cache.Cache
 	access    *access.Service
+	activity  ActivityLogger
 }
 
 func New(repo RecordRepository, fields FieldReader, validator Validator, appCache *cache.Cache, accessSvc *access.Service) *Service {
 	return &Service{repo: repo, fields: fields, validator: validator, cache: appCache, access: accessSvc}
+}
+
+func (s *Service) SetActivityLogger(logger ActivityLogger) {
+	s.activity = logger
+}
+
+func (s *Service) logActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) {
+	if s.activity == nil {
+		return
+	}
+	_ = s.activity.LogRecordActivity(ctx, orgID, moduleID, recordID, userID, action, description, metadata)
 }
 
 func (s *Service) invalidateDashboard(ctx context.Context, orgID string) {
@@ -137,6 +154,7 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID, userID string, re
 		return nil, err
 	}
 
+	s.logActivity(ctx, orgID, moduleID, rec.ID, userID, "RECORD_CREATED", "Record created", nil)
 	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(rec)
 	return &resp, nil
@@ -201,6 +219,7 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id, userID string
 		return nil, err
 	}
 
+	s.logActivity(ctx, orgID, moduleID, id, userID, "RECORD_UPDATED", "Record updated", nil)
 	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(existing)
 	return &resp, nil
@@ -332,6 +351,8 @@ func (s *Service) Delete(ctx context.Context, orgID, moduleID, id, userID string
 			return ErrNotFound
 		}
 	}
+
+	s.logActivity(ctx, orgID, moduleID, id, userID, "RECORD_DELETED", "Record deleted", nil)
 
 	deleted, err := s.repo.Delete(ctx, orgID, moduleID, id)
 	if err != nil {

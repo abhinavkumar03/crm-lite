@@ -2,6 +2,8 @@ import api from "@/services/api";
 
 import {
   CreateInvitePayload,
+  CreateOrganizationPayload,
+  CreateOrganizationResult,
   InviteResponse,
   OrgMember,
   OrgMembership,
@@ -10,7 +12,22 @@ import {
 
 export async function listMyOrganizations(): Promise<OrgMembership[]> {
   const res = await api.get("/me/organizations");
+  return res.data.data ?? [];
+}
+
+export async function createOrganization(
+  payload: CreateOrganizationPayload
+): Promise<CreateOrganizationResult> {
+  const res = await api.post("/organizations", payload);
   return res.data.data;
+}
+
+/** Post-login / gate destination based on membership. */
+export async function resolveHomePath(): Promise<
+  "/dashboard" | "/onboarding/organization"
+> {
+  const orgs = await listMyOrganizations();
+  return orgs.length === 0 ? "/onboarding/organization" : "/dashboard";
 }
 
 export async function switchOrganization(organizationId: string): Promise<void> {
