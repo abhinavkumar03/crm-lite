@@ -33,6 +33,13 @@ type ImportProcessor interface {
 	Process(ctx context.Context, orgID, importID string) error
 }
 
+// ExportProcessor builds a persisted export job identified by its id. It is
+// implemented in the exporter package; jobs defines the interface to avoid an
+// import cycle (the exporter package imports jobs to enqueue).
+type ExportProcessor interface {
+	Process(ctx context.Context, orgID, exportID string) error
+}
+
 // NewServer wires the asynq server and routes each JobType to a handler. The
 // notification-oriented jobs are delegated to the shared notify.Dispatcher so
 // email and WhatsApp travel the same pipeline. The optional processor handles
@@ -43,6 +50,7 @@ func NewServer(
 	dispatcher *notify.Dispatcher,
 	processor NotificationProcessor,
 	importProcessor ImportProcessor,
+	exportProcessor ExportProcessor,
 ) *Server {
 	srv := asynq.NewServer(opt, asynq.Config{
 		Concurrency: 10,
@@ -52,7 +60,13 @@ func NewServer(
 		Logger: newZapLogger(logger),
 	})
 
-	h := &handlers{logger: logger, dispatcher: dispatcher, processor: processor, importProcessor: importProcessor}
+	h := &handlers{
+		logger:          logger,
+		dispatcher:      dispatcher,
+		processor:       processor,
+		importProcessor: importProcessor,
+		exportProcessor: exportProcessor,
+	}
 
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(string(JobLeadCreated), h.handleLeadEvent)
@@ -61,6 +75,7 @@ func NewServer(
 	mux.HandleFunc(string(JobSendWhatsApp), h.handleSendWhatsApp)
 	mux.HandleFunc(string(JobSendNotification), h.handleSendNotification)
 	mux.HandleFunc(string(JobImportProcess), h.handleImportProcess)
+	mux.HandleFunc(string(JobExportProcess), h.handleExportProcess)
 
 	return &Server{srv: srv, mux: mux, logger: logger}
 }
@@ -78,6 +93,7 @@ type handlers struct {
 	dispatcher      *notify.Dispatcher
 	processor       NotificationProcessor
 	importProcessor ImportProcessor
+	exportProcessor ExportProcessor
 }
 
 func decode(t *asynq.Task) (Job, error) {
@@ -169,6 +185,25 @@ func (h *handlers) handleImportProcess(ctx context.Context, t *asynq.Task) error
 	}
 
 	return h.importProcessor.Process(ctx, orgID, id)
+}
+
+func (h *handlers) handleExportProcess(ctx context.Context, t *asynq.Task) error {
+	job, err := decode(t)
+	if err != nil {
+		return err
+	}
+	if h.exportProcessor == nil {
+		h.logger.Warn("jobs: no export processor configured; skipping")
+		return nil
+	}
+
+	id := stringField(job.Payload, "export_id")
+	orgID := stringField(job.Payload, "org_id")
+	if id == "" || orgID == "" {
+		return fmt.Errorf("jobs: export.process missing ids: %w", asynq.SkipRetry)
+	}
+
+	return h.exportProcessor.Process(ctx, orgID, id)
 }
 
 func stringField(payload map[string]interface{}, key string) string {

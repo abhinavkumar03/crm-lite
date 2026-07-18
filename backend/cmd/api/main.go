@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/importer"
@@ -93,6 +94,7 @@ func main() {
 	viewEngine := view.NewModule(db, authModule.Middleware(), orgMiddleware)
 	recordEngine := record.NewModule(db, authModule.Middleware(), orgMiddleware)
 	importEngine := importer.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
+	exportEngine := exporter.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
@@ -119,6 +121,7 @@ func main() {
 		viewEngine,
 		recordEngine,
 		importEngine,
+		exportEngine,
 		notificationModule,
 		leadModule,
 		contactModule,

@@ -2,6 +2,8 @@ package main
 
 import (
 	activityrepo "github.com/abhinavkumar03/crm-lite/backend/internal/activity/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter"
+	exportprocessor "github.com/abhinavkumar03/crm-lite/backend/internal/exporter/processor"
 	fieldrepo "github.com/abhinavkumar03/crm-lite/backend/internal/field/repository"
 	importprocessor "github.com/abhinavkumar03/crm-lite/backend/internal/importer/processor"
 	importrepo "github.com/abhinavkumar03/crm-lite/backend/internal/importer/repository"
@@ -68,6 +70,10 @@ func main() {
 		log,
 	)
 
+	// The export processor reuses the export service's generation logic. It only
+	// reads + builds + stores (never enqueues), so it needs no producer here.
+	exportProcessor := exportprocessor.New(exporter.NewService(db, nil), log)
+
 	server := jobs.NewServer(
 		jobs.RedisOpt(
 			cfg.RedisHost,
@@ -79,6 +85,7 @@ func main() {
 		dispatcher,
 		processor,
 		importProcessor,
+		exportProcessor,
 	)
 
 	if err := server.Run(); err != nil {

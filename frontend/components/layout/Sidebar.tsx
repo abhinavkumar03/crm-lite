@@ -12,6 +12,7 @@ import {
   LayoutTemplate,
   Table2,
   Upload,
+  Download,
   MessageCircle,
   ChevronRight,
 } from "lucide-react";
@@ -51,6 +52,11 @@ const navigation = [
     name: "Import",
     href: "/imports",
     icon: Upload,
+  },
+  {
+    name: "Export",
+    href: "/exports",
+    icon: Download,
   },
   {
     name: "Notifications",

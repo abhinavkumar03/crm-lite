@@ -677,3 +677,76 @@ Implementation:
 > validation (numbers/currency → float, boolean/checkbox → bool, multiselect →
 > list). A failed conversion keeps the raw value so the validator surfaces a
 > clear, field-specific error instead of silently dropping data.
+
+## 17. Export Engine (CSV / Excel)
+
+Export any **dynamic** module to CSV or `.xlsx`, either **synchronously** (stream
+the file straight back for small sets) or **asynchronously** (the worker builds
+it in the background and stores it for download). Rows are pulled through the
+**Phase 10 record runtime**, so the same columns, filters, search, sort and
+relation-label expansion apply as on screen. Reusable **templates** persist a
+format + column + filter selection. Completed async exports are stored inline in
+`export_jobs.content`, so history and re-download need no object store.
+Organization-scoped. Requires migration `000006` (`make migrate-up`).
+
+### Export API
+
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules/:id/export` | **Synchronous** download; streams the file immediately. | Quick, small export. |
+| `POST /modules/:id/exports` | **Async** export; enqueues a job the worker builds. | Large / background export. |
+| `GET /modules/:id/exports` | List export jobs (`status` filter + pagination). | Export history. |
+| `GET /modules/:id/exports/:exportId` | Fetch one job: status, row count, byte size. | Track progress. |
+| `GET /modules/:id/exports/:exportId/download` | Stream a completed job's stored file. | Re-download. |
+| `GET/POST /modules/:id/export-templates` | List / create reusable export configs. | Save a common export. |
+| `PUT/DELETE /modules/:id/export-templates/:templateId` | Update / delete a template. | Manage templates. |
+
+**Spec** (query params for sync, JSON body for async): `format` (`csv`/`xlsx`),
+`columns` (comma list for sync / array for async; empty = all visible fields, plus
+selectable meta columns `id`/`created_at`/`updated_at`), `search`, `sort`,
+`order`, `expand` and `filters` (record-runtime clause array). Unknown columns are
+dropped so a stale template never breaks an export; lookup/user columns auto-expand
+to human labels.
+
+**Synchronous download (streams a .csv):**
+```bash
+curl -X GET "http://localhost:8080/api/v1/modules/$MODULE_ID/export?format=csv&columns=first_name,email,amount" \
+  -H "Authorization: Bearer $TOKEN" -OJ
+```
+
+**Queue an async export, then download it when ready:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/$MODULE_ID/exports \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"format":"xlsx","columns":["first_name","email"],"search":"acme"}'
+# => { "id": "...", "status": "pending", "format": "xlsx" }
+
+curl -OJ "http://localhost:8080/api/v1/modules/$MODULE_ID/exports/$EXPORT_ID/download" \
+  -H "Authorization: Bearer $TOKEN"   # once status == completed
+```
+
+### Running the pipeline
+
+```bash
+make migrate-up
+make run-worker            # consumes export.process jobs
+# POST an async export, then GET the job (or use the /exports page). The worker
+# queries the records, serializes the file and flips the job to completed.
+```
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Writer | `internal/exporter/writer/` | Format-agnostic CSV (+BOM) + `.xlsx` serialization with per-type cell formatting. |
+| Engine (API) | `internal/exporter/` | Sync/async/list/get/download + template CRUD; shared `Build` core reused by the worker. |
+| Queue | `internal/jobs/{jobs,server}.go` | `export.process` job type + worker handler + `ExportProcessor` interface. |
+| Processor (worker) | `internal/exporter/processor/` | Thin adapter that runs the service's `RunJob` (build + store). |
+| Frontend | `frontend/features/export/` + `app/(dashboard)/exports/page.tsx` | Column picker + templates + sync/async download + history. Route: `/exports`. |
+
+> Reuse: the export service consumes the record service as its row source, so
+> filters/search/sort/expansion are the Phase 10 engine — the export never
+> reimplements querying. The same `Build` method powers both the synchronous
+> endpoint and the asynchronous worker job.
