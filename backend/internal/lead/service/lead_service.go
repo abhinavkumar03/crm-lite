@@ -168,12 +168,12 @@ func (s *Service) Update(
 		return nil, err
 	}
 
-	oldStatus := lead.Status
-	newStatus := req.Status
-
 	if lead == nil {
 		return nil, nil
 	}
+
+	oldStatus := lead.Status
+	newStatus := req.Status
 
 	if req.Name != "" {
 		lead.Name = req.Name

@@ -9,12 +9,17 @@ import (
 )
 
 type Service struct {
-	secret string
+	secret     string
+	expiration time.Duration
 }
 
-func NewService(secret string) *Service {
+func NewService(secret string, expiration time.Duration) *Service {
+	if expiration <= 0 {
+		expiration = 24 * time.Hour
+	}
 	return &Service{
-		secret: secret,
+		secret:     secret,
+		expiration: expiration,
 	}
 }
 
@@ -34,7 +39,7 @@ func (j *Service) GenerateToken(
 		"user_id": userID,
 		"email":   email,
 		"exp": time.Now().
-			Add(24 * time.Hour).
+			Add(j.expiration).
 			Unix(),
 	}
 
@@ -54,6 +59,9 @@ func (s *Service) ParseToken(tokenString string) (*Claims, error) {
 		tokenString,
 		&Claims{},
 		func(token *jwtv5.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwtv5.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected token signing method")
+			}
 			return []byte(s.secret), nil
 		},
 	)

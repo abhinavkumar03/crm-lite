@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -16,10 +18,10 @@ type Module struct {
 	AuthMW  *middleware.AuthMiddleware
 }
 
-func NewModule(db *pgxpool.Pool, jwtSecret string) *Module {
+func NewModule(db *pgxpool.Pool, jwtSecret string, jwtExpiration time.Duration) *Module {
 	repo := repository.New(db)
 
-	jwtSvc := jwt.NewService(jwtSecret)
+	jwtSvc := jwt.NewService(jwtSecret, jwtExpiration)
 
 	svc := service.New(repo, jwtSvc)
 

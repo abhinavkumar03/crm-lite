@@ -9,8 +9,12 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/middleware"
 )
 
+// NewRouter builds the Gin engine and the global middleware chain. Config is
+// injected (rather than re-loaded here) so configuration is read exactly once
+// at process start.
 func NewRouter(
 	logger *zap.Logger,
+	cfg *config.Config,
 	modules ...Module,
 ) *gin.Engine {
 
@@ -21,16 +25,16 @@ func NewRouter(
 		middleware.Logger(logger),
 		middleware.Recovery(logger),
 		middleware.SecurityHeaders(),
-		middleware.CORS(),
 	)
-	cfg := config.Load()
 
+	// Single, credential-aware CORS policy driven by configured origins.
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: cfg.FrontendURLs,
 		AllowMethods: []string{
 			"GET",
 			"POST",
 			"PUT",
+			"PATCH",
 			"DELETE",
 			"OPTIONS",
 		},

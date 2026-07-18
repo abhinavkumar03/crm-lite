@@ -3,37 +3,43 @@ package jobs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/hibiken/asynq"
 )
 
+// Producer enqueues Jobs onto the asynq queue. It is safe for concurrent use
+// and should be shared for the lifetime of the process, then Close()d on
+// shutdown.
 type Producer struct {
-	redis *redis.Client
+	client *asynq.Client
 }
 
-func NewProducer(
-	client *redis.Client,
-) *Producer {
-
+func NewProducer(opt asynq.RedisClientOpt) *Producer {
 	return &Producer{
-		redis: client,
+		client: asynq.NewClient(opt),
 	}
 }
 
-func (p *Producer) Publish(
-	ctx context.Context,
-	job Job,
-) error {
-
-	bytes, err := json.Marshal(job)
-
+// Publish serializes the job and enqueues it as an asynq task. Callers may pass
+// asynq options (e.g. asynq.MaxRetry, asynq.ProcessIn, asynq.Queue) to control
+// scheduling and retry behaviour.
+func (p *Producer) Publish(ctx context.Context, job Job, opts ...asynq.Option) error {
+	payload, err := json.Marshal(job)
 	if err != nil {
-		return err
+		return fmt.Errorf("jobs: marshal job: %w", err)
 	}
 
-	return p.redis.RPush(
-		ctx,
-		"crm:jobs",
-		bytes,
-	).Err()
+	task := asynq.NewTask(string(job.Type), payload)
+
+	if _, err := p.client.EnqueueContext(ctx, task, opts...); err != nil {
+		return fmt.Errorf("jobs: enqueue %q: %w", job.Type, err)
+	}
+
+	return nil
+}
+
+// Close releases the underlying Redis connection.
+func (p *Producer) Close() error {
+	return p.client.Close()
 }
