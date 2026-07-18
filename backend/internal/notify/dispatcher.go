@@ -45,3 +45,12 @@ func (d *Dispatcher) Dispatch(ctx context.Context, msg Message) error {
 
 	return provider.Send(ctx, msg)
 }
+
+// ProviderName returns the name of the provider registered for a channel (for
+// audit/logging), or "unknown" if none is registered.
+func (d *Dispatcher) ProviderName(channel Channel) string {
+	if p, ok := d.providers[channel]; ok {
+		return p.Name()
+	}
+	return "unknown"
+}

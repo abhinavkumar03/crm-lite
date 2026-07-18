@@ -19,10 +19,18 @@ type Server struct {
 	logger *zap.Logger
 }
 
+// NotificationProcessor delivers a persisted notification identified by its id.
+// It is implemented in the notification package; jobs defines the interface to
+// avoid an import cycle (the notification package imports jobs to enqueue).
+type NotificationProcessor interface {
+	Process(ctx context.Context, orgID, notificationID string) error
+}
+
 // NewServer wires the asynq server and routes each JobType to a handler. The
 // notification-oriented jobs are delegated to the shared notify.Dispatcher so
-// email and WhatsApp travel the same pipeline.
-func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.Dispatcher) *Server {
+// email and WhatsApp travel the same pipeline. The optional processor handles
+// persisted notifications (status lifecycle + activity logging).
+func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.Dispatcher, processor NotificationProcessor) *Server {
 	srv := asynq.NewServer(opt, asynq.Config{
 		Concurrency: 10,
 		Queues: map[string]int{
@@ -31,13 +39,14 @@ func NewServer(opt asynq.RedisClientOpt, logger *zap.Logger, dispatcher *notify.
 		Logger: newZapLogger(logger),
 	})
 
-	h := &handlers{logger: logger, dispatcher: dispatcher}
+	h := &handlers{logger: logger, dispatcher: dispatcher, processor: processor}
 
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(string(JobLeadCreated), h.handleLeadEvent)
 	mux.HandleFunc(string(JobLeadStatusChanged), h.handleLeadEvent)
 	mux.HandleFunc(string(JobSendEmail), h.handleSendEmail)
 	mux.HandleFunc(string(JobSendWhatsApp), h.handleSendWhatsApp)
+	mux.HandleFunc(string(JobSendNotification), h.handleSendNotification)
 
 	return &Server{srv: srv, mux: mux, logger: logger}
 }
@@ -53,6 +62,7 @@ func (s *Server) Run() error {
 type handlers struct {
 	logger     *zap.Logger
 	dispatcher *notify.Dispatcher
+	processor  NotificationProcessor
 }
 
 func decode(t *asynq.Task) (Job, error) {
@@ -106,6 +116,25 @@ func (h *handlers) handleSendWhatsApp(ctx context.Context, t *asynq.Task) error 
 		Template: stringField(job.Payload, "template"),
 		Data:     job.Payload,
 	})
+}
+
+func (h *handlers) handleSendNotification(ctx context.Context, t *asynq.Task) error {
+	job, err := decode(t)
+	if err != nil {
+		return err
+	}
+	if h.processor == nil {
+		h.logger.Warn("jobs: no notification processor configured; skipping")
+		return nil
+	}
+
+	id := stringField(job.Payload, "notification_id")
+	orgID := stringField(job.Payload, "org_id")
+	if id == "" || orgID == "" {
+		return fmt.Errorf("jobs: notification.send missing ids: %w", asynq.SkipRetry)
+	}
+
+	return h.processor.Process(ctx, orgID, id)
 }
 
 func stringField(payload map[string]interface{}, key string) string {

@@ -11,6 +11,7 @@ import {
   CheckSquare,
   LayoutTemplate,
   Table2,
+  MessageCircle,
   ChevronRight,
 } from "lucide-react";
 
@@ -44,6 +45,11 @@ const navigation = [
     name: "Dynamic Tables",
     href: "/tables",
     icon: Table2,
+  },
+  {
+    name: "Notifications",
+    href: "/notifications",
+    icon: MessageCircle,
   },
 ];
 

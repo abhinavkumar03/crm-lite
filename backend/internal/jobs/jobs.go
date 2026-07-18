@@ -14,6 +14,9 @@ const (
 	JobLeadStatusChanged JobType = "lead.status_changed"
 	JobSendEmail         JobType = "email.send"
 	JobSendWhatsApp      JobType = "whatsapp.send"
+	// JobSendNotification delivers a persisted notification (looked up by id) via
+	// the notification pipeline: dispatch -> update status -> log activity.
+	JobSendNotification JobType = "notification.send"
 )
 
 // Job is the transport-agnostic payload enqueued for asynchronous processing.

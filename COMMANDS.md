@@ -519,3 +519,80 @@ Implementation (`backend/internal/record/`, standard vertical slice):
 | Service | `service/record_service.go` + `expand.go` | Validation, ownership stamping, relationship expansion. |
 | Handler | `handler/record_handler.go` | Query-string parsing + error mapping. |
 | Composition | `record.go` | Reuses the field repo (metadata) and validation service (Phase 7). |
+
+---
+
+## 15. WhatsApp Automation & Notification Pipeline
+
+An end-to-end, provider-agnostic notification pipeline:
+**API → `Producer.Publish` → Redis/asynq → worker → `Dispatcher` → `Provider.Send`
+→ status + activity**. Messages are persisted in the `notifications` table with a
+`queued → sent / failed` lifecycle, so delivery is auditable and retried
+independently of the request. WhatsApp delivery is config-driven: the
+**simulation** provider (no network) by default, or the **Meta Cloud API** when
+credentials are supplied. Organization-scoped.
+
+### Provider configuration (env)
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `WHATSAPP_PROVIDER` | `simulation` | `simulation` (offline) or `meta` (Meta Cloud API). |
+| `WHATSAPP_API_URL` | `https://graph.facebook.com/v20.0` | Graph API base URL. |
+| `WHATSAPP_TOKEN` | — | Bearer token (required for `meta`). |
+| `WHATSAPP_PHONE_ID` | — | Sender phone number id (required for `meta`). |
+
+If `meta` is selected without full credentials, the pipeline safely falls back to
+the simulation provider — the app is always functional out of the box.
+
+### Notification API
+
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `POST /notifications` | Render, persist (queued) and enqueue a message. | Send WhatsApp/email. |
+| `GET /notifications` | List with `status` / `channel` filters + pagination. | Delivery log. |
+| `GET /notifications/:id` | Fetch one notification. | Inspect status/error. |
+
+`Subject`/`Body` support `{{placeholder}}` tokens resolved from `data` at send
+time. `channel` is `email` or `whatsapp`.
+
+**Send a WhatsApp message (rendered from data):**
+```bash
+curl -X POST http://localhost:8080/api/v1/notifications \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"channel":"whatsapp","to":"+15551234567","template":"lead_welcome","body":"Hi {{name}}, thanks for your interest!","data":{"name":"Dana"}}'
+# => { "id": "...", "status": "queued", "body": "Hi Dana, thanks for your interest!" }
+```
+
+**Read the delivery log:**
+```bash
+curl "http://localhost:8080/api/v1/notifications?status=sent&channel=whatsapp" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Running the pipeline
+
+```bash
+# 1) start the worker so queued messages get delivered + status-updated
+make run-worker            # go run ./cmd/worker (now also connects to Postgres)
+
+# 2) start the API and POST /notifications; watch the worker log the dispatch,
+#    then the notification flips queued -> sent and an activity is recorded.
+```
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Provider interface + dispatcher | `internal/notify/{notify,dispatcher}.go` | Channel-agnostic Strategy pipeline + provider-name lookup. |
+| Template rendering | `internal/notify/render.go` | Dependency-free `{{token}}` substitution. |
+| Providers | `internal/notify/{simulation,whatsapp_meta,factory}.go` | Simulation + Meta Cloud API; config-driven selection. |
+| Queue | `internal/jobs/{jobs,producer,server}.go` | `notification.send` job type + worker handler + `NotificationProcessor` interface. |
+| Engine (API) | `internal/notification/` | Send/list/get vertical slice; renders, persists, enqueues. |
+| Processor (worker) | `internal/notification/processor/` | Dispatches, transitions status, writes an activity. |
+| Frontend | `frontend/features/notifications/` + `app/(dashboard)/notifications/page.tsx` | Compose form + live delivery log. Route: `/notifications`. |
+
+> Activity logging: each delivery writes an `activities` row
+> (`WHATSAPP_SENT` / `EMAIL_SENT` / `NOTIFICATION_FAILED`) referencing the
+> notification, so sends appear in the audit trail alongside CRM actions.

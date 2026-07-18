@@ -22,13 +22,14 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/media"
 	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/notification"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/view"
@@ -90,6 +91,7 @@ func main() {
 	validationEngine := validationengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	viewEngine := view.NewModule(db, authModule.Middleware(), orgMiddleware)
 	recordEngine := record.NewModule(db, authModule.Middleware(), orgMiddleware)
+	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -114,6 +116,7 @@ func main() {
 		validationEngine,
 		viewEngine,
 		recordEngine,
+		notificationModule,
 		leadModule,
 		contactModule,
 		taskModule,
