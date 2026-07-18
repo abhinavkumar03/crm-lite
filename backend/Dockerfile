@@ -11,6 +11,8 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o crm-api ./cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -o crm-worker ./cmd/worker
+RUN CGO_ENABLED=0 GOOS=linux go build -o crm-migrate ./cmd/migrate
+RUN CGO_ENABLED=0 GOOS=linux go build -o crm-seed ./cmd/seed
 
 FROM alpine:3.20
 
@@ -20,6 +22,8 @@ WORKDIR /home/appuser
 
 COPY --from=builder /app/crm-api .
 COPY --from=builder /app/crm-worker .
+COPY --from=builder /app/crm-migrate .
+COPY --from=builder /app/crm-seed .
 
 USER appuser
 

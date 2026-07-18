@@ -38,6 +38,26 @@ services:
 
       - "6379:6379"
 
+  migrate:
+
+    build:
+
+      context: ./backend
+
+    container_name: crm-migrate
+
+    depends_on:
+
+      - postgres
+
+    env_file:
+
+      - ./backend/.env
+
+    command: ["./crm-migrate", "up"]
+
+    restart: on-failure
+
   backend:
 
     build:
@@ -51,6 +71,8 @@ services:
       - postgres
 
       - redis
+
+      - migrate
 
     env_file:
 
