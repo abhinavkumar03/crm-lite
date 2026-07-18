@@ -218,3 +218,55 @@ curl -X POST http://localhost:8080/api/v1/modules/reorder \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"items":[{"id":"<id-a>","sort_order":1},{"id":"<id-b>","sort_order":2}]}'
 ```
+
+---
+
+## 10. Dynamic Field Engine API
+
+Fields are a sub-resource of a module and are organization-scoped (same auth as
+above). Each field response includes a `storage` descriptor — the metadata-driven
+persistence strategy telling the client where the value lives (a real column for
+native modules, or `data.<api_name>` in the JSONB record store for dynamic ones).
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules/:id/fields` | List a module's fields (ordered), with full rendering metadata. | Drive dynamic forms and tables. |
+| `POST /modules/:id/fields` | Add a field to a module. | Let admins add a custom attribute (e.g. "Budget"). |
+| `GET /modules/:id/fields/:fieldId` | Fetch a single field. | Load a field's edit form. |
+| `PUT /modules/:id/fields/:fieldId` | Update a field (labels, validation, options, flags). | Tune a field without recreating it. |
+| `POST /modules/:id/fields/reorder` | Batch-update field `sort_order` (atomic). | Persist drag-and-drop field ordering on a form. |
+| `DELETE /modules/:id/fields/:fieldId` | Delete a field (system fields are protected → `409`). | Remove a custom field. |
+
+Supported `field_type` values: `text, textarea, email, phone, number, currency,
+date, datetime, boolean, dropdown, multiselect, radio, checkbox, url, file,
+image, user, lookup, formula, json, richtext`. Choice types (`dropdown`,
+`multiselect`, `radio`) require a non-empty `options` list; `lookup` requires a
+valid `lookup_module_id`.
+
+**Add a dropdown field:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/fields \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"api_name":"priority","label":"Priority","field_type":"dropdown","is_required":true,
+       "options":[{"label":"Low","value":"low"},{"label":"High","value":"high"}]}'
+```
+
+**Add a lookup field (relate to another module):**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<dealModuleId>/fields \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"api_name":"company","label":"Company","field_type":"lookup","lookup_module_id":"<companyModuleId>"}'
+```
+
+**List a module's fields (form/table metadata):**
+```bash
+curl http://localhost:8080/api/v1/modules/<moduleId>/fields -H "Authorization: Bearer $TOKEN"
+```
+
+**Reorder fields on a form:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/fields/reorder \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"items":[{"id":"<field-a>","sort_order":1},{"id":"<field-b>","sort_order":2}]}'
+```

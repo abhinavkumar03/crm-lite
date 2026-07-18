@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/field"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
@@ -82,6 +83,7 @@ func main() {
 	healthModule := health.NewModule()
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
 	moduleEngine := moduleengine.NewModule(db, authModule.Middleware(), orgMiddleware)
+	fieldEngine := field.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -102,6 +104,7 @@ func main() {
 		healthModule,
 		authModule,
 		moduleEngine,
+		fieldEngine,
 		leadModule,
 		contactModule,
 		taskModule,
