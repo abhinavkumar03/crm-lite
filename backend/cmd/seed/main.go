@@ -44,10 +44,19 @@ func main() {
 
 	runner := seed.NewRunner(db, log)
 
-	// Register seeders in dependency order. Phase 4 adds the rich demo dataset
-	// (organizations, companies, leads, tasks, activities, tags, ...).
+	// Register seeders in dependency order: catalog -> tenant -> metadata ->
+	// business data. Each later seeder looks up what it needs by natural key so
+	// they remain decoupled and idempotent.
 	runner.Register(
-		seeders.AdminSeeder{},
+		seeders.PermissionsSeeder{},
+		seeders.OrganizationSeeder{},
+		seeders.RolesSeeder{},
+		seeders.UsersSeeder{},
+		seeders.MembershipsSeeder{},
+		seeders.ModulesSeeder{},
+		seeders.FieldsSeeder{},
+		seeders.TourStepsSeeder{},
+		seeders.BusinessDataSeeder{},
 	)
 
 	if err := runner.Run(context.Background(), *fresh); err != nil {

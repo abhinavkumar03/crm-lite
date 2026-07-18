@@ -68,9 +68,18 @@ recorded in `schema_seed_history`, and idempotent.
 | `seed` | Run seeders not yet in the history | Normal seeding on a fresh/updated DB |
 | `seed -fresh` | Clear history, then re-run all seeders | After editing seeders, to re-apply everything |
 
-**Env overrides for the admin seeder:** `SEED_ADMIN_EMAIL`, `SEED_ADMIN_NAME`,
-`SEED_ADMIN_PASSWORD` (defaults: `admin@crmlite.com` / `Admin User` /
-`Admin@12345`).
+**Demo login credentials** (created by the seeders):
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@crmlite.com` | `Admin@12345` | Administrator |
+| `priya@crmlite.com` | `Password@123` | Sales Manager |
+| `vikram@crmlite.com` | `Password@123` | Sales Representative |
+| `sneha@crmlite.com` | `Password@123` | Sales Representative |
+| `arjun@crmlite.com` | `Password@123` | Viewer |
+
+The demo dataset also creates 50 leads, 30 contacts, 60 tasks, ~100 activities,
+notes, and 35 dynamic `company`/`deal` records (JSONB engine) owned by the admin.
 
 ---
 
