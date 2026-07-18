@@ -1,6 +1,7 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import Link from "next/link";
+import { Home, Menu } from "lucide-react";
 
 import SearchBar from "./SearchBar";
 import NotificationBell from "./NotificationBell";
@@ -98,6 +99,20 @@ export default function Topbar({
           gap-3
           "
         >
+          <Link
+            href="/"
+            aria-label="Home"
+            className="
+            rounded-2xl
+            bg-white
+            p-3
+            transition
+            hover:bg-slate-100
+            "
+          >
+            <Home size={20} className="text-slate-700" />
+          </Link>
+
           <div data-tour="notification-bell">
             <NotificationBell />
           </div>

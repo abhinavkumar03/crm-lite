@@ -11,10 +11,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
-    ChevronDown,
-    LogOut,
-    LayoutDashboard,
-    Compass,
+  ChevronDown,
+  LogOut,
+  LayoutDashboard,
+  Compass,
+  CircleHelp,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -296,6 +297,25 @@ export default function UserMenu({
             Take a tour
         </button>
     )}
+
+    <Link
+      href="/help"
+      onClick={() => setOpen(false)}
+      className="
+      flex
+      items-center
+      gap-3
+      rounded-2xl
+      px-4
+      py-3
+      text-slate-700
+      transition
+      hover:bg-slate-100
+      "
+    >
+      <CircleHelp size={18} />
+      How it works
+    </Link>
 
     <button
         onClick={logout}

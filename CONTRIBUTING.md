@@ -1,5 +1,8 @@
 # Contributing
 
+New to the repo? Start with **[docs/developer-onboarding.md](./docs/developer-onboarding.md)**
+and the doc index at **[docs/README.md](./docs/README.md)**.
+
 ## Branch Naming
 
 Feature:

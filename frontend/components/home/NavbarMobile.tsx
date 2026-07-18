@@ -1,43 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { X, BookOpen, MonitorPlay, LayoutDashboard } from "lucide-react";
 
-import {
-  X,
-  LayoutDashboard,
-  Cpu,
-  Activity,
-} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 import NavbarActions from "./NavbarActions";
-
-const navigation = [
-  {
-    name: "Features",
-    href: "#features",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Architecture",
-    href: "#architecture",
-    icon: Cpu,
-  },
-  {
-    name: "Performance",
-    href: "#performance",
-    icon: Activity,
-  },
-];
 
 type Props = {
   open: boolean;
   onClose: () => void;
 };
 
-export default function NavbarMobile({
-  open,
-  onClose,
-}: Props) {
+export default function NavbarMobile({ open, onClose }: Props) {
+  const { token, loading } = useAuth();
+  const signedIn = !loading && Boolean(token);
+
+  const navigation = [
+    ...(signedIn
+      ? [{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard }]
+      : []),
+    { name: "How it works", href: "/help", icon: BookOpen },
+    {
+      name: "Watch walkthrough",
+      href: "/crm_lite_walkthrough.html",
+      icon: MonitorPlay,
+    },
+  ];
+
   return (
     <>
       {/* Overlay */}
@@ -127,28 +117,35 @@ export default function NavbarMobile({
           <div className="space-y-2">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const className =
+                "flex items-center gap-3 rounded-2xl px-4 py-3 text-slate-700 transition hover:bg-slate-100";
+
+              if (item.href.startsWith("http") || item.href.endsWith(".html")) {
+                return (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    onClick={onClose}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={className}
+                  >
+                    <Icon size={20} />
+                    {item.name}
+                  </a>
+                );
+              }
 
               return (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
                   onClick={onClose}
-                  className="
-                  flex
-                  items-center
-                  gap-3
-                  rounded-2xl
-                  px-4
-                  py-3
-                  text-slate-700
-                  transition
-                  hover:bg-slate-100
-                  "
+                  className={className}
                 >
                   <Icon size={20} />
-
                   {item.name}
-                </a>
+                </Link>
               );
             })}
           </div>

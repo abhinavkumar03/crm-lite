@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Users,
   BriefcaseBusiness,
@@ -5,6 +6,7 @@ import {
   TrendingUp,
   CalendarDays,
   Database,
+  ArrowRight,
 } from "lucide-react";
 
 const metrics = [
@@ -65,13 +67,20 @@ const tasks = [
   "Sales Meeting",
 ];
 
-export default function DashboardPreview() {
+type Props = {
+  href?: string;
+  ctaLabel?: string;
+};
+
+export default function DashboardPreview({
+  href = "/login",
+  ctaLabel = "Enter the dashboard",
+}: Props) {
   return (
     <div className="relative">
-
       {/* Floating Card */}
 
-      <div className="glass shadow-soft absolute -left-6 top-16 hidden rounded-2xl p-4 lg:block">
+      <div className="glass shadow-soft absolute -left-6 top-16 z-10 hidden rounded-2xl p-4 lg:block">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-emerald-100 p-2">
             <TrendingUp
@@ -92,7 +101,7 @@ export default function DashboardPreview() {
         </div>
       </div>
 
-      <div className="glass shadow-soft absolute -right-5 bottom-20 hidden rounded-2xl p-4 lg:block">
+      <div className="glass shadow-soft absolute -right-5 bottom-20 z-10 hidden rounded-2xl p-4 lg:block">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-cyan-100 p-2">
             <Database
@@ -113,9 +122,17 @@ export default function DashboardPreview() {
         </div>
       </div>
 
-      {/* Browser */}
-
-      <div className="card shadow-soft overflow-hidden">
+      {/* Browser — clickable bridge into the real dashboard */}
+      <Link
+        href={href}
+        className="card shadow-soft group relative block overflow-hidden outline-none transition hover:-translate-y-1 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-emerald-400"
+      >
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-end justify-center bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg">
+            {ctaLabel}
+            <ArrowRight size={16} />
+          </span>
+        </div>
 
         {/* Browser Header */}
 
@@ -124,8 +141,8 @@ export default function DashboardPreview() {
           <div className="h-3 w-3 rounded-full bg-yellow-400" />
           <div className="h-3 w-3 rounded-full bg-green-400" />
 
-          <div className="ml-6 rounded-full bg-white px-4 py-1 text-xs text-slate-400 shadow-sm">
-            crm-lite.app/dashboard
+          <div className="ml-4 flex-1 truncate rounded-full bg-white px-4 py-1 text-xs text-slate-400 shadow-sm sm:ml-6">
+            /dashboard
           </div>
         </div>
 
@@ -311,9 +328,7 @@ export default function DashboardPreview() {
           </div>
 
         </div>
-
-      </div>
-
+      </Link>
     </div>
   );
 }

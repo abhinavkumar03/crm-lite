@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
-
-import {
-  ArrowRight,
-  ExternalLink,
-} from "lucide-react";
+import { ArrowRight, ExternalLink, LayoutDashboard } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
-
 import UserMenu from "@/components/layout/UserMenu";
 
 type Props = {
@@ -16,10 +11,7 @@ type Props = {
   onNavigate?: () => void;
 };
 
-export default function NavbarActions({
-  mobile = false,
-  onNavigate,
-}: Props) {
+export default function NavbarActions({ mobile = false, onNavigate }: Props) {
   const auth = useAuth();
 
   if (auth.loading) {
@@ -30,83 +22,74 @@ export default function NavbarActions({
     );
   }
 
-  // Logged In
-
   if (auth.token) {
     return (
-      <div
-        className={
-          mobile
-            ? "space-y-3"
-            : "flex items-center gap-3"
-        }
-      >
+      <div className={mobile ? "space-y-3" : "flex items-center gap-3"}>
         {!mobile && (
           <Link
             href="https://github.com/abhinavkumar03/crm-lite"
             target="_blank"
-            className="secondary-btn"
+            rel="noopener noreferrer"
+            className="secondary-btn !px-4 !py-2.5 text-sm"
           >
-            <ExternalLink size={18} />
+            <ExternalLink size={16} />
             GitHub
           </Link>
         )}
 
-        {mobile ? (
-          <>
-            <Link
-              href="/dashboard"
-              onClick={onNavigate}
-              className="primary-btn w-full justify-center"
-            >
-              Dashboard
-            </Link>
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          className={
+            mobile
+              ? "primary-btn w-full justify-center"
+              : "primary-btn !px-4 !py-2.5 text-sm"
+          }
+        >
+          <LayoutDashboard size={16} />
+          Open dashboard
+          {!mobile && <ArrowRight size={16} />}
+        </Link>
 
-            <UserMenu mobile />
-          </>
-        ) : (
-          <UserMenu showDashboard />
-        )}
+        {mobile ? <UserMenu mobile /> : <UserMenu showDashboard />}
       </div>
     );
   }
 
-  // Logged Out
-
   return (
-    <div
-      className={
-        mobile
-          ? "space-y-3"
-          : "flex items-center gap-3"
-      }
-    >
+    <div className={mobile ? "space-y-3" : "flex items-center gap-3"}>
       <Link
         href="https://github.com/abhinavkumar03/crm-lite"
         target="_blank"
+        rel="noopener noreferrer"
         onClick={onNavigate}
-        className="secondary-btn"
+        className={
+          mobile ? "secondary-btn w-full justify-center" : "secondary-btn !px-4 !py-2.5 text-sm"
+        }
       >
-        <ExternalLink size={18} />
+        <ExternalLink size={16} />
         GitHub
       </Link>
 
       <Link
         href="/login"
         onClick={onNavigate}
-        className="secondary-btn"
+        className={
+          mobile ? "secondary-btn w-full justify-center" : "secondary-btn !px-4 !py-2.5 text-sm"
+        }
       >
-        Login
+        Sign in
       </Link>
 
       <Link
-        href="/register"
+        href="/login"
         onClick={onNavigate}
-        className="primary-btn"
+        className={
+          mobile ? "primary-btn w-full justify-center" : "primary-btn !px-4 !py-2.5 text-sm"
+        }
       >
-        Get Started
-
-        <ArrowRight size={18} />
+        Enter dashboard
+        <ArrowRight size={16} />
       </Link>
     </div>
   );

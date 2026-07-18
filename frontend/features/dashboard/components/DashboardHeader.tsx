@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, Plus, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, CircleHelp, RefreshCw } from "lucide-react";
 
 type Props = {
   onRefresh?: () => void;
@@ -16,10 +17,7 @@ export default function DashboardHeader({ onRefresh }: Props) {
 
   return (
     <section className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-      {/* Left */}
-
       <div>
-
         <h1 className="text-4xl font-bold tracking-tight text-slate-900">
           Welcome back 👋
         </h1>
@@ -31,15 +29,21 @@ export default function DashboardHeader({ onRefresh }: Props) {
 
         <div className="mt-5 flex items-center gap-2 text-sm text-slate-500">
           <CalendarDays size={18} />
-
           <span>{today}</span>
         </div>
       </div>
 
-      {/* Right */}
-
       <div className="flex flex-wrap gap-3">
+        <Link
+          href="/help"
+          className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 font-medium text-emerald-700 transition-all duration-300 hover:border-emerald-300 hover:bg-emerald-100"
+        >
+          <CircleHelp size={18} />
+          How it works
+        </Link>
+
         <button
+          type="button"
           onClick={onRefresh}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 font-medium transition-all duration-300 hover:bg-slate-100"
         >

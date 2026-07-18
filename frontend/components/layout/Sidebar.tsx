@@ -15,6 +15,7 @@ import {
   Download,
   MessageCircle,
   Settings,
+  CircleHelp,
   ChevronRight,
 } from "lucide-react";
 
@@ -68,6 +69,11 @@ const navigation = [
     name: "Settings",
     href: "/settings",
     icon: Settings,
+  },
+  {
+    name: "How it works",
+    href: "/help",
+    icon: CircleHelp,
   },
 ];
 
