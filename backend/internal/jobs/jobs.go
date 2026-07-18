@@ -20,6 +20,9 @@ const (
 	// JobImportProcess processes a staged import job (looked up by id): map,
 	// validate and insert each row, then record progress and the error report.
 	JobImportProcess JobType = "import.process"
+	// JobExportProcess builds a persisted export (looked up by id): query the
+	// records, serialize the file and store it for download.
+	JobExportProcess JobType = "export.process"
 )
 
 // Job is the transport-agnostic payload enqueued for asynchronous processing.
