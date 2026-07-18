@@ -174,3 +174,47 @@ cd backend
 make migrate-force v=2   # baseline to the last version its schema matches
 make migrate-up          # apply the rest
 ```
+
+---
+
+## 9. Dynamic Module Engine API
+
+All endpoints are organization-scoped: they require a valid JWT (`Authorization: Bearer <token>`)
+and resolve the caller's organization automatically. Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules` | List every module for the org (enabled or not), ordered by `sort_order`. | Render the module-management/settings screen. |
+| `GET /navigation` | List only enabled, sidebar-visible modules. | Build the app sidebar dynamically. |
+| `POST /modules` | Create a new dynamic module. | Let admins add a custom object type (e.g. "Projects"). |
+| `GET /modules/:id` | Fetch a single module. | Load a module's detail/edit form. |
+| `PUT /modules/:id` | Update labels, icon, color, sidebar visibility, default sort. | Rename/re-style a module. |
+| `PATCH /modules/:id/status` | Enable or disable a module. | Toggle a module on/off without deleting it. |
+| `POST /modules/reorder` | Batch-update `sort_order` (atomic). | Persist drag-and-drop navigation ordering. |
+| `DELETE /modules/:id` | Delete a module (system modules are protected → `409`). | Remove a custom module and its records. |
+
+**Create a dynamic module:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"api_name":"project","singular_label":"Project","plural_label":"Projects","icon":"folder","color":"#2563eb"}'
+```
+
+**Fetch the sidebar navigation:**
+```bash
+curl http://localhost:8080/api/v1/navigation -H "Authorization: Bearer $TOKEN"
+```
+
+**Disable a module:**
+```bash
+curl -X PATCH http://localhost:8080/api/v1/modules/<id>/status \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"enabled":false}'
+```
+
+**Reorder navigation (drag-and-drop persistence):**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/reorder \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"items":[{"id":"<id-a>","sort_order":1},{"id":"<id-b>","sort_order":2}]}'
+```
