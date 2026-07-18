@@ -807,3 +807,70 @@ Implementation:
 > No worker: the tour has no async jobs. The engine is a small, per-user
 > preference store; all interaction logic (highlighting, navigation, step order)
 > is client-side, keeping the step catalogue versioned with the UI it describes.
+
+---
+
+## 19. Settings Center
+
+A single admin surface (`/settings`) that consolidates everything that shapes the
+workspace: **General** (organization profile & preferences), **Modules**,
+**Fields**, **Validation**, **Automation**, and **Data** (import/export). Modules,
+fields and validation reuse the existing metadata engines (Phases 5–7); the only
+new backend piece is an **organization-settings** engine that reads/writes the
+`organizations` row (name + the `settings` JSONB that already exists — **no new
+migration**). Organization-scoped.
+
+### Settings API (organization settings)
+
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /settings` | Org profile + `general` + `automation`, with defaults filled in for anything never saved. | Load any settings tab. |
+| `PUT /settings` | Partial update — send any subset of `name` / `general` / `automation`. | Save one tab without clobbering the others. |
+
+**`general`**: `timezone`, `date_format`, `time_format` (`12h`/`24h`), `currency`,
+`locale`, `week_start` (`sunday`/`monday`). **`automation`**:
+`notifications_enabled`, `default_channel` (`whatsapp`/`email`), `daily_digest`.
+`slug` and `plan` are read-only (managed at signup/billing). Enum-like values are
+normalized server-side so bad input can't corrupt stored preferences.
+
+```bash
+curl http://localhost:8080/api/v1/settings -H "Authorization: Bearer $TOKEN"
+
+curl -X PUT http://localhost:8080/api/v1/settings \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Acme Inc","general":{"timezone":"Asia/Kolkata","currency":"INR",
+       "date_format":"DD/MM/YYYY","time_format":"24h","locale":"en-IN","week_start":"monday"}}'
+```
+
+### Tabs & the APIs they drive
+
+| Tab | Route | Backing API |
+| --- | --- | --- |
+| General | `/settings` | `GET/PUT /settings` |
+| Modules | `/settings/modules` | `GET/POST/PUT/DELETE /modules`, `PATCH /modules/:id/status` |
+| Fields | `/settings/fields` | `GET/POST/PUT/DELETE /modules/:id/fields` |
+| Validation | `/settings/validation` | `GET/POST/PUT/DELETE /modules/:id/validation-rules` |
+| Automation | `/settings/automation` | `GET/PUT /settings` (automation section) + link to `/notifications` |
+| Data | `/settings/data` | Links to the Import (`/imports`) & Export (`/exports`) engines |
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Settings engine (API) | `internal/settings/` | Read/update org name + `general`/`automation` sections; layers saved values over defaults, normalizes enums. |
+| Persistence | `organizations.name` + `organizations.settings` (JSONB) | Sections stored under `general` / `automation` keys — no new table. |
+| Settings shell | `frontend/app/(dashboard)/settings/layout.tsx` + `components/settings/SettingsNav.tsx` | Two-pane layout with a secondary nav. |
+| Admin API client | `frontend/features/settings/metadata.ts` | Module/field/rule CRUD wrappers over the existing metadata engines. |
+| Tabs | `frontend/app/(dashboard)/settings/{page,modules,fields,validation,automation,data}` | Each tab's UI (tables + modal forms + toasts). |
+
+**Validation rule params** (for the Validation tab / API): `min_length`,
+`max_length`, `min`, `max` → `{"value": n}`; `pattern` → `{"pattern": "..."}`;
+`in`, `not_in` → `{"values": [...]}`; `required`/`email`/`url` → `{}`;
+`required_if` (module-level, `field_id` null) → `{"field","equals","target"}`.
+
+> Reuse over rebuild: only General/Automation needed new code. Modules, Fields and
+> Validation are thin admin UIs over metadata engines that already existed — the
+> Settings Center is where the metadata-driven architecture becomes visible and
+> editable end-to-end, with no redeploys.
