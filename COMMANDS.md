@@ -1026,8 +1026,12 @@ route, with request/response examples and the shared error envelope.
 
 | URL | What |
 | --- | --- |
-| `http://localhost:8080/api/v1/docs` | Interactive Swagger UI (Try it out + Authorize) |
-| `http://localhost:8080/api/v1/openapi.yaml` | Raw OpenAPI 3 YAML |
+| `{origin}/api/v1/docs` | Interactive Swagger UI (Try it out + Authorize) |
+| `{origin}/api/v1/openapi.yaml` | Raw OpenAPI 3 YAML |
+
+`servers.url` and the Swagger spec fetch URL are injected from the request host
+(plus `X-Forwarded-Proto` / `X-Forwarded-Host` when behind a proxy) — not
+hardcoded to localhost.
 
 No auth is required to load the docs. Click **Authorize** in Swagger UI and
 paste a JWT from `POST /auth/login` to call protected endpoints.
@@ -1068,4 +1072,23 @@ Embedded at build time via `//go:embed` in `internal/docs`.
 | Spec + generator | `backend/internal/docs/openapi.yaml`, `generate_openapi.py`, `schemas_data.py` |
 | Swagger UI | `backend/internal/docs/swagger.html` |
 | Gin module | `backend/internal/docs/docs.go` |
+
+---
+
+## 23. Documentation & architecture (Phase 19)
+
+Human docs live under [`docs/`](./docs/README.md):
+
+| Doc | Use when |
+| --- | --- |
+| [Architecture](./docs/architecture.md) | You need the process / request / cache map |
+| [ERD](./docs/erd.md) | You need table relationships |
+| [Sequences](./docs/sequences.md) | You need end-to-end flow diagrams |
+| [Migration guide](./docs/migration-guide.md) | You are changing or recovering schema |
+| [Metadata guide](./docs/metadata-guide.md) | You are building on modules/fields/records |
+| [Import / export](./docs/import-export-guide.md) | You are operating bulk pipelines |
+| [Automation](./docs/automation-guide.md) | You are wiring notifications / settings |
+| [Onboarding](./docs/developer-onboarding.md) | First day on the project |
+
+Machine API docs remain at `/api/v1/docs` (Phase 18).
 

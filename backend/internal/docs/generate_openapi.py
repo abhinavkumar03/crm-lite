@@ -1518,10 +1518,12 @@ def main():
                 """
             ),
         },
+        # Placeholder is rewritten per request in internal/docs/docs.go so
+        # Swagger "Try it out" always targets the host the client opened.
         "servers": [
             {
-                "url": "http://localhost:8080/api/v1",
-                "description": "Local development",
+                "url": "__API_SERVER_URL__",
+                "description": "Current host (injected at request time)",
             }
         ],
         "tags": [

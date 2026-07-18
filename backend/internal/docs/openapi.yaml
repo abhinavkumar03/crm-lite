@@ -22,8 +22,8 @@ info:
 
     '
 servers:
-- url: http://localhost:8080/api/v1
-  description: Local development
+- url: __API_SERVER_URL__
+  description: Current host (injected at request time)
 tags:
 - name: Health
 - name: Auth

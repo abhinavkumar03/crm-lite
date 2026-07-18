@@ -24,8 +24,10 @@
     <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
     <script>
       window.onload = function () {
+        // Injected per-request by the docs module (never hardcode localhost).
+        var specUrl = "__OPENAPI_URL__";
         window.ui = SwaggerUIBundle({
-          url: "/api/v1/openapi.yaml",
+          url: specUrl,
           dom_id: "#swagger-ui",
           deepLinking: true,
           presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
