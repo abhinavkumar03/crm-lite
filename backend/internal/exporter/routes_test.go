@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
+
 	fieldengine "github.com/abhinavkumar03/crm-lite/backend/internal/field"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/importer"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
@@ -36,11 +38,11 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	producer := jobs.NewProducer(jobs.RedisOpt("localhost", "6379", "", 0))
 	defer producer.Close()
 
-	moduleengine.NewModule(nil, noop, noop).RegisterRoutes(api)
-	fieldengine.NewModule(nil, noop, noop).RegisterRoutes(api)
-	validationengine.NewModule(nil, noop, noop).RegisterRoutes(api)
-	view.NewModule(nil, noop, noop).RegisterRoutes(api)
-	record.NewModule(nil, noop, noop).RegisterRoutes(api)
-	importer.NewModule(nil, noop, noop, producer).RegisterRoutes(api)
-	NewModule(nil, noop, noop, producer).RegisterRoutes(api)
+	moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	view.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	record.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	importer.NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
 }

@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 )
 
 // TestRegisterRoutesNoConflict verifies the settings routes register without a
@@ -21,5 +23,5 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 		}
 	}()
 
-	NewModule(nil, noop, noop).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
 }

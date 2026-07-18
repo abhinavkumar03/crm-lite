@@ -852,6 +852,7 @@ curl -X PUT http://localhost:8080/api/v1/settings \
 | Modules | `/settings/modules` | `GET/POST/PUT/DELETE /modules`, `PATCH /modules/:id/status` |
 | Fields | `/settings/fields` | `GET/POST/PUT/DELETE /modules/:id/fields` |
 | Validation | `/settings/validation` | `GET/POST/PUT/DELETE /modules/:id/validation-rules` |
+| Roles | `/settings/roles` | `GET/POST/PUT/DELETE /roles`, permission matrix + module/field ACL |
 | Automation | `/settings/automation` | `GET/PUT /settings` (automation section) + link to `/notifications` |
 | Data | `/settings/data` | Links to the Import (`/imports`) & Export (`/exports`) engines |
 
@@ -874,3 +875,197 @@ Implementation:
 > Validation are thin admin UIs over metadata engines that already existed — the
 > Settings Center is where the metadata-driven architecture becomes visible and
 > editable end-to-end, with no redeploys.
+
+---
+
+## 20. Roles & Permissions (RBAC)
+
+Enforces a three-layer access model on top of the Phase 3 catalog
+(`permissions` / `roles` / `role_permissions` / `organization_members`):
+
+1. **Global permission matrix** — keys like `module.manage`, `import.run`, `export.run`
+2. **Module-level ACL** — per-role CRUD overrides on a module (`role_module_access`)
+3. **Field-level ACL** — `hidden` / `read` / `write` per field (`role_field_access`)
+
+Absence of a module/field ACL row means unrestricted (the global permission still
+applies). Organization-scoped. Requires migration `000008` (`make migrate-up`).
+
+### RBAC API
+
+Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /me/access` | Caller's role, permission keys, and ACL. | Boot UI / hide forbidden actions. |
+| `GET /permissions` | Global permission catalog (needs `role.manage`). | Render the matrix. |
+| `GET /roles` | List roles (+ member counts). | Role picker. |
+| `POST /roles` | Create a custom role. | New role. |
+| `GET /roles/:id` | Role detail: permissions + module/field ACL. | Edit screen. |
+| `PUT /roles/:id` | Update name/description. | Rename. |
+| `DELETE /roles/:id` | Delete a non-system role (must have no members). | Cleanup. |
+| `PUT /roles/:id/permissions` | Replace the permission matrix (`{ permissions: [...] }`). | Save matrix. |
+| `PUT /roles/:id/module-access` | Replace module ACL rows. | Lock a module down. |
+| `PUT /roles/:id/field-access` | Replace field ACL rows (`hidden`/`read`/`write`). | Hide/lock fields. |
+
+```bash
+# Who am I?
+curl http://localhost:8080/api/v1/me/access -H "Authorization: Bearer $TOKEN"
+
+# Set the viewer role to read-only exports + no imports
+curl -X PUT http://localhost:8080/api/v1/roles/$ROLE_ID/permissions \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"permissions":["module.view","record.view","export.run"]}'
+
+# Restrict a module for that role
+curl -X PUT http://localhost:8080/api/v1/roles/$ROLE_ID/module-access \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"access":[{"module_id":"…","can_view":true,"can_create":false,
+       "can_update":false,"can_delete":false}]}'
+```
+
+### What is enforced
+
+| Surface | Permission / ACL |
+| --- | --- |
+| Module list / navigation | `module.view` |
+| Module create/update/delete/reorder | `module.manage` |
+| Field reads (forms) | `module.view` (+ hidden fields filtered) |
+| Field writes | `field.manage` |
+| Record CRUD | `record.*` **and** `role_module_access` |
+| Record / field payloads | `role_field_access` strips hidden; blocks write on `read` |
+| Import | `import.run` + module create |
+| Export | `export.run` + module view |
+| Validation rules | `validation.manage` |
+| Settings writes | `settings.manage` |
+| Notifications | `automation.manage` |
+| Roles API | `role.manage` |
+
+Seeded roles (`admin` / `manager` / `sales_rep` / `viewer`) already grant
+sensible subsets via `make seed`.
+
+Implementation:
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Guard | `internal/rbac/` | `Load` middleware, `Require` / `RequireModule`, module & field ACL helpers. |
+| Roles engine | `internal/roles/` | Catalog, role CRUD, matrix + ACL writes, `GET /me/access`. |
+| Persistence | migration `000008` | `role_module_access`, `role_field_access`. |
+| Frontend | `frontend/features/roles/` + `app/(dashboard)/settings/roles` | Role picker, permission matrix, module ACL table, field ACL editor. |
+
+> Tenant middleware still resolves org + role; `rbac.Load` attaches permission
+> keys once per request. Handlers stay thin — the guard answers "may this role
+> do X?" without each service re-querying the catalog.
+
+---
+
+## 21. Performance & Optimization
+
+Phase 17 hardens the hot paths without changing public API contracts.
+
+### Caching (Redis)
+
+Shared package: `internal/shared/cache` (`GetJSON` / `SetJSON` / `Delete`, short TTLs).
+
+| Key family | TTL | Invalidated when |
+| --- | --- | --- |
+| `dashboard:{userID}` | 5m | Lead / task CUD |
+| `tenant:membership:{userID}` | 2m | (short TTL; membership changes rare) |
+| `rbac:perms:{roleID}` | 2m | `PUT /roles/:id/permissions`, role delete |
+| `rbac:module:{roleID}:{moduleID}` | 2m | `PUT …/module-access`, role delete |
+| `rbac:field:{roleID}:{moduleID}` | 2m | `PUT …/field-access`, role delete |
+
+Dashboard, tenant resolver, and RBAC guard all take `*cache.Cache`. A nil/miss is transparent — Postgres remains the source of truth.
+
+### Query / indexes
+
+Migration `000009_perf_indexes` (`make migrate-up`):
+
+- `records (organization_id, module_id, created_at DESC)` — list + export paging
+- `notifications (organization_id, created_at DESC)` — inbox / history
+
+Export paging sets `ListQuery.SkipTotal` so each page skips `COUNT(*)`.
+
+### Bulk import
+
+Worker import processor:
+
+1. `LoadSpec` once per job (fields + rules)
+2. `ValidateWithSpec` per row (no re-query)
+3. `CreateBatch` via Postgres `COPY` (flush every 100 rows; falls back to single insert on batch error)
+
+### asynq queues
+
+| Queue | Weight | Job types | MaxRetry | Timeout |
+| --- | --- | --- | --- | --- |
+| `critical` | 6 | email / WhatsApp / notification | 5 | 30s |
+| `default` | 3 | lead events | 3 | 60s |
+| `bulk` | 1 | import / export | 3 | 10m |
+
+`Producer.Publish` applies `DefaultOpts(job.Type)` automatically.
+
+### Frontend metadata cache
+
+`features/metadata/cache.ts` — 60s in-memory TTL around `getModules` / `getModuleFields` / `getValidationSchema`. Settings mutations call `invalidateMetadataCache`.
+
+### Verify
+
+```bash
+cd backend && make migrate-up   # applies 000009
+go test ./...
+cd ../frontend && npm run lint # optional
+```
+
+---
+
+## 22. API & Swagger (OpenAPI 3)
+
+Phase 18 publishes a complete OpenAPI 3.0 specification for every `/api/v1`
+route, with request/response examples and the shared error envelope.
+
+### Browse
+
+| URL | What |
+| --- | --- |
+| `http://localhost:8080/api/v1/docs` | Interactive Swagger UI (Try it out + Authorize) |
+| `http://localhost:8080/api/v1/openapi.yaml` | Raw OpenAPI 3 YAML |
+
+No auth is required to load the docs. Click **Authorize** in Swagger UI and
+paste a JWT from `POST /auth/login` to call protected endpoints.
+
+### Error envelope (documented on every operation)
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    { "field": "email", "message": "Must be a valid email" }
+  ]
+}
+```
+
+App-level codes use `{ "code": "NOT_FOUND" }` (see `BAD_REQUEST`, `UNAUTHORIZED`,
+`FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `VALIDATION_ERROR`, `INTERNAL_SERVER_ERROR`).
+Field validation failures are returned as **HTTP 400** with `{field,message}[]`.
+
+### Regenerate the spec
+
+The YAML is generated (not hand-annotated with swaggo) so it stays aligned with
+the route inventory without touching every handler:
+
+```bash
+cd backend
+make openapi          # needs: pip install pyyaml
+# edits: internal/docs/generate_openapi.py + schemas_data.py
+```
+
+Embedded at build time via `//go:embed` in `internal/docs`.
+
+### Implementation
+
+| Piece | Path |
+| --- | --- |
+| Spec + generator | `backend/internal/docs/openapi.yaml`, `generate_openapi.py`, `schemas_data.py` |
+| Swagger UI | `backend/internal/docs/swagger.html` |
+| Gin module | `backend/internal/docs/docs.go` |
+

@@ -9,6 +9,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter/service"
 	fieldrepository "github.com/abhinavkumar03/crm-lite/backend/internal/field/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	recordrepository "github.com/abhinavkumar03/crm-lite/backend/internal/record/repository"
 	recordservice "github.com/abhinavkumar03/crm-lite/backend/internal/record/service"
 	vrepository "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/repository"
@@ -23,6 +24,8 @@ type Module struct {
 	Handler *handler.ExportHandler
 	auth    gin.HandlerFunc
 	org     gin.HandlerFunc
+	load    gin.HandlerFunc
+	guard   *rbac.Guard
 }
 
 // NewService builds the export service, wiring the record runtime as the row
@@ -42,20 +45,21 @@ func NewService(db *pgxpool.Pool, producer *jobs.Producer) *service.Service {
 	)
 }
 
-func NewModule(db *pgxpool.Pool, auth gin.HandlerFunc, org gin.HandlerFunc, producer *jobs.Producer) *Module {
+func NewModule(db *pgxpool.Pool, auth, org, load gin.HandlerFunc, guard *rbac.Guard, producer *jobs.Producer) *Module {
 	return &Module{
 		Handler: handler.New(NewService(db, producer)),
 		auth:    auth,
 		org:     org,
+		load:    load,
+		guard:   guard,
 	}
 }
 
-// RegisterRoutes mounts the export API under a module. "export" (sync),
-// "exports" (async jobs) and "export-templates" are distinct static sub-paths so
-// they never collide with each other or with the sibling engines' param routes.
+// RegisterRoutes mounts the export API under a module. All endpoints require
+// export.run plus module-level view access.
 func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	g := api.Group("/modules/:id")
-	g.Use(m.auth, m.org)
+	g.Use(m.auth, m.org, m.load, m.guard.Require(rbac.PermExportRun), m.guard.RequireModule(rbac.ActionView))
 
 	g.GET("/export", m.Handler.ExportNow)
 

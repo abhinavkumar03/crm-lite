@@ -7,6 +7,7 @@ import (
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field/service"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/response"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/validation"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
@@ -21,23 +22,27 @@ const (
 
 type FieldHandler struct {
 	service *service.Service
+	guard   *rbac.Guard
 }
 
-func New(service *service.Service) *FieldHandler {
-	return &FieldHandler{service: service}
+func New(service *service.Service, guard *rbac.Guard) *FieldHandler {
+	return &FieldHandler{service: service, guard: guard}
 }
 
 func (h *FieldHandler) List(c *gin.Context) {
-	fields, err := h.service.List(c.Request.Context(), tenant.OrgID(c), c.Param(paramModuleID))
+	moduleID := c.Param(paramModuleID)
+	fields, err := h.service.List(c.Request.Context(), tenant.OrgID(c), moduleID)
 	if err != nil {
 		h.writeServiceError(c, err, "Unable to fetch fields")
 		return
 	}
+	fields = h.filterHidden(c, moduleID, fields)
 	response.OK(c, "Fields fetched successfully", fields)
 }
 
 func (h *FieldHandler) GetByID(c *gin.Context) {
-	field, err := h.service.GetByID(c.Request.Context(), tenant.OrgID(c), c.Param(paramModuleID), c.Param(paramFieldID))
+	moduleID := c.Param(paramModuleID)
+	field, err := h.service.GetByID(c.Request.Context(), tenant.OrgID(c), moduleID, c.Param(paramFieldID))
 	if err != nil {
 		h.writeServiceError(c, err, "Unable to fetch field")
 		return
@@ -46,7 +51,43 @@ func (h *FieldHandler) GetByID(c *gin.Context) {
 		response.NotFound(c, "Field not found")
 		return
 	}
+	// Treat a hidden field as not found for callers without field.manage.
+	if h.isHidden(c, moduleID, field.ID) {
+		response.NotFound(c, "Field not found")
+		return
+	}
 	response.OK(c, "Field fetched successfully", field)
+}
+
+// filterHidden removes fields the caller's role cannot see. Callers with
+// field.manage (settings admins) always see the full catalog.
+func (h *FieldHandler) filterHidden(c *gin.Context, moduleID string, fields []dto.FieldResponse) []dto.FieldResponse {
+	if h.guard == nil || rbac.Has(c, rbac.PermFieldManage) {
+		return fields
+	}
+	access, err := h.guard.FieldAccessMap(c.Request.Context(), tenant.RoleID(c), moduleID)
+	if err != nil || len(access) == 0 {
+		return fields
+	}
+	out := make([]dto.FieldResponse, 0, len(fields))
+	for _, f := range fields {
+		if access[f.ID] == rbac.FieldHidden {
+			continue
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+func (h *FieldHandler) isHidden(c *gin.Context, moduleID, fieldID string) bool {
+	if h.guard == nil || rbac.Has(c, rbac.PermFieldManage) {
+		return false
+	}
+	access, err := h.guard.FieldAccessMap(c.Request.Context(), tenant.RoleID(c), moduleID)
+	if err != nil {
+		return false
+	}
+	return access[fieldID] == rbac.FieldHidden
 }
 
 func (h *FieldHandler) Create(c *gin.Context) {

@@ -48,3 +48,13 @@ func Middleware(resolver *Resolver) gin.HandlerFunc {
 func OrgID(c *gin.Context) string {
 	return c.GetString(ContextOrgID)
 }
+
+// RoleID returns the caller's role id (empty if the membership has no role).
+func RoleID(c *gin.Context) string {
+	return c.GetString(ContextRoleID)
+}
+
+// RoleSlug returns the caller's role slug (e.g. "admin", "viewer").
+func RoleSlug(c *gin.Context) string {
+	return c.GetString(ContextRoleSlug)
+}

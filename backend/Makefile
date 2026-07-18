@@ -24,6 +24,10 @@ tidy: ## Sync go.mod/go.sum
 vet: ## Run go vet
 	go vet ./...
 
+.PHONY: openapi
+openapi: ## Regenerate OpenAPI 3 YAML (requires PyYAML)
+	cd internal/docs && python3 generate_openapi.py
+
 .PHONY: run-api
 run-api: ## Run the API server
 	go run ./cmd/api

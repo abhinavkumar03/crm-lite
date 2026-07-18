@@ -114,13 +114,14 @@ func (s *Service) Build(ctx context.Context, orgID, moduleID string, spec dto.Ex
 	page := 1
 	for {
 		q := recorddto.ListQuery{
-			Page:     page,
-			PageSize: fetchPageSize,
-			Search:   spec.Search,
-			Sort:     spec.Sort,
-			Order:    spec.Order,
-			Filters:  spec.Filters,
-			Expand:   expand,
+			Page:      page,
+			PageSize:  fetchPageSize,
+			Search:    spec.Search,
+			Sort:      spec.Sort,
+			Order:     spec.Order,
+			Filters:   spec.Filters,
+			Expand:    expand,
+			SkipTotal: true, // export only needs "is there another page?"
 		}
 		res, err := s.rows.List(ctx, orgID, moduleID, q)
 		if err != nil {
@@ -133,7 +134,8 @@ func (s *Service) Build(ctx context.Context, orgID, moduleID string, spec dto.Ex
 			rows = rows[:MaxRows]
 			break
 		}
-		if len(res.Records) == 0 || page >= res.TotalPages {
+		// Short page (or empty) means we have reached the end — no COUNT needed.
+		if len(res.Records) < fetchPageSize {
 			break
 		}
 		page++

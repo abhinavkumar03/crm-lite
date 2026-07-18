@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 )
 
 // TestRegisterRoutesNoConflict ensures the module engine's route tree registers
@@ -12,7 +14,7 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	noop := func(c *gin.Context) { c.Next() }
-	m := NewModule(nil, noop, noop)
+	m := NewModule(nil, noop, noop, noop, rbac.New(nil, nil))
 
 	router := gin.New()
 	api := router.Group("/api/v1")

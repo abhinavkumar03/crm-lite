@@ -1,5 +1,6 @@
 import api from "@/services/api";
 
+import { invalidateMetadataCache } from "@/features/metadata/cache";
 import { ModuleField } from "@/features/metadata/types";
 
 import {
@@ -24,6 +25,7 @@ export async function createModule(
   payload: CreateModulePayload
 ): Promise<ModuleDetail> {
   const res = await api.post("/modules", payload);
+  invalidateMetadataCache();
   return res.data.data;
 }
 
@@ -32,6 +34,7 @@ export async function updateModule(
   payload: UpdateModulePayload
 ): Promise<ModuleDetail> {
   const res = await api.put(`/modules/${moduleId}`, payload);
+  invalidateMetadataCache();
   return res.data.data;
 }
 
@@ -40,11 +43,13 @@ export async function setModuleStatus(
   enabled: boolean
 ): Promise<ModuleDetail> {
   const res = await api.patch(`/modules/${moduleId}/status`, { enabled });
+  invalidateMetadataCache();
   return res.data.data;
 }
 
 export async function deleteModule(moduleId: string): Promise<void> {
   await api.delete(`/modules/${moduleId}`);
+  invalidateMetadataCache();
 }
 
 // --- Fields ----------------------------------------------------------------
@@ -59,6 +64,8 @@ export async function createField(
   payload: CreateFieldPayload
 ): Promise<ModuleField> {
   const res = await api.post(`/modules/${moduleId}/fields`, payload);
+  invalidateMetadataCache(`fields:${moduleId}`);
+  invalidateMetadataCache("modules");
   return res.data.data;
 }
 
@@ -68,6 +75,8 @@ export async function updateField(
   payload: UpdateFieldPayload
 ): Promise<ModuleField> {
   const res = await api.put(`/modules/${moduleId}/fields/${fieldId}`, payload);
+  invalidateMetadataCache(`fields:${moduleId}`);
+  invalidateMetadataCache(`validation:${moduleId}`);
   return res.data.data;
 }
 
@@ -76,6 +85,8 @@ export async function deleteField(
   fieldId: string
 ): Promise<void> {
   await api.delete(`/modules/${moduleId}/fields/${fieldId}`);
+  invalidateMetadataCache(`fields:${moduleId}`);
+  invalidateMetadataCache(`validation:${moduleId}`);
 }
 
 // --- Validation rules ------------------------------------------------------
@@ -90,6 +101,7 @@ export async function createRule(
   payload: CreateRulePayload
 ): Promise<ValidationRule> {
   const res = await api.post(`/modules/${moduleId}/validation-rules`, payload);
+  invalidateMetadataCache(`validation:${moduleId}`);
   return res.data.data;
 }
 
@@ -102,6 +114,7 @@ export async function updateRule(
     `/modules/${moduleId}/validation-rules/${ruleId}`,
     payload
   );
+  invalidateMetadataCache(`validation:${moduleId}`);
   return res.data.data;
 }
 
@@ -110,4 +123,5 @@ export async function deleteRule(
   ruleId: string
 ): Promise<void> {
   await api.delete(`/modules/${moduleId}/validation-rules/${ruleId}`);
+  invalidateMetadataCache(`validation:${moduleId}`);
 }

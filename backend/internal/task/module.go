@@ -9,6 +9,7 @@ import (
 
 	contactrepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	leadrepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/service"
@@ -22,6 +23,7 @@ type Module struct {
 func NewModule(
 	db *pgxpool.Pool,
 	auth gin.HandlerFunc,
+	c *cache.Cache,
 ) *Module {
 
 	taskRepo := repository.New(db)
@@ -42,6 +44,7 @@ func NewModule(
 		leadRepo,
 		contactRepo,
 		activitySvc,
+		c,
 	)
 
 	h := handler.New(svc)

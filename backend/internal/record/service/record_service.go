@@ -219,12 +219,24 @@ func (s *Service) List(ctx context.Context, orgID, moduleID string, q dto.ListQu
 		}
 	}
 
+	totalPages := 1
+	if q.SkipTotal {
+		// Hint that another page may exist when the page is full.
+		if len(responses) == q.PageSize {
+			totalPages = q.Page + 1
+		} else {
+			totalPages = q.Page
+		}
+	} else {
+		totalPages = int(math.Max(1, math.Ceil(float64(total)/float64(q.PageSize))))
+	}
+
 	return &dto.ListResult{
 		Records:    responses,
 		Page:       q.Page,
 		PageSize:   q.PageSize,
 		Total:      total,
-		TotalPages: int(math.Max(1, math.Ceil(float64(total)/float64(q.PageSize)))),
+		TotalPages: totalPages,
 	}, nil
 }
 

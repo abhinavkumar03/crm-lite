@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
+
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
 )
 
@@ -28,5 +30,5 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	producer := jobs.NewProducer(jobs.RedisOpt("localhost", "6379", "", 0))
 	defer producer.Close()
 
-	NewModule(nil, noop, noop, producer).RegisterRoutes(api)
+	NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
 }

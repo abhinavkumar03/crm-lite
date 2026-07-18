@@ -9,6 +9,7 @@ import (
 	activityService "github.com/abhinavkumar03/crm-lite/backend/internal/activity/service"
 	contactrepository "github.com/abhinavkumar03/crm-lite/backend/internal/contact/repository"
 	leadrepository "github.com/abhinavkumar03/crm-lite/backend/internal/lead/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task/repository"
@@ -19,6 +20,7 @@ type Service struct {
 	leadRepository    *leadrepository.Repository
 	contactRepository *contactrepository.Repository
 	activityService   *activityService.Service
+	cache             *cache.Cache
 }
 
 func New(
@@ -26,6 +28,7 @@ func New(
 	leadRepo *leadrepository.Repository,
 	contactRepo *contactrepository.Repository,
 	activityService *activityService.Service,
+	c *cache.Cache,
 ) *Service {
 
 	return &Service{
@@ -33,6 +36,7 @@ func New(
 		leadRepository:    leadRepo,
 		contactRepository: contactRepo,
 		activityService:   activityService,
+		cache:             c,
 	}
 }
 
@@ -108,6 +112,8 @@ func (s *Service) Create(
 		nil,
 		ownerID,
 	)
+
+	s.cache.InvalidateDashboard(ctx, ownerID)
 
 	var dueDate *string
 	if task.DueDate != nil {
@@ -281,6 +287,8 @@ func (s *Service) Update(
 		ownerID,
 	)
 
+	s.cache.InvalidateDashboard(ctx, ownerID)
+
 	var dueDate *string
 
 	if task.DueDate != nil {
@@ -325,6 +333,7 @@ func (s *Service) Delete(
 			nil,
 			ownerID,
 		)
+		s.cache.InvalidateDashboard(ctx, ownerID)
 	}
 
 	return deleted, nil

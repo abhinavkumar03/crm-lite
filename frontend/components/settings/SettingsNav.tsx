@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Zap,
   Database,
+  Shield,
   LucideIcon,
 } from "lucide-react";
 
@@ -44,6 +45,12 @@ const items: NavItem[] = [
     href: "/settings/validation",
     icon: ShieldCheck,
     description: "Data-quality rules",
+  },
+  {
+    name: "Roles",
+    href: "/settings/roles",
+    icon: Shield,
+    description: "Permission matrix & ACL",
   },
   {
     name: "Automation",
