@@ -33,6 +33,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/tour"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/view"
 )
@@ -96,6 +97,7 @@ func main() {
 	importEngine := importer.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	exportEngine := exporter.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
+	tourModule := tour.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -123,6 +125,7 @@ func main() {
 		importEngine,
 		exportEngine,
 		notificationModule,
+		tourModule,
 		leadModule,
 		contactModule,
 		taskModule,

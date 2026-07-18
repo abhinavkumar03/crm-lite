@@ -7,6 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import { TourProvider } from "@/features/tour/TourProvider";
+import TourOverlay from "@/features/tour/TourOverlay";
 
 export default function DashboardLayout({
   children,
@@ -41,25 +43,29 @@ export default function DashboardLayout({
   if (!auth.token) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar
-        open={sidebarOpen}
-        onClose={() =>
-          setSidebarOpen(false)
-        }
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          onMenuClick={() =>
-            setSidebarOpen(true)
+    <TourProvider>
+      <div className="flex h-screen overflow-hidden bg-slate-50">
+        <Sidebar
+          open={sidebarOpen}
+          onClose={() =>
+            setSidebarOpen(false)
           }
         />
 
-        <main className="flex-1 overflow-auto p-6 lg:p-8">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar
+            onMenuClick={() =>
+              setSidebarOpen(true)
+            }
+          />
+
+          <main className="flex-1 overflow-auto p-6 lg:p-8">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+
+      <TourOverlay />
+    </TourProvider>
   );
 }

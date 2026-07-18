@@ -14,9 +14,11 @@ import {
     ChevronDown,
     LogOut,
     LayoutDashboard,
+    Compass,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { useTour } from "@/features/tour/TourProvider";
 
 type Props = {
   mobile?: boolean;
@@ -28,6 +30,8 @@ export default function UserMenu({
   showDashboard = false,
 }: Props)  {
   const auth = useAuth();
+
+  const tour = useTour();
 
   const router = useRouter();
 
@@ -266,6 +270,31 @@ export default function UserMenu({
 
             Dashboard
         </Link>
+    )}
+
+    {tour && (
+        <button
+            onClick={() => {
+                setOpen(false);
+                tour.restart();
+            }}
+            className="
+            flex
+            w-full
+            items-center
+            gap-3
+            rounded-2xl
+            px-4
+            py-3
+            text-slate-700
+            transition
+            hover:bg-slate-100
+            "
+        >
+            <Compass size={18} />
+
+            Take a tour
+        </button>
     )}
 
     <button
