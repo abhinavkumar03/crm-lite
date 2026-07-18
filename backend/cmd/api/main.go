@@ -25,7 +25,9 @@ import (
 	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notification"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/roles"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
@@ -85,31 +87,37 @@ func main() {
 	defer producer.Close()
 
 	// Resolves the authenticated user's organization; shared by all
-	// organization-scoped (metadata-driven) modules.
+	// organization-scoped (metadata-driven) modules. rbac.Load attaches the
+	// role's permission keys so Require()/RequireModule() can enforce them.
 	orgMiddleware := tenant.Middleware(tenant.NewResolver(db))
+	guard := rbac.New(db)
+	rbacLoad := guard.Load()
 
 	healthModule := health.NewModule()
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
-	moduleEngine := moduleengine.NewModule(db, authModule.Middleware(), orgMiddleware)
-	fieldEngine := field.NewModule(db, authModule.Middleware(), orgMiddleware)
-	validationEngine := validationengine.NewModule(db, authModule.Middleware(), orgMiddleware)
-	viewEngine := view.NewModule(db, authModule.Middleware(), orgMiddleware)
-	recordEngine := record.NewModule(db, authModule.Middleware(), orgMiddleware)
-	importEngine := importer.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
-	exportEngine := exporter.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
-	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
-	tourModule := tour.NewModule(db, authModule.Middleware(), orgMiddleware)
-	settingsModule := settings.NewModule(db, authModule.Middleware(), orgMiddleware)
-	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
-	contactModule := contact.NewModule(db, authModule.Middleware())
-	taskModule := task.NewModule(db, authModule.Middleware())
-	dashboardModule := dashboard.NewModule(db, redisClient, authModule.Middleware())
-	searchModule := search.NewModule(db, authModule.Middleware())
-	noteModule := note.NewModule(db, authModule.Middleware())
-	calllogModule := calllog.NewModule(db, authModule.Middleware())
-	attachmentModule := attachment.NewModule(db, authModule.Middleware())
-	activityModule := activity.NewModule(db, authModule.Middleware())
-	mediaModule, err := media.NewModule(cfg, authModule.Middleware())
+	authMW := authModule.Middleware()
+
+	moduleEngine := moduleengine.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	fieldEngine := field.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	validationEngine := validationengine.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	viewEngine := view.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	recordEngine := record.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	importEngine := importer.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
+	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
+	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
+	tourModule := tour.NewModule(db, authMW, orgMiddleware)
+	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	rolesModule := roles.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	leadModule := lead.NewModule(db, authMW, producer)
+	contactModule := contact.NewModule(db, authMW)
+	taskModule := task.NewModule(db, authMW)
+	dashboardModule := dashboard.NewModule(db, redisClient, authMW)
+	searchModule := search.NewModule(db, authMW)
+	noteModule := note.NewModule(db, authMW)
+	calllogModule := calllog.NewModule(db, authMW)
+	attachmentModule := attachment.NewModule(db, authMW)
+	activityModule := activity.NewModule(db, authMW)
+	mediaModule, err := media.NewModule(cfg, authMW)
 	if err != nil {
 		log.Sugar().Fatalf("failed to initialize media module: %v", err)
 	}
@@ -129,6 +137,7 @@ func main() {
 		notificationModule,
 		tourModule,
 		settingsModule,
+		rolesModule,
 		leadModule,
 		contactModule,
 		taskModule,

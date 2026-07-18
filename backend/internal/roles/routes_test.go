@@ -1,4 +1,4 @@
-package settings
+package roles
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 )
 
-// TestRegisterRoutesNoConflict verifies the settings routes register without a
-// Gin panic.
 func TestRegisterRoutesNoConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

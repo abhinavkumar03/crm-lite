@@ -7,6 +7,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/module/handler"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/module/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/module/service"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 )
 
 // Module is the dynamic-module engine composition root.
@@ -14,11 +15,13 @@ type Module struct {
 	Handler *handler.ModuleHandler
 	auth    gin.HandlerFunc
 	org     gin.HandlerFunc
+	load    gin.HandlerFunc
+	guard   *rbac.Guard
 }
 
-// NewModule wires the module engine. It takes the auth middleware and the
-// tenant (organization-scoping) middleware, both applied to every route.
-func NewModule(db *pgxpool.Pool, auth gin.HandlerFunc, org gin.HandlerFunc) *Module {
+// NewModule wires the module engine. auth → org → rbac.Load run on every route;
+// mutating endpoints additionally Require module.manage.
+func NewModule(db *pgxpool.Pool, auth, org, load gin.HandlerFunc, guard *rbac.Guard) *Module {
 	repo := repository.New(db)
 	svc := service.New(repo)
 	h := handler.New(svc)
@@ -27,24 +30,25 @@ func NewModule(db *pgxpool.Pool, auth gin.HandlerFunc, org gin.HandlerFunc) *Mod
 		Handler: h,
 		auth:    auth,
 		org:     org,
+		load:    load,
+		guard:   guard,
 	}
 }
 
 func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	modules := api.Group("/modules")
-	modules.Use(m.auth, m.org)
+	modules.Use(m.auth, m.org, m.load)
 
-	modules.GET("", m.Handler.List)
-	modules.POST("", m.Handler.Create)
-	modules.POST("/reorder", m.Handler.Reorder)
-	modules.GET("/:id", m.Handler.GetByID)
-	modules.PUT("/:id", m.Handler.Update)
-	modules.PATCH("/:id/status", m.Handler.SetStatus)
-	modules.DELETE("/:id", m.Handler.Delete)
+	modules.GET("", m.guard.Require(rbac.PermModuleView), m.Handler.List)
+	modules.GET("/:id", m.guard.Require(rbac.PermModuleView), m.Handler.GetByID)
 
-	// Navigation is exposed separately to avoid a static/param route conflict
-	// under /modules (GET /modules/navigation vs GET /modules/:id).
+	modules.POST("", m.guard.Require(rbac.PermModuleManage), m.Handler.Create)
+	modules.POST("/reorder", m.guard.Require(rbac.PermModuleManage), m.Handler.Reorder)
+	modules.PUT("/:id", m.guard.Require(rbac.PermModuleManage), m.Handler.Update)
+	modules.PATCH("/:id/status", m.guard.Require(rbac.PermModuleManage), m.Handler.SetStatus)
+	modules.DELETE("/:id", m.guard.Require(rbac.PermModuleManage), m.Handler.Delete)
+
 	nav := api.Group("/navigation")
-	nav.Use(m.auth, m.org)
-	nav.GET("", m.Handler.Navigation)
+	nav.Use(m.auth, m.org, m.load)
+	nav.GET("", m.guard.Require(rbac.PermModuleView), m.Handler.Navigation)
 }

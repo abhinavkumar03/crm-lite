@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
+
 	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
 )
 
@@ -16,8 +18,8 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	noop := func(c *gin.Context) { c.Next() }
-	fieldModule := NewModule(nil, noop, noop)
-	moduleModule := moduleengine.NewModule(nil, noop, noop)
+	fieldModule := NewModule(nil, noop, noop, noop, rbac.New(nil))
+	moduleModule := moduleengine.NewModule(nil, noop, noop, noop, rbac.New(nil))
 
 	router := gin.New()
 	api := router.Group("/api/v1")
