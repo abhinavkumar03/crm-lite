@@ -28,6 +28,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/view"
@@ -88,6 +89,7 @@ func main() {
 	fieldEngine := field.NewModule(db, authModule.Middleware(), orgMiddleware)
 	validationEngine := validationengine.NewModule(db, authModule.Middleware(), orgMiddleware)
 	viewEngine := view.NewModule(db, authModule.Middleware(), orgMiddleware)
+	recordEngine := record.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -111,6 +113,7 @@ func main() {
 		fieldEngine,
 		validationEngine,
 		viewEngine,
+		recordEngine,
 		leadModule,
 		contactModule,
 		taskModule,

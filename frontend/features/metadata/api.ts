@@ -4,6 +4,9 @@ import {
   FormValues,
   ModuleField,
   ModuleSummary,
+  RecordListParams,
+  RecordListResult,
+  RecordResponse,
   SavedView,
   SaveViewPayload,
   ValidateResult,
@@ -73,4 +76,46 @@ export async function setDefaultView(
   viewId: string
 ): Promise<void> {
   await api.post(`/modules/${moduleId}/views/${viewId}/default`);
+}
+
+// --- Records (Phase 10 module runtime) -------------------------------------
+
+export async function listRecords(
+  moduleId: string,
+  params: RecordListParams = {}
+): Promise<RecordListResult> {
+  const res = await api.get(`/modules/${moduleId}/records`, { params });
+  return res.data.data;
+}
+
+export async function createRecord(
+  moduleId: string,
+  data: FormValues,
+  ownerId?: string
+): Promise<RecordResponse> {
+  const res = await api.post(`/modules/${moduleId}/records`, {
+    data,
+    owner_id: ownerId,
+  });
+  return res.data.data;
+}
+
+export async function updateRecord(
+  moduleId: string,
+  recordId: string,
+  data: FormValues,
+  ownerId?: string
+): Promise<RecordResponse> {
+  const res = await api.put(`/modules/${moduleId}/records/${recordId}`, {
+    data,
+    owner_id: ownerId,
+  });
+  return res.data.data;
+}
+
+export async function deleteRecord(
+  moduleId: string,
+  recordId: string
+): Promise<void> {
+  await api.delete(`/modules/${moduleId}/records/${recordId}`);
 }

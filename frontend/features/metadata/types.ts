@@ -72,6 +72,7 @@ export interface ModuleSummary {
   plural_label: string;
   icon: string | null;
   color: string | null;
+  storage_strategy: "native" | "dynamic";
   is_enabled: boolean;
   is_system: boolean;
   sort_order: number;
@@ -186,3 +187,39 @@ export interface SaveViewPayload {
 
 // A table row is just a bag of field values keyed by api_name.
 export type TableRow = Record<string, FieldValue>;
+
+// --- Record runtime (Phase 10) --------------------------------------------
+
+export interface RelationRef {
+  id: string;
+  label: string;
+}
+
+export interface RecordResponse {
+  id: string;
+  module_id: string;
+  data: Record<string, FieldValue>;
+  owner_id: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  relations?: Record<string, RelationRef>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecordListResult {
+  records: RecordResponse[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface RecordListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  sort?: string;
+  order?: SortDirection;
+  expand?: boolean;
+}

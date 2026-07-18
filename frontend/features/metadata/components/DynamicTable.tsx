@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  Trash2,
 } from "lucide-react";
 
 import TableCell from "./TableCell";
@@ -30,6 +31,7 @@ interface Props {
   pageSize: number;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
+  onDeleteRow?: (row: TableRow) => void;
 }
 
 const PAGE_SIZES = [5, 10, 25, 50];
@@ -113,6 +115,7 @@ export default function DynamicTable({
   pageSize,
   onPage,
   onPageSize,
+  onDeleteRow,
 }: Props) {
   const fieldByName = new Map(fields.map((f) => [f.api_name, f]));
   const visible = columns
@@ -143,6 +146,7 @@ export default function DynamicTable({
                   </th>
                 );
               })}
+              {onDeleteRow && <th className="w-12 px-4 py-3" />}
             </tr>
             {showFilters && (
               <tr className="border-b border-slate-200 bg-white">
@@ -155,6 +159,7 @@ export default function DynamicTable({
                     />
                   </th>
                 ))}
+                {onDeleteRow && <th className="px-3 py-2" />}
               </tr>
             )}
           </thead>
@@ -162,7 +167,7 @@ export default function DynamicTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={Math.max(1, visible.length)}
+                  colSpan={Math.max(1, visible.length + (onDeleteRow ? 1 : 0))}
                   className="px-4 py-10 text-center text-sm text-slate-400"
                 >
                   No records to display.
@@ -179,6 +184,18 @@ export default function DynamicTable({
                       <TableCell field={field} value={row[field.api_name]} />
                     </td>
                   ))}
+                  {onDeleteRow && (
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRow(row)}
+                        className="text-slate-300 transition hover:text-red-500"
+                        aria-label="Delete record"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}

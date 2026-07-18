@@ -439,7 +439,7 @@ Lives under `frontend/features/metadata/`, reusing the Phase 8 form primitives.
 | `useDynamicTable` | `features/metadata/hooks/useDynamicTable.ts` | Owns columns/filters/sort/pagination state and derives visible rows. |
 | `lib/table.ts` | `features/metadata/lib/table.ts` | Pure `sortRows` / `filterRows` / `paginate` (type-aware). |
 | `api.ts` | `features/metadata/api.ts` | `getViews`, `createView`, `updateView`, `deleteView`, `setDefaultView`. |
-| Playground page | `app/(dashboard)/tables/page.tsx` | Pick a module → table + saved views; add rows via the dynamic form. Route: `/tables`. |
+| Playground page | `app/(dashboard)/tables/page.tsx` | Pick a dynamic module → table + saved views; create/delete records via the record runtime. Route: `/tables`. |
 
 ```bash
 cd frontend
@@ -447,7 +447,75 @@ npm run dev
 # then visit http://localhost:3000/tables  (also linked in the sidebar)
 ```
 
-> Note: the playground seeds sample rows and lets you add records via the dynamic
-> form. The table is data-source-agnostic — in Phase 10 (Module Runtime) the
-> in-memory rows are swapped for the generic records query API without touching
-> `DynamicTable`.
+> The playground lists dynamic modules only and is now backed by the Phase 10
+> record runtime: rows are real records fetched from `GET /modules/:id/records`,
+> "Add record" persists via `POST`, and the row trash icon calls `DELETE`. The
+> `DynamicTable` component itself was untouched by that swap.
+
+---
+
+## 14. Module Runtime (generic record engine)
+
+The runtime turns any **dynamic** module into a working object: create, read,
+update, delete and query records that live entirely in the `records.data` JSONB
+column — no per-module tables or migrations. Every write is validated by the
+Phase 7 engine, and lookup/user references can be expanded to display labels.
+Native modules (leads/contacts/tasks) keep their first-class endpoints and are
+rejected here. Organization-scoped. Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules/:id/records` | Paginated, sortable, filterable, searchable list. | Power a table/list view. |
+| `POST /modules/:id/records` | Create a record (validated). | Add a row. |
+| `GET /modules/:id/records/:recordId` | Fetch one record (`?expand=true` for relations). | Detail view. |
+| `PUT /modules/:id/records/:recordId` | Replace a record's data (validated). | Edit a row. |
+| `DELETE /modules/:id/records/:recordId` | Delete a record. | Remove a row. |
+
+**List query parameters:**
+
+| Param | Meaning |
+| --- | --- |
+| `page`, `page_size` | Pagination (default 20, max 100). |
+| `search` | Case-insensitive match across the module's **searchable** fields. |
+| `sort`, `order` | Sort by a field api_name (or `created_at`/`updated_at`) + `asc`/`desc`. |
+| `expand` | `true` resolves lookup/user fields into `{id, label}` under `relations`. |
+| `filter.<field>=<v>` | Shorthand equality filter on a **filterable** field. |
+| `filters` | JSON array for richer filters, e.g. `[{"field":"amount","operator":"gt","value":100}]`. |
+
+Filter `operator` values: `eq`, `ne`, `contains`, `gt`, `lt`, `gte`, `lte`, `in`.
+Only filterable/searchable fields are honoured and field names are whitelisted
+against the module schema, so query input can never widen or inject SQL.
+
+**Create a record:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/records \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"data":{"name":"Acme Corp","amount":5000,"stage":"open"}}'
+# 400 with {"errors":[{"field":"...","message":"..."}]} if validation fails
+```
+
+**Query (search + filter + sort + paginate + expand):**
+```bash
+curl "http://localhost:8080/api/v1/modules/<moduleId>/records?search=acme&sort=amount&order=desc&page=1&page_size=20&expand=true&filters=%5B%7B%22field%22%3A%22amount%22%2C%22operator%22%3A%22gte%22%2C%22value%22%3A1000%7D%5D" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Update / delete:**
+```bash
+curl -X PUT http://localhost:8080/api/v1/modules/<moduleId>/records/<recordId> \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"data":{"name":"Acme Corp","amount":7500,"stage":"won"}}'
+
+curl -X DELETE http://localhost:8080/api/v1/modules/<moduleId>/records/<recordId> \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Implementation (`backend/internal/record/`, standard vertical slice):
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Query builder | `repository/query.go` | Pure, unit-tested SQL builder for search/filter/sort (whitelisted, parameterized). |
+| Repository | `repository/record_repository.go` | CRUD, dynamic `List`, batched display-label lookups. |
+| Service | `service/record_service.go` + `expand.go` | Validation, ownership stamping, relationship expansion. |
+| Handler | `handler/record_handler.go` | Query-string parsing + error mapping. |
+| Composition | `record.go` | Reuses the field repo (metadata) and validation service (Phase 7). |
