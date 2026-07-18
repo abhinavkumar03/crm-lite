@@ -53,6 +53,7 @@ func main() {
 		seeders.RolesSeeder{},
 		seeders.UsersSeeder{},
 		seeders.MembershipsSeeder{},
+		seeders.OrgStructureSeeder{},
 		seeders.ModulesSeeder{},
 		seeders.FieldsSeeder{},
 		seeders.TourStepsSeeder{},

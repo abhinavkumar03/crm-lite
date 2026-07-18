@@ -11,8 +11,8 @@ import {
 
 const metrics = [
   {
-    title: "Leads",
-    value: "128",
+    title: "Companies",
+    value: "48",
     change: "+18%",
     icon: Users,
   },
@@ -23,10 +23,10 @@ const metrics = [
     icon: BriefcaseBusiness,
   },
   {
-    title: "Tasks",
-    value: "24",
-    change: "Today",
-    icon: CheckCircle2,
+    title: "Records",
+    value: "214",
+    change: "Total",
+    icon: Database,
   },
 ];
 
@@ -246,7 +246,7 @@ export default function DashboardPreview({
             <div className="rounded-2xl border border-slate-200 p-5">
 
               <h3 className="mb-5 font-semibold">
-                Recent Leads
+                Recent records
               </h3>
 
               <div className="space-y-4">

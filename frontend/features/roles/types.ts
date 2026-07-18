@@ -28,6 +28,8 @@ export interface RoleSummary {
   slug: string;
   description: string | null;
   is_system: boolean;
+  hierarchy_level: number;
+  parent_role_id?: string | null;
   member_count: number;
   created_at: string;
   updated_at: string;

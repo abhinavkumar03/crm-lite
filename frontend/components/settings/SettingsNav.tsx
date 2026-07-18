@@ -11,6 +11,9 @@ import {
   Zap,
   Database,
   Shield,
+  Users,
+  Building2,
+  Network,
   LucideIcon,
 } from "lucide-react";
 
@@ -47,10 +50,28 @@ const items: NavItem[] = [
     description: "Data-quality rules",
   },
   {
+    name: "Members",
+    href: "/settings/members",
+    icon: Users,
+    description: "Invite & manage people",
+  },
+  {
     name: "Roles",
     href: "/settings/roles",
     icon: Shield,
     description: "Permission matrix & ACL",
+  },
+  {
+    name: "Departments",
+    href: "/settings/departments",
+    icon: Building2,
+    description: "Org structure departments",
+  },
+  {
+    name: "Teams",
+    href: "/settings/teams",
+    icon: Network,
+    description: "Teams under departments",
   },
   {
     name: "Automation",

@@ -1077,10 +1077,19 @@ Embedded at build time via `//go:embed` in `internal/docs`.
 
 ## 23. Documentation & architecture (Phase 19)
 
+> **Dynamic-only CRM:** Native `/leads`, `/contacts`, and `/tasks` HTTP APIs are
+> unwired. Use Settings → Modules/Fields, `/forms`, `/tables`, and
+> `/modules/:id/records`. Legacy SQL tables remain in migrations unused.
+
+> **Tenancy-first roadmap:** Canonical product phases live in
+> [`docs/roadmap.md`](./docs/roadmap.md). Historical “Phase N” labels in this
+> file are the build log; map them via the roadmap’s mapping table.
+
 Human docs live under [`docs/`](./docs/README.md):
 
 | Doc | Use when |
 | --- | --- |
+| [Roadmap](./docs/roadmap.md) | Tenancy-first phase order + status |
 | [Architecture](./docs/architecture.md) | You need the process / request / cache map |
 | [ERD](./docs/erd.md) | You need table relationships |
 | [Sequences](./docs/sequences.md) | You need end-to-end flow diagrams |
@@ -1091,4 +1100,48 @@ Human docs live under [`docs/`](./docs/README.md):
 | [Onboarding](./docs/developer-onboarding.md) | First day on the project |
 
 Machine API docs remain at `/api/v1/docs` (Phase 18).
+
+---
+
+## 24. Enterprise tenancy (orgs, hierarchy, visibility)
+
+Schema lands in migration **`000011_enterprise_tenancy`**. Confirm with:
+
+```bash
+make migrate-up
+make migrate-version   # expect version 11 (or higher)
+```
+
+Then seed demo org profile, hierarchy roles, departments/teams, reporting tree, and varied record visibility:
+
+```bash
+cd backend && make seed
+# full re-seed (clears seeder history):
+cd backend && make seed-fresh
+```
+
+| Concern | Endpoints / packages |
+| --- | --- |
+| Org profile + settings | `GET/PUT /settings`, org profile fields on organizations |
+| My orgs / switch | `GET /me/organizations`, `POST /me/organizations/switch` |
+| Create org (bootstrap) | `POST /organizations` |
+| Invitations | `POST /organizations/invitations`, `POST /invitations/accept` |
+| Members | `GET /organizations/members` |
+| Departments / teams / branches | `/departments`, `/teams`, `/branches` |
+| Record visibility | Applied inside `GET/POST/PUT/DELETE /modules/:id/records` via `internal/access` |
+
+```bash
+# List memberships and switch active org
+curl http://localhost:8080/api/v1/me/organizations -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8080/api/v1/me/organizations/switch \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"organization_id":"<org-uuid>"}'
+
+# Invite a teammate (requires user.manage)
+curl -X POST http://localhost:8080/api/v1/organizations/invitations \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"email":"rep@example.com","role_id":"<role-uuid>"}'
+```
+
+Canonical product order: [`docs/roadmap.md`](./docs/roadmap.md).
 

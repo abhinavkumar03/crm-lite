@@ -38,7 +38,7 @@ func TestDocsRoutes(t *testing.T) {
 		if strings.Contains(body, "http://localhost:8080/api/v1") {
 			t.Fatal("must not keep static localhost server url")
 		}
-		if !strings.Contains(body, "/leads") || !strings.Contains(body, "ErrorResponse") {
+		if !strings.Contains(body, "/modules") || !strings.Contains(body, "ErrorResponse") {
 			t.Fatal("spec missing expected content")
 		}
 	})

@@ -74,7 +74,7 @@ func (c *Cache) Delete(ctx context.Context, keys ...string) {
 // Well-known key helpers
 // ---------------------------------------------------------------------------
 
-func DashboardKey(userID string) string { return Key("dashboard", userID) }
+func DashboardKey(orgID string) string { return Key("dashboard", orgID) }
 
 func MembershipKey(userID string) string { return Key("tenant", "membership", userID) }
 
@@ -120,10 +120,10 @@ func (c *Cache) InvalidateMembership(ctx context.Context, userID string) {
 	c.Delete(ctx, MembershipKey(userID))
 }
 
-// InvalidateDashboard drops the cached dashboard for a user.
-func (c *Cache) InvalidateDashboard(ctx context.Context, userID string) {
-	if userID == "" {
+// InvalidateDashboard drops the cached dashboard for an organization.
+func (c *Cache) InvalidateDashboard(ctx context.Context, orgID string) {
+	if orgID == "" {
 		return
 	}
-	c.Delete(ctx, DashboardKey(userID))
+	c.Delete(ctx, DashboardKey(orgID))
 }

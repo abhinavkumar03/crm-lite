@@ -1,11 +1,12 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useMemo,
   useState,
 } from "react";
-
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import PageHeader from "@/components/common/PageHeader";
@@ -14,10 +15,10 @@ import FormSelect from "@/components/common/form/FormSelect";
 import DynamicForm from "@/features/metadata/components/DynamicForm";
 
 import {
+  createRecord,
   getModuleFields,
   getModules,
   getValidationSchema,
-  validateRecord,
 } from "@/features/metadata/api";
 
 import {
@@ -31,8 +32,26 @@ import {
 import { errorListToMap } from "@/features/metadata/lib/validation";
 
 export default function DynamicFormsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+          Loading forms...
+        </div>
+      }
+    >
+      <DynamicFormsInner />
+    </Suspense>
+  );
+}
+
+function DynamicFormsInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const moduleFromQuery = searchParams.get("module") ?? "";
+
   const [modules, setModules] = useState<ModuleSummary[]>([]);
-  const [moduleId, setModuleId] = useState("");
+  const [moduleId, setModuleId] = useState(moduleFromQuery);
 
   const [fields, setFields] = useState<ModuleField[]>([]);
   const [schema, setSchema] = useState<ValidationSchema | null>(null);
@@ -41,20 +60,27 @@ export default function DynamicFormsPage() {
   const [preview, setPreview] = useState<FormValues>({});
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [conditionalDemo, setConditionalDemo] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Loading is derived rather than stored so no state is set synchronously
-  // inside an effect (avoids cascading renders).
   const isLoading = !!moduleId && loadedId !== moduleId;
 
   useEffect(() => {
     (async () => {
       try {
-        setModules(await getModules());
+        const all = await getModules();
+        const dynamic = all.filter((m) => m.storage_strategy === "dynamic");
+        setModules(dynamic);
       } catch {
         toast.error("Failed to load modules");
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (moduleFromQuery && moduleFromQuery !== moduleId) {
+      setModuleId(moduleFromQuery);
+    }
+  }, [moduleFromQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!moduleId) return;
@@ -76,8 +102,6 @@ export default function DynamicFormsPage() {
     })();
   }, [moduleId]);
 
-  // Demo: when enabled, every field after the first is only shown once the first
-  // field has a value — a live demonstration of the conditional-rendering engine.
   const visibilityRules = useMemo<VisibilityRule[]>(() => {
     if (!conditionalDemo) return [];
 
@@ -97,17 +121,39 @@ export default function DynamicFormsPage() {
     ];
   }, [conditionalDemo, fields]);
 
+  function selectModule(id: string) {
+    setModuleId(id);
+    const params = new URLSearchParams();
+    if (id) params.set("module", id);
+    const qs = params.toString();
+    router.replace(qs ? `/forms?${qs}` : "/forms");
+  }
+
   async function handleSubmit(values: FormValues) {
-    const result = await validateRecord(moduleId, values);
-
-    if (result.valid) {
+    if (!moduleId || submitting) return;
+    setSubmitting(true);
+    try {
+      await createRecord(moduleId, values);
       setServerErrors({});
-      toast.success("Payload is valid (server-verified).");
-      return;
+      setPreview({});
+      toast.success("Record created");
+      router.push(`/tables?module=${moduleId}`);
+    } catch (err: unknown) {
+      const axiosErr = err as {
+        response?: { data?: { data?: { errors?: { field: string; message: string }[] }; message?: string } };
+      };
+      const fieldErrors = axiosErr.response?.data?.data?.errors;
+      if (fieldErrors?.length) {
+        setServerErrors(errorListToMap(fieldErrors));
+        toast.error("Validation failed");
+      } else {
+        toast.error(
+          axiosErr.response?.data?.message || "Failed to create record"
+        );
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    setServerErrors(errorListToMap(result.errors));
-    toast.error("Server validation failed.");
   }
 
   const selectedModule = modules.find((m) => m.id === moduleId);
@@ -117,16 +163,16 @@ export default function DynamicFormsPage() {
       <PageHeader
         badge="Metadata Engine"
         title="Dynamic Forms"
-        description="Forms generated entirely from module field metadata, with conditional rendering and validation driven by the backend schema. No form is hand-coded."
+        description="Create records with forms generated from module field metadata and backend validation."
       />
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-5 md:grid-cols-2">
           <FormSelect
             label="Module"
-            helperText="Pick any module to generate its form from metadata."
+            helperText="Only dynamic modules are listed."
             value={moduleId}
-            onChange={(e) => setModuleId(e.target.value)}
+            onChange={(e) => selectModule(e.target.value)}
           >
             <option value="">Select a module...</option>
             {modules.map((m) => (
@@ -160,7 +206,7 @@ export default function DynamicFormsPage() {
             key={`${moduleId}-${conditionalDemo}`}
             fields={fields}
             schema={schema}
-            submitText="Validate"
+            submitText={submitting ? "Creating..." : "Create record"}
             visibilityRules={visibilityRules}
             sectionTitle={selectedModule?.plural_label ?? "Record"}
             sectionDescription="Rendered dynamically from field metadata."
@@ -186,8 +232,8 @@ export default function DynamicFormsPage() {
               <ul className="list-disc space-y-1 pl-5">
                 <li>Fields come from <code>GET /modules/:id/fields</code>.</li>
                 <li>
-                  Validation uses the compiled schema and the server
-                  <code> /validate</code> endpoint.
+                  Submit creates a row via{" "}
+                  <code>POST /modules/:id/records</code>.
                 </li>
                 <li>Conditional visibility is metadata-driven.</li>
               </ul>

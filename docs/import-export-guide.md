@@ -1,7 +1,6 @@
 # Import / export guide
 
 Bulk data moves for **dynamic** modules only (`storage_strategy = dynamic`).
-Native modules (leads/contacts/tasks) use their own CRUD APIs.
 
 Requires worker process (`make run-worker`) and Redis. Feature flags:
 `FEATURE_IMPORT`, `FEATURE_EXPORT`.

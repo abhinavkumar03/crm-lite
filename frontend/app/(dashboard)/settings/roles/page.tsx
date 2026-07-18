@@ -327,6 +327,7 @@ export default function RolesSettingsPage() {
               <span className="text-sm font-semibold">{r.name}</span>
               <span className="text-xs text-slate-500">
                 {r.slug}
+                {` · L${r.hierarchy_level ?? 100}`}
                 {r.is_system ? " · system" : ""}
                 {` · ${r.member_count} member${r.member_count === 1 ? "" : "s"}`}
               </span>

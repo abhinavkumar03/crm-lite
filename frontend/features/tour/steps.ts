@@ -31,22 +31,15 @@ export const APP_TOUR_STEPS: TourStep[] = [
   {
     key: "navigation",
     title: "Your workspace",
-    body: "Everything lives in this sidebar — records, dynamic modules, and data tools. Let's walk through the essentials.",
+    body: "Everything lives in this sidebar — dynamic modules, forms, tables, and data tools.",
     target: '[data-tour="sidebar-nav"]',
     route: "/dashboard",
     placement: "right",
   },
   {
-    key: "leads",
-    title: "Leads & records",
-    body: "Track leads, contacts, and tasks. These native modules are your day-to-day CRM data.",
-    target: '[data-tour="nav-leads"]',
-    placement: "right",
-  },
-  {
     key: "forms",
     title: "Dynamic forms",
-    body: "Forms are generated from module metadata and a backend validation schema — no hard-coded fields.",
+    body: "Create records with forms generated from module metadata and a backend validation schema.",
     target: '[data-tour="nav-forms"]',
     placement: "right",
   },
@@ -74,7 +67,7 @@ export const APP_TOUR_STEPS: TourStep[] = [
   {
     key: "search",
     title: "Global search",
-    body: "Jump to any record fast. Search spans your CRM data from anywhere in the app.",
+    body: "Jump to any record fast. Search spans dynamic module data from anywhere in the app.",
     target: '[data-tour="global-search"]',
     route: "/dashboard",
     placement: "bottom",

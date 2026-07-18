@@ -1,55 +1,33 @@
-import {
-  Users,
-  UserRound,
-  CheckSquare,
-  Trophy,
-} from "lucide-react";
+import { Boxes, Database } from "lucide-react";
 
 import { DashboardResponse } from "../types";
-
 import MetricCard from "./MetricCard";
 
 type Props = {
   dashboard: DashboardResponse;
 };
 
-export default function MetricsGrid({
-  dashboard,
-}: Props) {
+export default function MetricsGrid({ dashboard }: Props) {
   const metrics = [
     {
-      title: "Total Leads",
-      value: dashboard.total_leads,
-      icon: Users,
+      title: "Modules",
+      value: dashboard.total_modules,
+      icon: Boxes,
       color: "bg-emerald-500",
-      trend: "+18%",
+      trend: "Dynamic",
     },
     {
-      title: "Contacts",
-      value: dashboard.total_contacts,
-      icon: UserRound,
+      title: "Records",
+      value: dashboard.total_records,
+      icon: Database,
       color: "bg-blue-500",
-      trend: "+8%",
-    },
-    {
-      title: "Tasks",
-      value: dashboard.total_tasks,
-      icon: CheckSquare,
-      color: "bg-amber-500",
-      trend: "+15%",
-    },
-    {
-      title: "Won Leads",
-      value: dashboard.won_leads,
-      icon: Trophy,
-      color: "bg-violet-500",
-      trend: "+22%",
+      trend: "All modules",
     },
   ];
 
   return (
     <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics?.map((metric) => (
+      {metrics.map((metric) => (
         <MetricCard
           key={metric.title}
           title={metric.title}
@@ -57,6 +35,16 @@ export default function MetricsGrid({
           icon={metric.icon}
           color={metric.color}
           trend={metric.trend}
+        />
+      ))}
+      {(dashboard.module_counts ?? []).slice(0, 2).map((m) => (
+        <MetricCard
+          key={m.module_id}
+          title={m.plural_label}
+          value={m.record_count}
+          icon={Boxes}
+          color="bg-violet-500"
+          trend={m.api_name}
         />
       ))}
     </section>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 
@@ -254,8 +255,26 @@ function extractFieldErrors(err: unknown): FieldError[] | null {
 }
 
 export default function DynamicTablesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+          Loading tables...
+        </div>
+      }
+    >
+      <DynamicTablesInner />
+    </Suspense>
+  );
+}
+
+function DynamicTablesInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const moduleFromQuery = searchParams.get("module") ?? "";
+
   const [modules, setModules] = useState<ModuleSummary[]>([]);
-  const [moduleId, setModuleId] = useState("");
+  const [moduleId, setModuleId] = useState(moduleFromQuery);
 
   const [fields, setFields] = useState<ModuleField[]>([]);
   const [schema, setSchema] = useState<ValidationSchema | null>(null);
@@ -268,14 +287,18 @@ export default function DynamicTablesPage() {
     (async () => {
       try {
         const all = await getModules();
-        // The record runtime only serves modules backed by dynamic (JSONB)
-        // storage; native modules keep their first-class endpoints.
         setModules(all.filter((m) => m.storage_strategy === "dynamic"));
       } catch {
         toast.error("Failed to load modules");
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (moduleFromQuery && moduleFromQuery !== moduleId) {
+      setModuleId(moduleFromQuery);
+    }
+  }, [moduleFromQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!moduleId) return;
@@ -297,6 +320,14 @@ export default function DynamicTablesPage() {
     })();
   }, [moduleId]);
 
+  function selectModule(id: string) {
+    setModuleId(id);
+    const params = new URLSearchParams();
+    if (id) params.set("module", id);
+    const qs = params.toString();
+    router.replace(qs ? `/tables?${qs}` : "/tables");
+  }
+
   const selectedModule = modules.find((m) => m.id === moduleId);
 
   return (
@@ -312,7 +343,7 @@ export default function DynamicTablesPage() {
           label="Module"
           helperText="Dynamic (JSONB-backed) modules are served by the record runtime."
           value={moduleId}
-          onChange={(e) => setModuleId(e.target.value)}
+          onChange={(e) => selectModule(e.target.value)}
         >
           <option value="">Select a module...</option>
           {modules.map((m) => (

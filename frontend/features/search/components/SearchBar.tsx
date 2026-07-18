@@ -37,24 +37,11 @@ export default function SearchBar() {
   } = useGlobalSearch(query);
 
   const flatResults = useMemo(
-    () => [
-      ...results.leads.map((lead) => ({
-        href: "/leads",
-        ...lead,
+    () =>
+      (results.results ?? []).map((hit) => ({
+        href: `/tables?module=${hit.module_id}`,
+        ...hit,
       })),
-
-      ...results.contacts.map(
-        (contact) => ({
-          href: "/contacts",
-          ...contact,
-        })
-      ),
-
-      ...results.tasks.map((task) => ({
-        href: "/tasks",
-        ...task,
-      })),
-    ],
     [results]
   );
 
@@ -210,7 +197,7 @@ export default function SearchBar() {
         onChange={(e) =>
           setQuery(e.target.value)
         }
-        placeholder="Search leads, contacts or tasks..."
+        placeholder="Search records..."
         className="
           w-full
           rounded-2xl

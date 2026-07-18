@@ -23,8 +23,8 @@ export default function DashboardHeader({ onRefresh }: Props) {
         </h1>
 
         <p className="mt-2 max-w-2xl text-slate-500">
-          Manage leads, contacts, tasks and monitor your CRM performance from
-          one place.
+          Manage dynamic modules, create records from metadata-driven forms, and
+          monitor CRM performance from one place.
         </p>
 
         <div className="mt-5 flex items-center gap-2 text-sm text-slate-500">

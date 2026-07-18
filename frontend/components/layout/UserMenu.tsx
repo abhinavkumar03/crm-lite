@@ -16,10 +16,18 @@ import {
   LayoutDashboard,
   Compass,
   CircleHelp,
+  Building2,
+  Check,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
 import { useTour } from "@/features/tour/TourProvider";
+import {
+  listMyOrganizations,
+  switchOrganization,
+} from "@/features/organization/api";
+import { OrgMembership } from "@/features/organization/types";
 
 type Props = {
   mobile?: boolean;
@@ -39,6 +47,9 @@ export default function UserMenu({
   const [open, setOpen] =
     useState(false);
 
+  const [orgs, setOrgs] = useState<OrgMembership[]>([]);
+  const [switching, setSwitching] = useState(false);
+
   const ref =
     useRef<HTMLDivElement>(null);
 
@@ -46,6 +57,41 @@ export default function UserMenu({
     auth.logout();
 
     router.replace("/login");
+  }
+
+  useEffect(() => {
+    if (!auth.user) return;
+    let active = true;
+    (async () => {
+      try {
+        const list = await listMyOrganizations();
+        if (active) setOrgs(list);
+      } catch {
+        // Single-org demos can ignore switcher failures.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [auth.user]);
+
+  async function handleSwitchOrg(orgId: string) {
+    if (switching) return;
+    try {
+      setSwitching(true);
+      await switchOrganization(orgId);
+      setOrgs((prev) =>
+        prev.map((o) => ({ ...o, is_active: o.id === orgId }))
+      );
+      toast.success("Organization switched");
+      setOpen(false);
+      router.refresh();
+      window.location.reload();
+    } catch {
+      toast.error("Could not switch organization");
+    } finally {
+      setSwitching(false);
+    }
   }
 
   useEffect(() => {
@@ -246,6 +292,27 @@ export default function UserMenu({
           {/* Actions */}
 
           <div className="p-2">
+
+    {orgs.length > 1 && (
+      <div className="mb-1 border-b border-slate-100 px-2 pb-2">
+        <p className="px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Organization
+        </p>
+        {orgs.map((org) => (
+          <button
+            key={org.id}
+            type="button"
+            disabled={switching || org.is_active}
+            onClick={() => handleSwitchOrg(org.id)}
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+          >
+            <Building2 size={18} />
+            <span className="min-w-0 flex-1 truncate text-sm">{org.name}</span>
+            {org.is_active ? <Check size={16} className="text-emerald-500" /> : null}
+          </button>
+        ))}
+      </div>
+    )}
 
     {showDashboard && (
         <Link

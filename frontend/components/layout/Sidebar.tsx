@@ -1,14 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   X,
   LayoutDashboard,
-  Users,
-  ContactRound,
-  CheckSquare,
   LayoutTemplate,
   Table2,
   Upload,
@@ -17,63 +14,73 @@ import {
   Settings,
   CircleHelp,
   ChevronRight,
+  Boxes,
+  type LucideIcon,
 } from "lucide-react";
 
-const navigation = [
+import api from "@/services/api";
+
+type NavItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  tourKey: string;
+};
+
+type NavModule = {
+  id: string;
+  api_name: string;
+  plural_label: string;
+};
+
+const fixedNavigation: NavItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    tourKey: "dashboard",
   },
   {
-    name: "Leads",
-    href: "/leads",
-    icon: Users,
-  },
-  {
-    name: "Contacts",
-    href: "/contacts",
-    icon: ContactRound,
-  },
-  {
-    name: "Tasks",
-    href: "/tasks",
-    icon: CheckSquare,
-  },
-  {
-    name: "Dynamic Forms",
+    name: "Forms",
     href: "/forms",
     icon: LayoutTemplate,
+    tourKey: "forms",
   },
   {
-    name: "Dynamic Tables",
+    name: "Tables",
     href: "/tables",
     icon: Table2,
+    tourKey: "tables",
   },
   {
     name: "Import",
     href: "/imports",
     icon: Upload,
+    tourKey: "imports",
   },
   {
     name: "Export",
     href: "/exports",
     icon: Download,
+    tourKey: "exports",
   },
   {
     name: "Notifications",
     href: "/notifications",
     icon: MessageCircle,
+    tourKey: "notifications",
   },
   {
     name: "Settings",
     href: "/settings",
     icon: Settings,
+    tourKey: "settings",
   },
   {
     name: "How it works",
     href: "/help",
     icon: CircleHelp,
+    tourKey: "help",
   },
 ];
 
@@ -82,16 +89,86 @@ type Props = {
   onClose: () => void;
 };
 
-export default function Sidebar({
-  open,
+function NavLink({
+  name,
+  href,
+  icon: Icon,
+  tourKey,
+  active,
   onClose,
-}: Props) {
+}: {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  tourKey: string;
+  active: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      data-tour={`nav-${tourKey}`}
+      onClick={onClose}
+      className={`
+      group
+      flex
+      items-center
+      justify-between
+      rounded-2xl
+      px-4
+      py-3
+      transition-all
+      duration-200
+
+      ${
+        active
+          ? "bg-emerald-500 text-white shadow-lg"
+          : "text-slate-600 hover:bg-slate-100"
+      }
+    `}
+    >
+      <div className="flex items-center gap-3">
+        <Icon size={20} />
+        <span className="font-medium">{name}</span>
+      </div>
+      <ChevronRight
+        size={16}
+        className={`
+        transition-transform
+        ${
+          active
+            ? "translate-x-1"
+            : "opacity-0 group-hover:translate-x-1 group-hover:opacity-100"
+        }
+      `}
+      />
+    </Link>
+  );
+}
+
+export default function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeModuleId = searchParams.get("module");
+  const [modules, setModules] = useState<NavModule[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await api.get("/navigation");
+        if (active) setModules(res.data.data ?? []);
+      } catch {
+        if (active) setModules([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <>
-      {/* Overlay */}
-
       {open && (
         <div
           onClick={onClose}
@@ -125,15 +202,9 @@ export default function Sidebar({
         lg:relative
         lg:translate-x-0
 
-        ${
-          open
-            ? "translate-x-0"
-            : "-translate-x-full"
-        }
+        ${open ? "translate-x-0" : "-translate-x-full"}
       `}
       >
-        {/* Header */}
-
         <div className="relative border-b border-slate-200 px-6 py-4">
           <button
             onClick={onClose}
@@ -175,132 +246,61 @@ export default function Sidebar({
             >
               C
             </div>
-
             <div>
-              <h2 className="text-lg font-bold">
-                CRM Lite
-              </h2>
-
-              <p className="text-xs text-slate-500">
-                Production CRM
-              </p>
+              <h2 className="text-lg font-bold">CRM Lite</h2>
+              <p className="text-xs text-slate-500">Production CRM</p>
             </div>
           </Link>
         </div>
 
-        {/* Navigation */}
-
         <div className="flex-1 overflow-y-auto px-4 py-6">
-          <p
-            className="
-            mb-4
-            px-3
-            text-xs
-            font-semibold
-            uppercase
-            tracking-widest
-            text-slate-400
-            "
-          >
+          <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
             Workspace
           </p>
 
-          <nav
-            data-tour="sidebar-nav"
-            className="space-y-2"
-          >
-            {navigation.map((item) => {
-              const Icon = item.icon;
-
+          <nav data-tour="sidebar-nav" className="space-y-2">
+            {fixedNavigation.map((item) => {
               const active =
                 pathname === item.href ||
                 pathname.startsWith(`${item.href}/`);
-
               return (
-                <Link
+                <NavLink
                   key={item.href}
-                  href={item.href}
-                  data-tour={`nav-${item.href.slice(1)}`}
-                  onClick={onClose}
-                  className={`
-                  group
-                  flex
-                  items-center
-                  justify-between
-                  rounded-2xl
-                  px-4
-                  py-3
-                  transition-all
-                  duration-200
-
-                  ${
-                    active
-                      ? "bg-emerald-500 text-white shadow-lg"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }
-                `}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon size={20} />
-
-                    <span className="font-medium">
-                      {item.name}
-                    </span>
-                  </div>
-
-                  <ChevronRight
-                    size={16}
-                    className={`
-                    transition-transform
-                    ${
-                      active
-                        ? "translate-x-1"
-                        : "opacity-0 group-hover:translate-x-1 group-hover:opacity-100"
-                    }
-                  `}
-                  />
-                </Link>
+                  {...item}
+                  active={active}
+                  onClose={onClose}
+                />
               );
             })}
           </nav>
+
+          {modules.length > 0 && (
+            <>
+              <p className="mb-4 mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Modules
+              </p>
+              <nav className="space-y-2">
+                {modules.map((m) => {
+                  const href = `/tables?module=${m.id}`;
+                  const active =
+                    pathname.startsWith("/tables") &&
+                    activeModuleId === m.id;
+                  return (
+                    <NavLink
+                      key={m.id}
+                      name={m.plural_label}
+                      href={href}
+                      icon={Boxes}
+                      tourKey={`module-${m.api_name}`}
+                      active={active}
+                      onClose={onClose}
+                    />
+                  );
+                })}
+              </nav>
+            </>
+          )}
         </div>
-
-        {/* Footer */}
-
-        {/* <div className="border-slate-200 p-5">
-          <div
-            className="
-            rounded-2xl
-            bg-gradient-to-br
-            from-slate-50
-            to-slate-100
-            p-5
-            "
-          >
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Built with Go, PostgreSQL, Redis and
-              Next.js for modern CRM workflows.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 shadow-sm">
-                Go
-              </span>
-
-              <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 shadow-sm">
-                PostgreSQL
-              </span>
-
-              <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 shadow-sm">
-                Redis
-              </span>
-
-              <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-600 shadow-sm">
-                Next.js
-              </span>
-            </div>
-          </div>
-        </div> */}
       </aside>
     </>
   );

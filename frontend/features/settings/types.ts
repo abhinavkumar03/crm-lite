@@ -20,6 +20,12 @@ export interface OrgSettings {
   name: string;
   slug: string;
   plan: string;
+  subscription_plan?: string;
+  logo_url?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  country?: string | null;
+  status?: string;
   general: GeneralSettings;
   automation: AutomationSettings;
   updated_at: string;
@@ -28,6 +34,10 @@ export interface OrgSettings {
 // Partial update: send only the sections that changed.
 export interface UpdateSettingsPayload {
   name?: string;
+  logo_url?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  country?: string | null;
   general?: GeneralSettings;
   automation?: AutomationSettings;
 }

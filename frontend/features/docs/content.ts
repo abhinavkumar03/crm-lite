@@ -83,8 +83,8 @@ export const DOC_GUIDES: DocGuide[] = [
         type: "bullets",
         title: "Storage strategies",
         items: [
-          "native — first-class tables (leads, contacts, tasks)",
-          "dynamic — records.data JSONB (custom modules, import/export)",
+          "Product CRM is dynamic-only — modules + records.data JSONB",
+          "Legacy native tables (leads/contacts/tasks) remain in migrations but APIs are unwired",
           "Vertical slices under internal/<feature>/{handler,service,repository}",
         ],
       },
@@ -100,12 +100,12 @@ export const DOC_GUIDES: DocGuide[] = [
     title: "Entity model (ERD)",
     eyebrow: "Data model",
     summary:
-      "Tables grouped by domain — identity, native CRM, metadata engine, jobs, RBAC, and tour.",
+      "Tables grouped by domain — identity, metadata engine, jobs, RBAC, and tour.",
     readingTime: "5 min",
     blocks: [
       {
         type: "intro",
-        text: "Schema lives in backend/migrations (000001–000009). Everything org-scoped carries organization_id.",
+        text: "Schema lives in backend/migrations. Everything org-scoped carries organization_id. Active product data is modules + records.",
       },
       {
         type: "groups",
@@ -116,8 +116,8 @@ export const DOC_GUIDES: DocGuide[] = [
             items: ["users", "organizations", "organization_members", "roles"],
           },
           {
-            name: "Native CRM",
-            items: ["leads", "contacts", "tasks", "notes", "call_logs", "attachments", "activities"],
+            name: "Legacy tables (unused by API)",
+            items: ["leads", "contacts", "tasks", "notes", "call_logs"],
           },
           {
             name: "Metadata engine",
@@ -408,7 +408,7 @@ export const DOC_GUIDES: DocGuide[] = [
         items: [
           "Email: simulation logger in default worker wiring",
           "WhatsApp: WHATSAPP_PROVIDER=meta + token/phone ID for Meta Cloud API",
-          "Lead create may also enqueue lead.created and email.send",
+          "Notification sends enqueue notification.send on the critical queue"
         ],
       },
       {
@@ -451,7 +451,7 @@ export const DOC_GUIDES: DocGuide[] = [
         type: "bullets",
         title: "First 30 minutes",
         items: [
-          "Login as admin → Dashboard, Leads, Tables/Forms",
+          "Login as admin → Dashboard, Forms, Tables, Settings → Modules",
           "Open Swagger at /api/v1/docs and Authorize with a JWT",
           "Walk Settings → Modules / Fields / Validation / Roles",
           "Run an import with the worker running",

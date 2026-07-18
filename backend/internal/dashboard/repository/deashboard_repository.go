@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard/dto"
-	leadDto "github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
-	taskDto "github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,255 +14,127 @@ type Repository struct {
 }
 
 func New(db *pgxpool.Pool) *Repository {
-	return &Repository{
-		db: db,
-	}
+	return &Repository{db: db}
 }
 
-func (r *Repository) GetMetrics(
+func (r *Repository) GetDashboard(
 	ctx context.Context,
-	ownerID string,
+	orgID string,
 ) (*dto.DashboardResponse, error) {
+	out := &dto.DashboardResponse{
+		ModuleCounts:  make([]dto.ModuleCount, 0),
+		RecentRecords: make([]dto.RecentRecord, 0),
+	}
 
-	var dashboard dto.DashboardResponse
-
-	err := r.db.QueryRow(
-		ctx,
-		`
-SELECT
-
-(SELECT COUNT(*) FROM leads WHERE owner_id=$1),
-
-(SELECT COUNT(*) FROM leads
-WHERE owner_id=$1
-AND status='NEW'),
-
-(SELECT COUNT(*) FROM leads
-WHERE owner_id=$1
-AND status='CONTACTED'),
-
-(SELECT COUNT(*) FROM leads
-WHERE owner_id=$1
-AND status='QUALIFIED'),
-
-(SELECT COUNT(*) FROM leads
-WHERE owner_id=$1
-AND status='WON'),
-
-(SELECT COUNT(*) FROM leads
-WHERE owner_id=$1
-AND status='LOST'),
-
-(SELECT COUNT(*) FROM contacts
-WHERE owner_id=$1),
-
-(SELECT COUNT(*) FROM tasks
-WHERE owner_id=$1),
-
-(SELECT COUNT(*) FROM tasks
-WHERE owner_id=$1
-AND status='PENDING'),
-
-(SELECT COUNT(*) FROM tasks
-WHERE owner_id=$1
-AND status='IN_PROGRESS'),
-
-(SELECT COUNT(*) FROM tasks
-WHERE owner_id=$1
-AND status='COMPLETED')
-`,
-		ownerID,
-	).Scan(
-		&dashboard.TotalLeads,
-		&dashboard.NewLeads,
-		&dashboard.ContactedLeads,
-		&dashboard.QualifiedLeads,
-		&dashboard.WonLeads,
-		&dashboard.LostLeads,
-		&dashboard.TotalContacts,
-		&dashboard.TotalTasks,
-		&dashboard.PendingTasks,
-		&dashboard.InProgressTasks,
-		&dashboard.CompletedTasks,
-	)
-
+	err := r.db.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM modules
+			  WHERE organization_id = $1
+			    AND is_enabled = TRUE
+			    AND storage_strategy = 'dynamic'),
+			(SELECT COUNT(*) FROM records r
+			  JOIN modules m ON m.id = r.module_id
+			  WHERE r.organization_id = $1
+			    AND m.storage_strategy = 'dynamic'
+			    AND m.is_enabled = TRUE)
+	`, orgID).Scan(&out.TotalModules, &out.TotalRecords)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dashboard, nil
-}
-
-func (r *Repository) RecentLeads(
-	ctx context.Context,
-	ownerID string,
-) ([]leadDto.LeadResponse, error) {
-
-	query := `
-	SELECT
-		id,
-		name,
-		email,
-		phone,
-		company,
-		status,
-		notes
-	FROM leads
-	WHERE owner_id = $1
-	ORDER BY created_at DESC
-	LIMIT 5;
-	`
-
-	rows, err := r.db.Query(ctx, query, ownerID)
+	rows, err := r.db.Query(ctx, `
+		SELECT m.id, m.api_name, m.plural_label, COALESCE(m.icon, ''), COALESCE(m.color, ''),
+		       COUNT(r.id) AS record_count
+		FROM modules m
+		LEFT JOIN records r
+		  ON r.module_id = m.id AND r.organization_id = m.organization_id
+		WHERE m.organization_id = $1
+		  AND m.is_enabled = TRUE
+		  AND m.storage_strategy = 'dynamic'
+		GROUP BY m.id, m.api_name, m.plural_label, m.icon, m.color, m.sort_order
+		ORDER BY m.sort_order ASC, m.plural_label ASC
+	`, orgID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var leads []leadDto.LeadResponse
-
 	for rows.Next() {
-
-		var lead leadDto.LeadResponse
-
+		var mc dto.ModuleCount
 		if err := rows.Scan(
-			&lead.ID,
-			&lead.Name,
-			&lead.Email,
-			&lead.Phone,
-			&lead.Company,
-			&lead.Status,
-			&lead.Notes,
+			&mc.ModuleID,
+			&mc.APIName,
+			&mc.PluralLabel,
+			&mc.Icon,
+			&mc.Color,
+			&mc.RecordCount,
 		); err != nil {
 			return nil, err
 		}
-
-		leads = append(leads, lead)
+		out.ModuleCounts = append(out.ModuleCounts, mc)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return leads, nil
-}
-
-func (r *Repository) UpcomingTasks(
-	ctx context.Context,
-	ownerID string,
-) ([]taskDto.TaskResponse, error) {
-
-	query := `
-	SELECT
-		id,
-		title,
-		description,
-		status,
-		lead_id,
-		contact_id,
-		due_date
-	FROM tasks
-	WHERE owner_id = $1
-	  AND status IN ('PENDING', 'IN_PROGRESS')
-	ORDER BY due_date ASC NULLS LAST
-	LIMIT 5;
-	`
-
-	rows, err := r.db.Query(ctx, query, ownerID)
+	recent, err := r.db.Query(ctx, `
+		SELECT r.id, r.module_id, m.plural_label, m.api_name, r.data, r.created_at
+		FROM records r
+		JOIN modules m ON m.id = r.module_id
+		WHERE r.organization_id = $1
+		  AND m.storage_strategy = 'dynamic'
+		  AND m.is_enabled = TRUE
+		ORDER BY r.created_at DESC
+		LIMIT 8
+	`, orgID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer recent.Close()
 
-	var tasks []taskDto.TaskResponse
-
-	for rows.Next() {
-
-		var task taskDto.TaskResponse
-		var dueDate *time.Time
-
-		if err := rows.Scan(
-			&task.ID,
-			&task.Title,
-			&task.Description,
-			&task.Status,
-			&task.LeadID,
-			&task.ContactID,
-			&dueDate,
+	for recent.Next() {
+		var (
+			rec       dto.RecentRecord
+			raw       []byte
+			createdAt time.Time
+		)
+		if err := recent.Scan(
+			&rec.ID,
+			&rec.ModuleID,
+			&rec.ModuleLabel,
+			&rec.APIName,
+			&raw,
+			&createdAt,
 		); err != nil {
 			return nil, err
 		}
-
-		if dueDate != nil {
-			v := dueDate.Format(time.RFC3339)
-			task.DueDate = &v
-		}
-
-		tasks = append(tasks, task)
+		rec.Title = recordTitle(raw)
+		rec.CreatedAt = createdAt.Format(time.RFC3339)
+		out.RecentRecords = append(out.RecentRecords, rec)
 	}
-
-	if err := rows.Err(); err != nil {
+	if err := recent.Err(); err != nil {
 		return nil, err
 	}
 
-	return tasks, nil
+	return out, nil
 }
 
-func (r *Repository) RecentActivities(
-	ctx context.Context,
-	ownerID string,
-) ([]dto.RecentActivityResponse, error) {
-
-	query := `
-	SELECT
-		id,
-		entity_type,
-		entity_id,
-		action,
-		description,
-		metadata,
-		performed_by,
-		created_at
-	FROM activities
-	WHERE performed_by = $1
-	ORDER BY created_at DESC
-	LIMIT 5;
-	`
-
-	rows, err := r.db.Query(
-		ctx,
-		query,
-		ownerID,
-	)
-	if err != nil {
-		return nil, err
+func recordTitle(raw []byte) string {
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return "Untitled"
 	}
-	defer rows.Close()
-
-	activities := make([]dto.RecentActivityResponse, 0)
-
-	for rows.Next() {
-		var activity dto.RecentActivityResponse
-
-		if err := rows.Scan(
-			&activity.ID,
-			&activity.EntityType,
-			&activity.EntityID,
-			&activity.Action,
-			&activity.Description,
-			&activity.Metadata,
-			&activity.PerformedBy,
-			&activity.CreatedAt,
-		); err != nil {
-			return nil, err
+	for _, key := range []string{"name", "title", "email", "company"} {
+		if v, ok := data[key]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				return s
+			}
 		}
-
-		activities = append(activities, activity)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	for _, v := range data {
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
 	}
-
-	return activities, nil
+	return "Untitled"
 }

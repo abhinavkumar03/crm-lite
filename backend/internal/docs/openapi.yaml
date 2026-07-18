@@ -28,13 +28,8 @@ tags:
 - name: Health
 - name: Auth
 - name: Docs
-- name: Leads
-- name: Contacts
-- name: Tasks
 - name: Dashboard
 - name: Search
-- name: Notes
-- name: CallLogs
 - name: Attachments
 - name: Activities
 - name: Media
@@ -173,508 +168,6 @@ paths:
                       $ref: '#/components/schemas/UserResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /leads:
-    get:
-      summary: List leads
-      tags:
-      - Leads
-      operationId: listLeads
-      security:
-      - bearerAuth: []
-      parameters:
-      - &id001
-        name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          example: 1
-        description: 1-based page
-      - &id002
-        name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          example: 20
-        description: Page size (max 100)
-      - &id003
-        name: search
-        in: query
-        required: false
-        schema:
-          type: string
-        description: ''
-      - &id004
-        name: sort_by
-        in: query
-        required: false
-        schema:
-          type: string
-        description: ''
-      - &id005
-        name: sort_order
-        in: query
-        required: false
-        schema:
-          type: string
-          example: desc
-        description: ''
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-          example: new
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ListLeadResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      summary: Create lead
-      tags:
-      - Leads
-      operationId: createLead
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLeadRequest'
-            example:
-              name: Acme Corp
-              email: hello@acme.com
-              phone: +91-9876543210
-              company: Acme
-              notes: Inbound demo request
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/LeadResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-  /leads/{id}:
-    get:
-      summary: Get lead
-      tags:
-      - Leads
-      operationId: getLead
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/LeadResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      summary: Update lead
-      tags:
-      - Leads
-      operationId: updateLead
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateLeadRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/LeadResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    delete:
-      summary: Delete lead
-      tags:
-      - Leads
-      operationId: deleteLead
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '204':
-          description: Deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /contacts:
-    get:
-      summary: List contacts
-      tags:
-      - Contacts
-      operationId: listContacts
-      security:
-      - bearerAuth: []
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ListContactResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      summary: Create contact
-      tags:
-      - Contacts
-      operationId: createContact
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateContactRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ContactResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-  /contacts/{id}:
-    get:
-      summary: Get contact
-      tags:
-      - Contacts
-      operationId: getContact
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ContactResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      summary: Update contact
-      tags:
-      - Contacts
-      operationId: updateContact
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateContactRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ContactResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    delete:
-      summary: Delete contact
-      tags:
-      - Contacts
-      operationId: deleteContact
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '204':
-          description: Deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /tasks:
-    get:
-      summary: List tasks
-      tags:
-      - Tasks
-      operationId: listTasks
-      security:
-      - bearerAuth: []
-      parameters:
-      - *id001
-      - *id002
-      - *id003
-      - *id004
-      - *id005
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ListTaskResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      summary: Create task
-      tags:
-      - Tasks
-      operationId: createTask
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTaskRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/TaskResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /tasks/{id}:
-    get:
-      summary: Get task
-      tags:
-      - Tasks
-      operationId: getTask
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/TaskResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    put:
-      summary: Update task
-      tags:
-      - Tasks
-      operationId: updateTask
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTaskRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/TaskResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-    delete:
-      summary: Delete task
-      tags:
-      - Tasks
-      operationId: deleteTask
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '204':
-          description: Deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /dashboard:
     get:
       summary: Dashboard metrics
@@ -737,849 +230,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           $ref: '#/components/responses/BadRequest'
-  /notes/lead/{leadId}:
-    get:
-      summary: List lead notes
-      tags:
-      - Notes
-      operationId: listLeadNotes
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create lead note
-      tags:
-      - Notes
-      operationId: createLeadNote
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNoteBody'
-            example:
-              note: Followed up by phone
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /calllogs/lead/{leadId}:
-    get:
-      summary: List lead call logs
-      tags:
-      - CallLogs
-      operationId: listLeadCallLogs
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create lead call log
-      tags:
-      - CallLogs
-      operationId: createLeadCallLog
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCallLogRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /attachments/lead/{leadId}:
-    get:
-      summary: List lead attachments
-      tags:
-      - Attachments
-      operationId: listLeadAttachments
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create lead attachment metadata
-      tags:
-      - Attachments
-      operationId: createLeadAttachment
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAttachmentRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /activities/lead/{leadId}:
-    get:
-      summary: List lead activities
-      tags:
-      - Activities
-      operationId: listLeadActivities
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: leadId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ActivityList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /notes/task/{taskId}:
-    get:
-      summary: List task notes
-      tags:
-      - Notes
-      operationId: listTaskNotes
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create task note
-      tags:
-      - Notes
-      operationId: createTaskNote
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNoteBody'
-            example:
-              note: Followed up by phone
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /calllogs/task/{taskId}:
-    get:
-      summary: List task call logs
-      tags:
-      - CallLogs
-      operationId: listTaskCallLogs
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create task call log
-      tags:
-      - CallLogs
-      operationId: createTaskCallLog
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCallLogRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /attachments/task/{taskId}:
-    get:
-      summary: List task attachments
-      tags:
-      - Attachments
-      operationId: listTaskAttachments
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create task attachment metadata
-      tags:
-      - Attachments
-      operationId: createTaskAttachment
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAttachmentRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /activities/task/{taskId}:
-    get:
-      summary: List task activities
-      tags:
-      - Activities
-      operationId: listTaskActivities
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: taskId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ActivityList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /notes/contact/{contactId}:
-    get:
-      summary: List contact notes
-      tags:
-      - Notes
-      operationId: listContactNotes
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create contact note
-      tags:
-      - Notes
-      operationId: createContactNote
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateNoteBody'
-            example:
-              note: Followed up by phone
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /calllogs/contact/{contactId}:
-    get:
-      summary: List contact call logs
-      tags:
-      - CallLogs
-      operationId: listContactCallLogs
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create contact call log
-      tags:
-      - CallLogs
-      operationId: createContactCallLog
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCallLogRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /attachments/contact/{contactId}:
-    get:
-      summary: List contact attachments
-      tags:
-      - Attachments
-      operationId: listContactAttachments
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    post:
-      summary: Create contact attachment metadata
-      tags:
-      - Attachments
-      operationId: createContactAttachment
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAttachmentRequest'
-      responses:
-        '201':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/AttachmentResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /activities/contact/{contactId}:
-    get:
-      summary: List contact activities
-      tags:
-      - Activities
-      operationId: listContactActivities
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: contactId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/ActivityList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /notes/{noteId}:
-    put:
-      summary: Update note
-      tags:
-      - Notes
-      operationId: updateNote
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateNoteRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/NoteResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      summary: Delete note
-      tags:
-      - Notes
-      operationId: deleteNote
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '204':
-          description: Deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /calllogs/{noteId}:
-    put:
-      summary: Update call log
-      tags:
-      - CallLogs
-      operationId: updateCallLog
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateCallLogRequest'
-      responses:
-        '200':
-          description: Success
-          content:
-            application/json:
-              schema:
-                allOf:
-                - $ref: '#/components/schemas/APIResponse'
-                - type: object
-                  properties:
-                    data:
-                      $ref: '#/components/schemas/CallLogResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      summary: Delete call log
-      tags:
-      - CallLogs
-      operationId: deleteCallLog
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: noteId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-        description: ''
-      responses:
-        '204':
-          description: Deleted
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /attachments/{attachmentId}:
     delete:
       summary: Delete attachment
@@ -3636,7 +2286,7 @@ paths:
               current_step: 2
               completed_steps:
               - welcome
-              - leads
+              - forms
       responses:
         '200':
           description: Success
@@ -4288,7 +2938,7 @@ components:
         name:
           type: string
           example: Ada Lovelace
-        email: &id006
+        email: &id001
           type: string
           format: email
           example: ada@example.com
@@ -4303,7 +2953,7 @@ components:
       - email
       - password
       properties:
-        email: *id006
+        email: *id001
         password:
           type: string
           format: password
@@ -4315,14 +2965,14 @@ components:
       - name
       - email
       properties:
-        id: &id007
+        id: &id002
           type: string
           format: uuid
           example: 11111111-1111-1111-1111-111111111111
         name:
           type: string
           example: Ada Lovelace
-        email: *id006
+        email: *id001
     LoginResponse:
       type: object
       required:
@@ -4381,7 +3031,7 @@ components:
     LeadResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         name:
           type: string
         email:
@@ -4403,11 +3053,11 @@ components:
         owner_id:
           type: string
           format: uuid
-        created_at: &id008
+        created_at: &id003
           type: string
           format: date-time
           example: '2026-07-18T10:00:00Z'
-        updated_at: *id008
+        updated_at: *id003
     ListLeadResponse:
       type: object
       properties:
@@ -4439,7 +3089,7 @@ components:
         last_name:
           type: string
           example: Lovelace
-        email: *id006
+        email: *id001
         phone:
           type: string
           example: +91-9876543210
@@ -4456,7 +3106,7 @@ components:
     ContactResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         first_name:
           type: string
         last_name:
@@ -4474,8 +3124,8 @@ components:
         owner_id:
           type: string
           format: uuid
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ListContactResponse:
       type: object
       properties:
@@ -4543,7 +3193,7 @@ components:
     TaskResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         title:
           type: string
         description:
@@ -4569,8 +3219,8 @@ components:
         owner_id:
           type: string
           format: uuid
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ListTaskResponse:
       type: object
       properties:
@@ -4587,69 +3237,70 @@ components:
           format: int64
         total_pages:
           type: integer
+    ModuleCount:
+      type: object
+      properties:
+        module_id: *id002
+        api_name:
+          type: string
+        plural_label:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        record_count:
+          type: integer
+          format: int64
+    RecentRecord:
+      type: object
+      properties:
+        id: *id002
+        module_id: *id002
+        module_label:
+          type: string
+        api_name:
+          type: string
+        title:
+          type: string
+        created_at: *id003
     DashboardResponse:
       type: object
       properties:
-        total_leads:
+        total_modules:
           type: integer
           format: int64
-        new_leads:
+        total_records:
           type: integer
           format: int64
-        contacted_leads:
-          type: integer
-          format: int64
-        qualified_leads:
-          type: integer
-          format: int64
-        won_leads:
-          type: integer
-          format: int64
-        lost_leads:
-          type: integer
-          format: int64
-        total_contacts:
-          type: integer
-          format: int64
-        total_tasks:
-          type: integer
-          format: int64
-        pending_tasks:
-          type: integer
-          format: int64
-        in_progress_tasks:
-          type: integer
-          format: int64
-        completed_tasks:
-          type: integer
-          format: int64
-        recent_leads:
+        module_counts:
           type: array
           items:
-            $ref: '#/components/schemas/LeadResponse'
-        upcoming_tasks:
+            $ref: '#/components/schemas/ModuleCount'
+        recent_records:
           type: array
           items:
-            $ref: '#/components/schemas/TaskResponse'
-        recent_activities:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityResponse'
+            $ref: '#/components/schemas/RecentRecord'
+    SearchHit:
+      type: object
+      properties:
+        id: *id002
+        module_id: *id002
+        module_label:
+          type: string
+        api_name:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
     SearchResponse:
       type: object
       properties:
-        leads:
+        results:
           type: array
           items:
-            $ref: '#/components/schemas/LeadResponse'
-        contacts:
-          type: array
-          items:
-            $ref: '#/components/schemas/ContactResponse'
-        tasks:
-          type: array
-          items:
-            $ref: '#/components/schemas/TaskResponse'
+            $ref: '#/components/schemas/SearchHit'
     CreateNoteBody:
       type: object
       required:
@@ -4663,7 +3314,7 @@ components:
     NoteResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         entity_type:
           type: string
           enum:
@@ -4682,8 +3333,8 @@ components:
           type: string
           format: uuid
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
         user:
           type: object
           properties:
@@ -4733,7 +3384,7 @@ components:
     CallLogResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         entity_type:
           type: string
           enum:
@@ -4772,8 +3423,8 @@ components:
           type: string
           format: uuid
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     CallLogList:
       type: array
       items:
@@ -4804,7 +3455,7 @@ components:
     AttachmentResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         entity_type:
           type: string
           enum:
@@ -4828,7 +3479,7 @@ components:
         uploaded_by:
           type: string
           format: uuid
-        created_at: *id008
+        created_at: *id003
     AttachmentList:
       type: array
       items:
@@ -4836,7 +3487,7 @@ components:
     ActivityResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         action:
           type: string
           example: LEAD_CREATED
@@ -4849,7 +3500,7 @@ components:
           type: object
           additionalProperties: true
           nullable: true
-        created_at: *id008
+        created_at: *id003
     ActivityList:
       type: array
       items:
@@ -4874,7 +3525,7 @@ components:
     ModuleResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         api_name:
           type: string
           example: deals
@@ -4918,8 +3569,8 @@ components:
           enum:
           - asc
           - desc
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ModuleList:
       type: array
       items:
@@ -4927,7 +3578,7 @@ components:
     NavigationItem:
       type: object
       properties:
-        id: *id007
+        id: *id002
         api_name:
           type: string
         singular_label:
@@ -5044,7 +3695,7 @@ components:
     FieldResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5140,8 +3791,8 @@ components:
               - jsonb
             path:
               type: string
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     FieldList:
       type: array
       items:
@@ -5330,7 +3981,7 @@ components:
     RuleResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5350,8 +4001,8 @@ components:
           type: boolean
         sort_order:
           type: integer
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     RuleList:
       type: array
       items:
@@ -5449,7 +4100,7 @@ components:
     ViewResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5494,8 +4145,8 @@ components:
           nullable: true
         is_owner:
           type: boolean
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ViewList:
       type: array
       items:
@@ -5543,7 +4194,7 @@ components:
     RecordResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5575,8 +4226,8 @@ components:
               label:
                 type: string
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     RecordListResult:
       type: object
       properties:
@@ -5637,7 +4288,7 @@ components:
     ImportResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5685,8 +4336,8 @@ components:
           type: string
           format: date-time
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ImportListResult:
       type: object
       properties:
@@ -5738,7 +4389,7 @@ components:
     ExportResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5779,8 +4430,8 @@ components:
           type: string
           format: date-time
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     ExportListResult:
       type: object
       properties:
@@ -5837,7 +4488,7 @@ components:
     TemplateResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         module_id:
           type: string
           format: uuid
@@ -5870,8 +4521,8 @@ components:
           type: string
           format: uuid
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     TemplateList:
       type: array
       items:
@@ -5912,7 +4563,7 @@ components:
     NotificationResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         channel:
           type: string
           enum:
@@ -5958,8 +4609,8 @@ components:
           type: string
           format: date-time
           nullable: true
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     NotificationListResult:
       type: object
       properties:
@@ -6022,12 +4673,12 @@ components:
           type: array
           items:
             type: string
-        started_at: *id008
+        started_at: *id003
         completed_at:
           type: string
           format: date-time
           nullable: true
-        updated_at: *id008
+        updated_at: *id003
     GeneralSettings:
       type: object
       properties:
@@ -6070,7 +4721,7 @@ components:
     SettingsResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         name:
           type: string
           example: Acme Org
@@ -6084,7 +4735,7 @@ components:
           $ref: '#/components/schemas/GeneralSettings'
         automation:
           $ref: '#/components/schemas/AutomationSettings'
-        updated_at: *id008
+        updated_at: *id003
     UpdateSettingsRequest:
       type: object
       properties:
@@ -6097,7 +4748,7 @@ components:
     PermissionResponse:
       type: object
       properties:
-        id: *id007
+        id: *id002
         key:
           type: string
           example: record.view
@@ -6153,7 +4804,7 @@ components:
     RoleSummary:
       type: object
       properties:
-        id: *id007
+        id: *id002
         name:
           type: string
           example: Sales Rep
@@ -6168,8 +4819,8 @@ components:
         member_count:
           type: integer
           example: 4
-        created_at: *id008
-        updated_at: *id008
+        created_at: *id003
+        updated_at: *id003
     RoleSummaryList:
       type: array
       items:

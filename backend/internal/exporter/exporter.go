@@ -34,7 +34,7 @@ type Module struct {
 func NewService(db *pgxpool.Pool, producer *jobs.Producer) *service.Service {
 	fieldRepo := fieldrepository.New(db)
 	validator := vservice.New(vrepository.New(db), fieldRepo)
-	recordSvc := recordservice.New(recordrepository.New(db), fieldRepo, validator)
+	recordSvc := recordservice.New(recordrepository.New(db), fieldRepo, validator, nil, nil)
 
 	return service.New(
 		repository.NewExportRepository(db),

@@ -30,6 +30,8 @@ var permissionCatalog = []permission{
 	{"settings.manage", "settings", "Manage organization settings"},
 	{"user.manage", "user", "Invite and manage users"},
 	{"role.manage", "role", "Create and manage roles and permissions"},
+	{"organization.manage", "organization", "Create organizations and manage membership structure"},
+	{"analytics.view", "analytics", "View dashboards and analytics"},
 }
 
 // PermissionsSeeder populates the global permission catalog.

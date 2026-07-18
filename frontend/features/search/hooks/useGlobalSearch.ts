@@ -1,62 +1,36 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 
 import { searchCRM } from "../api";
 import { SearchResponse } from "../types";
 
-export default function useGlobalSearch(
-  query: string
-) {
-  const [loading, setLoading] =
-    useState(false);
+const empty: SearchResponse = { results: [] };
 
-  const [results, setResults] =
-    useState<SearchResponse>({
-      leads: [],
-      contacts: [],
-      tasks: [],
-    });
+export default function useGlobalSearch(query: string) {
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<SearchResponse>(empty);
 
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults({
-        leads: [],
-        contacts: [],
-        tasks: [],
-      });
-
+      setResults(empty);
       return;
     }
 
     const timeout = setTimeout(async () => {
       try {
         setLoading(true);
-
-        const data =
-          await searchCRM(query);
-
-        setResults(data);
+        const data = await searchCRM(query);
+        setResults(data ?? empty);
       } catch {
-        setResults({
-          leads: [],
-          contacts: [],
-          tasks: [],
-        });
+        setResults(empty);
       } finally {
         setLoading(false);
       }
     }, 350);
 
-    return () =>
-      clearTimeout(timeout);
+    return () => clearTimeout(timeout);
   }, [query]);
 
-  return {
-    loading,
-    results,
-  };
+  return { loading, results };
 }

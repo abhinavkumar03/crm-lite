@@ -40,6 +40,6 @@ func TestRegisterRoutesNoConflict(t *testing.T) {
 	fieldengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
 	validationengine.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
 	view.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
-	record.NewModule(nil, noop, noop, noop, rbac.New(nil, nil)).RegisterRoutes(api)
+	record.NewModule(nil, noop, noop, noop, rbac.New(nil, nil), nil).RegisterRoutes(api)
 	NewModule(nil, noop, noop, noop, rbac.New(nil, nil), producer).RegisterRoutes(api)
 }

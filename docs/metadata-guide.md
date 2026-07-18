@@ -21,11 +21,11 @@ Everything above is **organization-scoped** (`organization_id`).
 
 | `storage_strategy` | Persistence | APIs |
 | --- | --- | --- |
-| `native` | Dedicated SQL table (`native_table`) | Lead/contact/task style modules |
-| `dynamic` | `records` + `data` JSONB | Record runtime, import, export |
+| `dynamic` | `records` + `data` JSONB | Record runtime, import, export (product path) |
+| `native` | Dedicated SQL table | Legacy only — APIs unwired; not seeded |
 
-Creating a module via Settings defaults to **dynamic**. System native modules
-are seeded and usually not deleted.
+Creating a module via Settings is always **dynamic**. Seeded demos are
+`company` and `deal`.
 
 ```text
 modules.api_name = "deal"

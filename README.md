@@ -17,20 +17,22 @@ metadata-driven module engine.
 
 ## Capabilities
 
-- Auth (JWT), leads / contacts / tasks, dashboard & search
+- Multi-tenant organizations (isolation, membership, active-org switch)
+- Roles, permissions, module/field ACL, reporting hierarchy, departments/teams
+- Record visibility engine (owner / manager / hierarchy / org / team / …)
 - Metadata engine: modules, fields, validation, views, dynamic records
 - Import / export (CSV & XLSX) via background workers
-- Notifications (email / WhatsApp providers)
-- Settings center, guided tour, RBAC (permissions + module/field ACL)
+- Notifications, settings center, guided tour
 - OpenAPI 3 + Swagger UI at `/api/v1/docs`
 - Redis caching, composite indexes, bulk import optimizations
 
 ## Documentation
 
-Start here: **[docs/README.md](./docs/README.md)**
+Start here: **[docs/README.md](./docs/README.md)** · **[Product roadmap](./docs/roadmap.md)** (tenancy-first)
 
 | Doc | Topic |
 | --- | --- |
+| [Roadmap](./docs/roadmap.md) | Tenancy → hierarchy → visibility → metadata |
 | [Developer onboarding](./docs/developer-onboarding.md) | Local setup & first PR |
 | [Architecture](./docs/architecture.md) | Processes, layers, tenancy |
 | [ERD](./docs/erd.md) | Data model diagrams |
@@ -64,7 +66,7 @@ Hybrid (local API + Docker Postgres/Redis): see
 crm-lite/
 ├── backend/          # API, worker, migrate, seed
 ├── frontend/         # Next.js App Router
-├── docs/             # Architecture & guides (Phase 19)
+├── docs/             # Architecture, roadmap & guides
 ├── deploy/           # K8s / Render
 ├── docker-compose.yml
 └── COMMANDS.md
@@ -72,13 +74,14 @@ crm-lite/
 
 ## Roadmap (high level)
 
-- [x] Repository, auth, native CRM, dashboard
-- [x] Metadata engine, validation, views, records
-- [x] Notifications, import, export
-- [x] Guided tour, settings, RBAC
-- [x] Performance & caching
-- [x] OpenAPI / Swagger
-- [x] Documentation & architecture
+Canonical order (see [`docs/roadmap.md`](./docs/roadmap.md)):
+
+- [x] Phase 1 — Multi-tenant foundation (harden org profile)
+- [x] Phase 2 — Organization, membership, invites, bootstrap
+- [x] Phase 3 — Roles, hierarchy, departments / teams
+- [x] Phase 4 — Record visibility engine
+- [x] Phase 5 — Tenant-aware seed / demos
+- [x] Phase 6+ — Metadata CRM, import/export, notify, OpenAPI, docs
 - [ ] Hardening / production polish as needed
 
 ## License

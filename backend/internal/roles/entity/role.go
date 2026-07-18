@@ -10,6 +10,8 @@ type Role struct {
 	Slug           string
 	Description    *string
 	IsSystem       bool
+	HierarchyLevel int
+	ParentRoleID   *string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

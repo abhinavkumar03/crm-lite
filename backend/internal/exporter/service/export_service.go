@@ -42,7 +42,7 @@ var (
 // RowFetcher fetches records through the Phase 10 runtime (search + filters +
 // sort + relation expansion). Satisfied by the record service.
 type RowFetcher interface {
-	List(ctx context.Context, orgID, moduleID string, q recorddto.ListQuery) (*recorddto.ListResult, error)
+	List(ctx context.Context, orgID, moduleID, userID string, q recorddto.ListQuery) (*recorddto.ListResult, error)
 }
 
 // FieldReader exposes module + field metadata (satisfied by the field repo).
@@ -123,7 +123,7 @@ func (s *Service) Build(ctx context.Context, orgID, moduleID string, spec dto.Ex
 			Expand:    expand,
 			SkipTotal: true, // export only needs "is there another page?"
 		}
-		res, err := s.rows.List(ctx, orgID, moduleID, q)
+		res, err := s.rows.List(ctx, orgID, moduleID, "", q)
 		if err != nil {
 			return nil, 0, err
 		}
