@@ -137,3 +137,52 @@ export interface VisibilityRule {
   effect: "show" | "hide";
   targets: string[];
 }
+
+// --- Saved views / dynamic tables ------------------------------------------
+
+export type SortDirection = "asc" | "desc";
+
+export type FilterOperator =
+  | "contains"
+  | "equals"
+  | "not_equals"
+  | "gt"
+  | "lt"
+  | "in";
+
+export interface ViewFilter {
+  field: string;
+  operator: FilterOperator;
+  value: unknown;
+}
+
+export interface ViewSort {
+  field: string;
+  order: SortDirection | "";
+}
+
+export interface SavedView {
+  id: string;
+  module_id: string;
+  name: string;
+  columns: string[];
+  filters: ViewFilter[];
+  sort: ViewSort;
+  is_default: boolean;
+  is_public: boolean;
+  owner_id: string | null;
+  is_owner: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SaveViewPayload {
+  name: string;
+  columns: string[];
+  filters: ViewFilter[];
+  sort?: ViewSort;
+  is_public?: boolean;
+}
+
+// A table row is just a bag of field values keyed by api_name.
+export type TableRow = Record<string, FieldValue>;
