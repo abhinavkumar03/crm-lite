@@ -33,6 +33,7 @@ func main() {
 	cfg := config.Load()
 
 	log := logger.New()
+	defer log.Sync()
 
 	dsn := database.BuildDSN(
 		cfg.DBHost,
@@ -49,6 +50,7 @@ func main() {
 	if err != nil {
 		log.Sugar().Fatalf("Postgres connection failed: %v", err)
 	}
+	defer db.Close()
 
 	log.Info("PostgreSQL connected")
 
@@ -61,20 +63,18 @@ func main() {
 
 	log.Info("Redis connected")
 
-	producer := jobs.NewProducer(
-		redisClient,
-	)
-
-	worker := jobs.NewWorker(
-		redisClient,
-	)
-
-	go worker.Start(
-		context.Background(),
-	)
+	// The producer enqueues async work onto the asynq queue; the worker that
+	// consumes it runs as a separate process (cmd/worker).
+	producer := jobs.NewProducer(jobs.RedisOpt(
+		cfg.RedisHost,
+		cfg.RedisPort,
+		cfg.RedisPassword,
+		cfg.RedisDB,
+	))
+	defer producer.Close()
 
 	healthModule := health.NewModule()
-	authModule := auth.NewModule(db, cfg.JWTSecret)
+	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -91,6 +91,7 @@ func main() {
 
 	router := app.NewRouter(
 		log,
+		cfg,
 		healthModule,
 		authModule,
 		leadModule,
@@ -105,22 +106,13 @@ func main() {
 		mediaModule,
 	)
 
-	application := &app.Application{
-		Config: cfg,
-		Logger: log,
-		Router: router,
-	}
-
-	defer log.Sync()
-
 	server := &http.Server{
-		Addr:    ":" + application.Config.AppPort,
-		Handler: application.Router,
+		Addr:    ":" + cfg.AppPort,
+		Handler: router,
 	}
 
 	go func() {
-
-		log.Info("server started")
+		log.Info("server started on port " + cfg.AppPort)
 
 		if err := server.ListenAndServe(); err != nil &&
 			err != http.ErrServerClosed {
@@ -144,7 +136,6 @@ func main() {
 		context.Background(),
 		5*time.Second,
 	)
-
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
