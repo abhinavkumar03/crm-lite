@@ -270,3 +270,63 @@ curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/fields/reorder \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"items":[{"id":"<field-a>","sort_order":1},{"id":"<field-b>","sort_order":2}]}'
 ```
+
+---
+
+## 11. Validation Engine API
+
+Database-driven validation rules layered on top of each field's built-in
+constraints. The engine merges field metadata (required, length, regex, type
+format, options) with rows in `validation_rules` and evaluates a payload,
+returning field-keyed errors with custom messages. It also compiles a schema the
+frontend can use to mirror validation client-side. Organization-scoped (same
+auth as above). Base URL: `http://localhost:8080/api/v1`.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /modules/:id/validation-rules` | List a module's validation rules. | Manage rules in the settings UI. |
+| `POST /modules/:id/validation-rules` | Add a rule (field-level or cross-field). | Enforce e.g. "amount ≥ 0" or "email format". |
+| `GET /modules/:id/validation-rules/:ruleId` | Fetch a single rule. | Load a rule's edit form. |
+| `PUT /modules/:id/validation-rules/:ruleId` | Update a rule (params, message, active, order). | Tweak a rule or toggle it off. |
+| `DELETE /modules/:id/validation-rules/:ruleId` | Delete a rule. | Remove a rule. |
+| `GET /modules/:id/validation-schema` | Compiled per-field constraints for the client. | Drive frontend (client-side) validation. |
+| `POST /modules/:id/validate` | Dry-run validation of a data payload. | Validate a form/record before saving. |
+
+Supported `rule_type` values and their `params`:
+
+| rule_type | Scope | params | Notes |
+| --- | --- | --- | --- |
+| `required` | field | — | Field must be non-empty. |
+| `min_length` / `max_length` | field | `{"value": n}` | String length bounds. |
+| `min` / `max` | field | `{"value": n}` | Numeric bounds. |
+| `pattern` | field | `{"pattern": "regex"}` | Must match (regex is compiled/validated on save). |
+| `email` / `url` | field | — | Format checks. |
+| `in` / `not_in` | field | `{"values": [...]}` | Allow/deny list. |
+| `required_if` | module | `{"field": "...", "equals": <v>, "target": "..."}` | Cross-field conditional requirement. |
+
+**Add a field-level rule with a custom message:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/validation-rules \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"field_id":"<amountFieldId>","rule_type":"min","params":{"value":0},"error_message":"Amount cannot be negative"}'
+```
+
+**Add a cross-field rule (require company_name when type = company):**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/validation-rules \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"rule_type":"required_if","params":{"field":"type","equals":"company","target":"company_name"}}'
+```
+
+**Fetch the compiled schema for the frontend:**
+```bash
+curl http://localhost:8080/api/v1/modules/<moduleId>/validation-schema -H "Authorization: Bearer $TOKEN"
+```
+
+**Dry-run validate a payload:**
+```bash
+curl -X POST http://localhost:8080/api/v1/modules/<moduleId>/validate \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"data":{"name":"Al","email":"nope","amount":-5}}'
+# => {"valid":false,"errors":[{"field":"name","message":"Value is too short"}, ...]}
+```
