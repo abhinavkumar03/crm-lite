@@ -27,6 +27,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notification"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/search"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/settings"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
@@ -98,6 +99,7 @@ func main() {
 	exportEngine := exporter.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	notificationModule := notification.NewModule(db, authModule.Middleware(), orgMiddleware, producer)
 	tourModule := tour.NewModule(db, authModule.Middleware(), orgMiddleware)
+	settingsModule := settings.NewModule(db, authModule.Middleware(), orgMiddleware)
 	leadModule := lead.NewModule(db, authModule.Middleware(), producer)
 	contactModule := contact.NewModule(db, authModule.Middleware())
 	taskModule := task.NewModule(db, authModule.Middleware())
@@ -126,6 +128,7 @@ func main() {
 		exportEngine,
 		notificationModule,
 		tourModule,
+		settingsModule,
 		leadModule,
 		contactModule,
 		taskModule,

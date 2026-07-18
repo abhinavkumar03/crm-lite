@@ -14,6 +14,7 @@ import {
   Upload,
   Download,
   MessageCircle,
+  Settings,
   ChevronRight,
 } from "lucide-react";
 
@@ -62,6 +63,11 @@ const navigation = [
     name: "Notifications",
     href: "/notifications",
     icon: MessageCircle,
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
   },
 ];
 
@@ -201,7 +207,8 @@ export default function Sidebar({
               const Icon = item.icon;
 
               const active =
-                pathname === item.href;
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
               return (
                 <Link

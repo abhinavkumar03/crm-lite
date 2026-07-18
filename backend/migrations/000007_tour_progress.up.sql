@@ -1,11 +1,12 @@
 -- Phase 14: Guided CRM tour.
 --
--- tour_progress persists a user's onboarding progress so the guided tour can be
--- resumed across devices/sessions and restarted on demand. Progress is scoped to
--- (organization, user, tour_key); tour_key lets a single user carry independent
--- progress for multiple named tours (the app ships one, "app", but the schema is
--- open for feature-specific tours later). The step catalogue itself lives on the
--- client — only lightweight progress is stored server-side.
+-- The Phase 3 schema shipped a placeholder `tour_progress` (user-only, no step
+-- cursor, no org scoping). The guided-tour engine needs organization scoping and
+-- a persisted step cursor + seen-step list, so we replace that placeholder with
+-- the richer shape the engine actually uses. `tour_progress` holds only transient
+-- onboarding state, so dropping and recreating it is safe.
+
+DROP TABLE IF EXISTS tour_progress;
 
 CREATE TABLE tour_progress (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
