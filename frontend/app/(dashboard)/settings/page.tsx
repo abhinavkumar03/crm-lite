@@ -29,9 +29,15 @@ const CURRENCIES = ["USD", "EUR", "GBP", "INR", "AUD", "CAD", "SGD", "JPY"];
 
 const LOCALES = ["en-US", "en-GB", "en-IN", "de-DE", "fr-FR", "es-ES", "ja-JP"];
 
+const COMPANY_SIZES = ["1-10", "11-50", "51-200", "201-500", "500+"];
+
 export default function GeneralSettingsPage() {
   const [settings, setSettings] = useState<OrgSettings | null>(null);
   const [name, setName] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [companySize, setCompanySize] = useState("");
+  const [country, setCountry] = useState("");
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +50,10 @@ export default function GeneralSettingsPage() {
         if (!active) return;
         setSettings(data);
         setName(data.name);
+        setLogoUrl(data.logo_url ?? "");
+        setIndustry(data.industry ?? "");
+        setCompanySize(data.company_size ?? "");
+        setCountry(data.country ?? "");
         setGeneral(data.general);
       } catch {
         toast.error("Failed to load settings");
@@ -68,9 +78,20 @@ export default function GeneralSettingsPage() {
     }
     try {
       setSaving(true);
-      const updated = await updateSettings({ name: name.trim(), general });
+      const updated = await updateSettings({
+        name: name.trim(),
+        logo_url: logoUrl.trim() || null,
+        industry: industry.trim() || null,
+        company_size: companySize.trim() || null,
+        country: country.trim() || null,
+        general,
+      });
       setSettings(updated);
       setName(updated.name);
+      setLogoUrl(updated.logo_url ?? "");
+      setIndustry(updated.industry ?? "");
+      setCompanySize(updated.company_size ?? "");
+      setCountry(updated.country ?? "");
       setGeneral(updated.general);
       toast.success("Settings saved");
     } catch {
@@ -90,13 +111,12 @@ export default function GeneralSettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Organization profile */}
       <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Organization</h2>
           <p className="text-sm text-slate-500">
-            Your workspace identity. The slug and plan are managed at signup and
-            billing.
+            Workspace identity and profile. Timezone and currency live under
+            Preferences (settings.general).
           </p>
         </div>
 
@@ -117,13 +137,54 @@ export default function GeneralSettingsPage() {
           <div className="space-y-1">
             <p className="text-sm font-semibold text-slate-700">Plan</p>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm capitalize text-slate-500">
-              {settings.plan}
+              {settings.subscription_plan || settings.plan}
             </div>
           </div>
         </div>
+
+        <FormInput
+          label="Logo URL"
+          value={logoUrl}
+          placeholder="https://…"
+          onChange={(e) => setLogoUrl(e.target.value)}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput
+            label="Industry"
+            value={industry}
+            placeholder="Technology"
+            onChange={(e) => setIndustry(e.target.value)}
+          />
+          <FormSelect
+            label="Company size"
+            value={companySize}
+            onChange={(e) => setCompanySize(e.target.value)}
+          >
+            <option value="">Select…</option>
+            {COMPANY_SIZES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </FormSelect>
+          <FormInput
+            label="Country"
+            value={country}
+            placeholder="IN"
+            onChange={(e) => setCountry(e.target.value)}
+          />
+          {settings.status ? (
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-700">Status</p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm capitalize text-slate-500">
+                {settings.status}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </section>
 
-      {/* Preferences */}
       <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Preferences</h2>

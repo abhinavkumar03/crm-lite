@@ -6,10 +6,12 @@ import (
 	"errors"
 	"math"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/access"
 	fieldentity "github.com/abhinavkumar03/crm-lite/backend/internal/field/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record/entity"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record/repository"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	vdto "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/dto"
 )
 
@@ -40,7 +42,7 @@ type RecordRepository interface {
 	GetByID(ctx context.Context, orgID, moduleID, id string) (*entity.Record, error)
 	Update(ctx context.Context, rec *entity.Record) error
 	Delete(ctx context.Context, orgID, moduleID, id string) (bool, error)
-	List(ctx context.Context, orgID, moduleID string, q dto.ListQuery, meta map[string]repository.FieldMeta) ([]entity.Record, int, error)
+	List(ctx context.Context, orgID, moduleID string, q dto.ListQuery, meta map[string]repository.FieldMeta, extra repository.ExtraWhere) ([]entity.Record, int, error)
 	DisplayValues(ctx context.Context, orgID, moduleID string, ids []string, displayField string) (map[string]string, error)
 	UserDisplays(ctx context.Context, ids []string) (map[string]string, error)
 }
@@ -61,10 +63,18 @@ type Service struct {
 	repo      RecordRepository
 	fields    FieldReader
 	validator Validator
+	cache     *cache.Cache
+	access    *access.Service
 }
 
-func New(repo RecordRepository, fields FieldReader, validator Validator) *Service {
-	return &Service{repo: repo, fields: fields, validator: validator}
+func New(repo RecordRepository, fields FieldReader, validator Validator, appCache *cache.Cache, accessSvc *access.Service) *Service {
+	return &Service{repo: repo, fields: fields, validator: validator, cache: appCache, access: accessSvc}
+}
+
+func (s *Service) invalidateDashboard(ctx context.Context, orgID string) {
+	if s.cache != nil {
+		s.cache.InvalidateDashboard(ctx, orgID)
+	}
 }
 
 // ensureDynamicModule verifies the module exists in the org and uses dynamic
@@ -106,11 +116,20 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID, userID string, re
 		owner = &userID
 	}
 
+	vis := "organization"
+	if req.Visibility != nil && *req.Visibility != "" {
+		vis = *req.Visibility
+	}
+
 	rec := &entity.Record{
 		OrganizationID: orgID,
 		ModuleID:       moduleID,
 		Data:           data,
 		OwnerID:        owner,
+		AssignedTo:     req.AssignedTo,
+		TeamID:         req.TeamID,
+		DepartmentID:   req.DepartmentID,
+		Visibility:     vis,
 		CreatedBy:      &userID,
 		UpdatedBy:      &userID,
 	}
@@ -118,6 +137,7 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID, userID string, re
 		return nil, err
 	}
 
+	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(rec)
 	return &resp, nil
 }
@@ -133,6 +153,17 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id, userID string
 	}
 	if existing == nil {
 		return nil, ErrNotFound
+	}
+
+	if s.access != nil {
+		actor, err := s.access.LoadActor(ctx, orgID, userID)
+		if err != nil {
+			return nil, err
+		}
+		vis := existing.Visibility
+		if !access.CanViewRecord(actor, existing.OwnerID, existing.AssignedTo, existing.CreatedBy, existing.DepartmentID, existing.TeamID, &vis) {
+			return nil, ErrNotFound
+		}
 	}
 
 	result, err := s.validator.Validate(ctx, orgID, moduleID, req.Data)
@@ -153,16 +184,29 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id, userID string
 	if req.OwnerID != nil {
 		existing.OwnerID = req.OwnerID
 	}
+	if req.AssignedTo != nil {
+		existing.AssignedTo = req.AssignedTo
+	}
+	if req.TeamID != nil {
+		existing.TeamID = req.TeamID
+	}
+	if req.DepartmentID != nil {
+		existing.DepartmentID = req.DepartmentID
+	}
+	if req.Visibility != nil && *req.Visibility != "" {
+		existing.Visibility = *req.Visibility
+	}
 
 	if err := s.repo.Update(ctx, existing); err != nil {
 		return nil, err
 	}
 
+	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(existing)
 	return &resp, nil
 }
 
-func (s *Service) Get(ctx context.Context, orgID, moduleID, id string, expand bool) (*dto.RecordResponse, error) {
+func (s *Service) Get(ctx context.Context, orgID, moduleID, id, userID string, expand bool) (*dto.RecordResponse, error) {
 	if err := s.ensureDynamicModule(ctx, orgID, moduleID); err != nil {
 		return nil, err
 	}
@@ -173,6 +217,17 @@ func (s *Service) Get(ctx context.Context, orgID, moduleID, id string, expand bo
 	}
 	if rec == nil {
 		return nil, ErrNotFound
+	}
+
+	if s.access != nil {
+		actor, err := s.access.LoadActor(ctx, orgID, userID)
+		if err != nil {
+			return nil, err
+		}
+		vis := rec.Visibility
+		if !access.CanViewRecord(actor, rec.OwnerID, rec.AssignedTo, rec.CreatedBy, rec.DepartmentID, rec.TeamID, &vis) {
+			return nil, ErrNotFound
+		}
 	}
 
 	resp := toResponse(rec)
@@ -188,7 +243,7 @@ func (s *Service) Get(ctx context.Context, orgID, moduleID, id string, expand bo
 	return &resp, nil
 }
 
-func (s *Service) List(ctx context.Context, orgID, moduleID string, q dto.ListQuery) (*dto.ListResult, error) {
+func (s *Service) List(ctx context.Context, orgID, moduleID, userID string, q dto.ListQuery) (*dto.ListResult, error) {
 	if err := s.ensureDynamicModule(ctx, orgID, moduleID); err != nil {
 		return nil, err
 	}
@@ -201,7 +256,22 @@ func (s *Service) List(ctx context.Context, orgID, moduleID string, q dto.ListQu
 
 	normalizeQuery(&q)
 
-	records, total, err := s.repo.List(ctx, orgID, moduleID, q, meta)
+	extra := repository.ExtraWhere{SQL: "TRUE"}
+	if s.access != nil && userID != "" {
+		actor, err := s.access.LoadActor(ctx, orgID, userID)
+		if err != nil {
+			return nil, err
+		}
+		// BuildWhere uses $1,$2 for org/module — visibility args start at $3 + filter args.
+		// Compute after BuildWhere by asking VisibilitySQL with a high start and then
+		// re-building: List merges ExtraWhere after BuildWhere, so startArg = 3 + filter args.
+		// Simpler: build base where first to know arg count.
+		base := repository.BuildWhere(orgID, moduleID, q, meta)
+		sql, args, _ := access.VisibilitySQL(actor, len(base.Args)+1)
+		extra = repository.ExtraWhere{SQL: sql, Args: args}
+	}
+
+	records, total, err := s.repo.List(ctx, orgID, moduleID, q, meta, extra)
 	if err != nil {
 		return nil, err
 	}
@@ -240,9 +310,27 @@ func (s *Service) List(ctx context.Context, orgID, moduleID string, q dto.ListQu
 	}, nil
 }
 
-func (s *Service) Delete(ctx context.Context, orgID, moduleID, id string) error {
+func (s *Service) Delete(ctx context.Context, orgID, moduleID, id, userID string) error {
 	if err := s.ensureDynamicModule(ctx, orgID, moduleID); err != nil {
 		return err
+	}
+
+	existing, err := s.repo.GetByID(ctx, orgID, moduleID, id)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return ErrNotFound
+	}
+	if s.access != nil {
+		actor, err := s.access.LoadActor(ctx, orgID, userID)
+		if err != nil {
+			return err
+		}
+		vis := existing.Visibility
+		if !access.CanViewRecord(actor, existing.OwnerID, existing.AssignedTo, existing.CreatedBy, existing.DepartmentID, existing.TeamID, &vis) {
+			return ErrNotFound
+		}
 	}
 
 	deleted, err := s.repo.Delete(ctx, orgID, moduleID, id)
@@ -252,6 +340,7 @@ func (s *Service) Delete(ctx context.Context, orgID, moduleID, id string) error 
 	if !deleted {
 		return ErrNotFound
 	}
+	s.invalidateDashboard(ctx, orgID)
 	return nil
 }
 
@@ -272,14 +361,22 @@ func toResponse(rec *entity.Record) dto.RecordResponse {
 	if len(rec.Data) > 0 {
 		_ = json.Unmarshal(rec.Data, &data)
 	}
+	vis := rec.Visibility
+	if vis == "" {
+		vis = "organization"
+	}
 	return dto.RecordResponse{
-		ID:        rec.ID,
-		ModuleID:  rec.ModuleID,
-		Data:      data,
-		OwnerID:   rec.OwnerID,
-		CreatedBy: rec.CreatedBy,
-		UpdatedBy: rec.UpdatedBy,
-		CreatedAt: rec.CreatedAt,
-		UpdatedAt: rec.UpdatedAt,
+		ID:           rec.ID,
+		ModuleID:     rec.ModuleID,
+		Data:         data,
+		OwnerID:      rec.OwnerID,
+		AssignedTo:   rec.AssignedTo,
+		TeamID:       rec.TeamID,
+		DepartmentID: rec.DepartmentID,
+		Visibility:   vis,
+		CreatedBy:    rec.CreatedBy,
+		UpdatedBy:    rec.UpdatedBy,
+		CreatedAt:    rec.CreatedAt,
+		UpdatedAt:    rec.UpdatedAt,
 	}
 }

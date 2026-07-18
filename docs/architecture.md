@@ -35,6 +35,23 @@ flowchart LR
 
 API and worker scale independently. Never run migrations from the API process.
 
+## Tenant isolation
+
+Every business query **must** filter by `organization_id` from tenant context
+(`tenant.OrgID(c)` after JWT + membership resolution). Cross-tenant joins are
+forbidden. Optional header `X-Organization-Id` may select a membership the user
+already has; it never grants access to another tenant.
+
+Row-level visibility (owner / manager / hierarchy / department / team /
+organization) is an **additional** filter inside the active organization, applied
+by `internal/access` on the dynamic record runtime.
+
+Locale preferences (timezone, currency, language) live under
+`organizations.settings.general`. First-class org profile fields include logo,
+industry, company size, country, status, and `created_by`.
+
+See [`docs/roadmap.md`](./roadmap.md) for the tenancy-first phase order.
+
 ## Request path (API)
 
 ```mermaid
@@ -78,15 +95,15 @@ internal/lead/
 Cross-cutting packages (not feature slices): `tenant`, `rbac`, `jobs`, `notify`,
 `shared/*`, `docs`, `seed`.
 
-## Two storage strategies
+## Storage strategy
 
-| Strategy | Where data lives | Examples |
-| --- | --- | --- |
-| `native` | First-class tables | leads, contacts, tasks |
-| `dynamic` | `records.data` JSONB | company, deal (seeded), custom modules |
+The product surface is **dynamic-only**: modules + `records.data` JSONB
+(seeded demos: company, deal). Legacy `leads` / `contacts` / `tasks` tables
+remain in early migrations but their HTTP APIs are unwired.
 
-Metadata (`modules`, `fields`, `validation_rules`, `views`) describes both.
-The record runtime, import, and export APIs require `storage_strategy = dynamic`.
+Metadata (`modules`, `fields`, `validation_rules`, `views`) drives Forms,
+Tables, import, and export. User-created modules always use
+`storage_strategy = dynamic`.
 
 ## Caching (Phase 17)
 
@@ -94,7 +111,7 @@ Shared package `internal/shared/cache`:
 
 | Key | TTL | Invalidated |
 | --- | --- | --- |
-| `dashboard:{userID}` | 5m | Lead / task CUD |
+| `dashboard:{orgID}` | 5m | Record CUD |
 | `tenant:membership:{userID}` | 2m | Short TTL |
 | `rbac:perms:{roleID}` | 2m | Permission matrix change |
 | `rbac:module:{roleID}:{moduleID}` | 2m | Module ACL change |

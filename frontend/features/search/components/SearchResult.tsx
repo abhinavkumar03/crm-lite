@@ -1,18 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  Building2,
-  ClipboardList,
-  User,
-} from "lucide-react";
+import { ArrowUpRight, Boxes } from "lucide-react";
 
 type Props = {
   title: string;
   subtitle?: string;
   href: string;
-  type: "lead" | "contact" | "task";
+  type: "record";
   status?: string;
   onClick?: () => void;
   active?: boolean;
@@ -23,18 +18,13 @@ export default function SearchResult({
   title,
   subtitle,
   href,
-  type,
+  type: _type,
   status,
   onClick,
   active = false,
   query,
 }: Props) {
-  const Icon =
-    type === "lead"
-      ? Building2
-      : type === "contact"
-      ? User
-      : ClipboardList;
+  const Icon = Boxes;
 
   return (
     <Link

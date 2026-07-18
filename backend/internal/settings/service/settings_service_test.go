@@ -7,6 +7,7 @@ import (
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/entity"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/repository"
 )
 
 type fakeRepo struct {
@@ -17,18 +18,24 @@ func (f *fakeRepo) GetByID(_ context.Context, _ string) (*entity.Organization, e
 	return f.org, nil
 }
 
-func (f *fakeRepo) Update(_ context.Context, _, name string, settings []byte) (*entity.Organization, error) {
-	f.org.Name = name
-	f.org.Settings = settings
+func (f *fakeRepo) Update(_ context.Context, _ string, p repository.ProfileUpdate) (*entity.Organization, error) {
+	f.org.Name = p.Name
+	f.org.LogoURL = p.LogoURL
+	f.org.Industry = p.Industry
+	f.org.CompanySize = p.CompanySize
+	f.org.Country = p.Country
+	f.org.Status = p.Status
+	f.org.Settings = p.Settings
 	return f.org, nil
 }
 
 func newRepo() *fakeRepo {
 	return &fakeRepo{org: &entity.Organization{
-		ID:   "org1",
-		Name: "Acme",
-		Slug: "acme",
-		Plan: "free",
+		ID:     "org1",
+		Name:   "Acme",
+		Slug:   "acme",
+		Plan:   "free",
+		Status: "active",
 	}}
 }
 

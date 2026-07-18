@@ -45,12 +45,13 @@ func (r *Repository) ListPermissions(ctx context.Context) ([]entity.Permission, 
 func (r *Repository) ListRoles(ctx context.Context, orgID string) ([]entity.Role, []int, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT r.id::text, r.organization_id::text, r.name, r.slug, r.description,
-		       r.is_system, r.created_at, r.updated_at,
+		       r.is_system, COALESCE(r.hierarchy_level, 100), r.parent_role_id::text,
+		       r.created_at, r.updated_at,
 		       (SELECT COUNT(*) FROM organization_members om
 		         WHERE om.role_id = r.id AND om.status = 'active') AS member_count
 		FROM roles r
 		WHERE r.organization_id = $1
-		ORDER BY r.is_system DESC, r.name ASC
+		ORDER BY r.hierarchy_level ASC, r.is_system DESC, r.name ASC
 	`, orgID)
 	if err != nil {
 		return nil, nil, err
@@ -64,7 +65,8 @@ func (r *Repository) ListRoles(ctx context.Context, orgID string) ([]entity.Role
 		var count int
 		if err := rows.Scan(
 			&role.ID, &role.OrganizationID, &role.Name, &role.Slug, &role.Description,
-			&role.IsSystem, &role.CreatedAt, &role.UpdatedAt, &count,
+			&role.IsSystem, &role.HierarchyLevel, &role.ParentRoleID,
+			&role.CreatedAt, &role.UpdatedAt, &count,
 		); err != nil {
 			return nil, nil, err
 		}
@@ -78,12 +80,14 @@ func (r *Repository) GetByID(ctx context.Context, orgID, roleID string) (*entity
 	var role entity.Role
 	err := r.db.QueryRow(ctx, `
 		SELECT id::text, organization_id::text, name, slug, description,
-		       is_system, created_at, updated_at
+		       is_system, COALESCE(hierarchy_level, 100), parent_role_id::text,
+		       created_at, updated_at
 		FROM roles
 		WHERE id = $1 AND organization_id = $2
 	`, roleID, orgID).Scan(
 		&role.ID, &role.OrganizationID, &role.Name, &role.Slug, &role.Description,
-		&role.IsSystem, &role.CreatedAt, &role.UpdatedAt,
+		&role.IsSystem, &role.HierarchyLevel, &role.ParentRoleID,
+		&role.CreatedAt, &role.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -105,20 +109,20 @@ func (r *Repository) MemberCount(ctx context.Context, roleID string) (int, error
 
 func (r *Repository) Create(ctx context.Context, role *entity.Role) error {
 	return r.db.QueryRow(ctx, `
-		INSERT INTO roles (organization_id, name, slug, description, is_system)
-		VALUES ($1, $2, $3, $4, FALSE)
+		INSERT INTO roles (organization_id, name, slug, description, is_system, hierarchy_level)
+		VALUES ($1, $2, $3, $4, FALSE, $5)
 		RETURNING id::text, created_at, updated_at
-	`, role.OrganizationID, role.Name, role.Slug, role.Description).
+	`, role.OrganizationID, role.Name, role.Slug, role.Description, role.HierarchyLevel).
 		Scan(&role.ID, &role.CreatedAt, &role.UpdatedAt)
 }
 
 func (r *Repository) Update(ctx context.Context, role *entity.Role) error {
 	return r.db.QueryRow(ctx, `
 		UPDATE roles
-		SET name = $3, description = $4, updated_at = NOW()
+		SET name = $3, description = $4, hierarchy_level = $5, updated_at = NOW()
 		WHERE id = $1 AND organization_id = $2
 		RETURNING updated_at
-	`, role.ID, role.OrganizationID, role.Name, role.Description).Scan(&role.UpdatedAt)
+	`, role.ID, role.OrganizationID, role.Name, role.Description, role.HierarchyLevel).Scan(&role.UpdatedAt)
 }
 
 func (r *Repository) Delete(ctx context.Context, orgID, roleID string) error {

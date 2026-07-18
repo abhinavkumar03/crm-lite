@@ -35,7 +35,7 @@ func userID(c *gin.Context) string { return c.GetString("userID") }
 func (h *RecordHandler) List(c *gin.Context) {
 	moduleID := c.Param(paramModuleID)
 	q := parseListQuery(c)
-	result, err := h.service.List(c.Request.Context(), tenant.OrgID(c), moduleID, q)
+	result, err := h.service.List(c.Request.Context(), tenant.OrgID(c), moduleID, userID(c), q)
 	if err != nil {
 		h.writeError(c, err, "Unable to fetch records")
 		return
@@ -50,7 +50,7 @@ func (h *RecordHandler) List(c *gin.Context) {
 func (h *RecordHandler) Get(c *gin.Context) {
 	moduleID := c.Param(paramModuleID)
 	expand := c.Query("expand") == "true"
-	rec, err := h.service.Get(c.Request.Context(), tenant.OrgID(c), moduleID, c.Param(paramRecordID), expand)
+	rec, err := h.service.Get(c.Request.Context(), tenant.OrgID(c), moduleID, c.Param(paramRecordID), userID(c), expand)
 	if err != nil {
 		h.writeError(c, err, "Unable to fetch record")
 		return
@@ -106,7 +106,7 @@ func (h *RecordHandler) Update(c *gin.Context) {
 }
 
 func (h *RecordHandler) Delete(c *gin.Context) {
-	if err := h.service.Delete(c.Request.Context(), tenant.OrgID(c), c.Param(paramModuleID), c.Param(paramRecordID)); err != nil {
+	if err := h.service.Delete(c.Request.Context(), tenant.OrgID(c), c.Param(paramModuleID), c.Param(paramRecordID), userID(c)); err != nil {
 		h.writeError(c, err, "Unable to delete record")
 		return
 	}

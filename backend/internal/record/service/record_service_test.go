@@ -54,7 +54,7 @@ func (r *fakeRepo) Update(_ context.Context, _ *entity.Record) error { return ni
 func (r *fakeRepo) Delete(_ context.Context, _, _, _ string) (bool, error) {
 	return true, nil
 }
-func (r *fakeRepo) List(_ context.Context, _, _ string, _ dto.ListQuery, _ map[string]repository.FieldMeta) ([]entity.Record, int, error) {
+func (r *fakeRepo) List(_ context.Context, _, _ string, _ dto.ListQuery, _ map[string]repository.FieldMeta, _ repository.ExtraWhere) ([]entity.Record, int, error) {
 	return r.list, len(r.list), nil
 }
 func (r *fakeRepo) DisplayValues(_ context.Context, _, _ string, _ []string, displayField string) (map[string]string, error) {
@@ -75,6 +75,8 @@ func TestCreate_RejectsInvalidPayload(t *testing.T) {
 			Valid:  false,
 			Errors: []vdto.FieldError{{Field: "name", Message: "required"}},
 		}},
+		nil,
+		nil,
 	)
 
 	_, err := svc.Create(context.Background(), "o", "m", "u1", dto.CreateRecordRequest{Data: map[string]any{}})
@@ -93,6 +95,8 @@ func TestCreate_DefaultsOwnerToActingUser(t *testing.T) {
 	svc := New(repo,
 		&fakeFields{strategy: map[string]string{"m": "dynamic"}},
 		&fakeValidator{result: vdto.ValidateResult{Valid: true}},
+		nil,
+		nil,
 	)
 
 	resp, err := svc.Create(context.Background(), "o", "m", "u1", dto.CreateRecordRequest{
@@ -116,6 +120,8 @@ func TestCreate_RejectsNativeModule(t *testing.T) {
 	svc := New(&fakeRepo{},
 		&fakeFields{strategy: map[string]string{"m": "native"}},
 		&fakeValidator{result: vdto.ValidateResult{Valid: true}},
+		nil,
+		nil,
 	)
 
 	_, err := svc.Create(context.Background(), "o", "m", "u1", dto.CreateRecordRequest{Data: map[string]any{}})
@@ -147,9 +153,11 @@ func TestList_ExpandsLookupAndUserRelations(t *testing.T) {
 			byModule: map[string][]fieldentity.Field{"m": fields, lookupModuleID: targetFields},
 		},
 		&fakeValidator{result: vdto.ValidateResult{Valid: true}},
+		nil,
+		nil,
 	)
 
-	result, err := svc.List(context.Background(), "o", "m", dto.ListQuery{Expand: true})
+	result, err := svc.List(context.Background(), "o", "m", "u1", dto.ListQuery{Expand: true})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -12,8 +12,6 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/app"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/attachment"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/calllog"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/contact"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/docs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter"
@@ -21,11 +19,10 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/health"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/importer"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/jobs"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/lead"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/media"
 	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/note"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notification"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/organization"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles"
@@ -36,7 +33,6 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
-	"github.com/abhinavkumar03/crm-lite/backend/internal/task"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tour"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
@@ -94,7 +90,8 @@ func main() {
 	// organization-scoped (metadata-driven) modules. rbac.Load attaches the
 	// role's permission keys so Require()/RequireModule() can enforce them.
 	// Membership + RBAC grants are cached briefly in Redis (Phase 17).
-	orgMiddleware := tenant.Middleware(tenant.NewResolver(db, appCache))
+	tenantResolver := tenant.NewResolver(db, appCache)
+	orgMiddleware := tenant.Middleware(tenantResolver)
 	guard := rbac.New(db, appCache)
 	rbacLoad := guard.Load()
 
@@ -103,24 +100,22 @@ func main() {
 	authModule := auth.NewModule(db, cfg.JWTSecret, cfg.JWTExpiration)
 	authMW := authModule.Middleware()
 
+	organizationModule := organization.NewModule(db, tenantResolver, authMW, orgMiddleware, rbacLoad, guard)
 	moduleEngine := moduleengine.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	fieldEngine := field.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	validationEngine := validationengine.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	viewEngine := view.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
-	recordEngine := record.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	recordEngine := record.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, appCache) // cache: invalidate org dashboard on CUD
 	importEngine := importer.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	tourModule := tour.NewModule(db, authMW, orgMiddleware)
 	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	rolesModule := roles.NewModule(db, appCache, authMW, orgMiddleware, rbacLoad, guard)
-	leadModule := lead.NewModule(db, authMW, producer, appCache)
-	contactModule := contact.NewModule(db, authMW)
-	taskModule := task.NewModule(db, authMW, appCache)
-	dashboardModule := dashboard.NewModule(db, appCache, authMW)
-	searchModule := search.NewModule(db, authMW)
-	noteModule := note.NewModule(db, authMW)
-	calllogModule := calllog.NewModule(db, authMW)
+	dashboardModule := dashboard.NewModule(db, appCache, authMW, orgMiddleware)
+	searchModule := search.NewModule(db, authMW, orgMiddleware)
+	// Legacy native CRM packages (lead/contact/task/note/calllog) remain on disk
+	// but are intentionally not registered — product surface is dynamic-only.
 	attachmentModule := attachment.NewModule(db, authMW)
 	activityModule := activity.NewModule(db, authMW)
 	mediaModule, err := media.NewModule(cfg, authMW)
@@ -134,6 +129,7 @@ func main() {
 		healthModule,
 		docsModule,
 		authModule,
+		organizationModule,
 		moduleEngine,
 		fieldEngine,
 		validationEngine,
@@ -145,13 +141,8 @@ func main() {
 		tourModule,
 		settingsModule,
 		rolesModule,
-		leadModule,
-		contactModule,
-		taskModule,
 		dashboardModule,
 		searchModule,
-		noteModule,
-		calllogModule,
 		attachmentModule,
 		activityModule,
 		mediaModule,

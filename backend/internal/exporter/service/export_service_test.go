@@ -32,7 +32,7 @@ type fakeRows struct {
 	lastExp bool
 }
 
-func (r *fakeRows) List(_ context.Context, _, _ string, q recorddto.ListQuery) (*recorddto.ListResult, error) {
+func (r *fakeRows) List(_ context.Context, _, _, _ string, q recorddto.ListQuery) (*recorddto.ListResult, error) {
 	r.lastExp = q.Expand
 	if r.call >= len(r.pages) {
 		return &recorddto.ListResult{}, nil

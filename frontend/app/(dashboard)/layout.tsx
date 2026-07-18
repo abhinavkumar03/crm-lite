@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/context/AuthContext";
@@ -45,12 +45,14 @@ export default function DashboardLayout({
   return (
     <TourProvider>
       <div className="flex h-screen overflow-hidden bg-slate-50">
-        <Sidebar
-          open={sidebarOpen}
-          onClose={() =>
-            setSidebarOpen(false)
-          }
-        />
+        <Suspense fallback={null}>
+          <Sidebar
+            open={sidebarOpen}
+            onClose={() =>
+              setSidebarOpen(false)
+            }
+          />
+        </Suspense>
 
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar

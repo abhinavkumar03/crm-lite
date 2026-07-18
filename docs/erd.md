@@ -1,6 +1,6 @@
 # Entity-relationship diagrams
 
-PostgreSQL schema from migrations `000001`–`000009`. Diagrams use Mermaid ER
+PostgreSQL schema from migrations `000001`–`000011`. Diagrams use Mermaid ER
 syntax (render in GitHub / most Markdown previewers).
 
 ## Identity & tenancy
@@ -10,18 +10,30 @@ erDiagram
   users ||--o{ organization_members : has
   organizations ||--o{ organization_members : has
   roles ||--o{ organization_members : "optional role"
+  organizations ||--o{ organization_invitations : invites
+  organizations ||--o{ departments : owns
+  organizations ||--o{ teams : owns
+  organizations ||--o{ branches : owns
+  departments ||--o{ teams : groups
 
   users {
     uuid id PK
     text name
     text email UK
     text password_hash
+    uuid active_organization_id FK
   }
   organizations {
     uuid id PK
     text name
     text slug UK
     text plan
+    text logo_url
+    text industry
+    text company_size
+    text country
+    text status
+    uuid created_by FK
     jsonb settings
   }
   organization_members {
@@ -29,7 +41,39 @@ erDiagram
     uuid organization_id FK
     uuid user_id FK
     uuid role_id FK
+    uuid manager_user_id FK
+    uuid department_id FK
+    uuid team_id FK
+    uuid branch_id FK
+    text designation
+    int hierarchy_level
     text status
+  }
+  organization_invitations {
+    uuid id PK
+    uuid organization_id FK
+    text email
+    uuid role_id FK
+    text token UK
+    text status
+    timestamptz expires_at
+  }
+  departments {
+    uuid id PK
+    uuid organization_id FK
+    text name
+  }
+  teams {
+    uuid id PK
+    uuid organization_id FK
+    uuid department_id FK
+    text name
+  }
+  branches {
+    uuid id PK
+    uuid organization_id FK
+    text name
+    text location
   }
   roles {
     uuid id PK
@@ -37,6 +81,8 @@ erDiagram
     text name
     text slug
     boolean is_system
+    int hierarchy_level
+    uuid parent_role_id FK
   }
 ```
 
@@ -180,8 +226,14 @@ erDiagram
     uuid module_id FK
     jsonb data
     uuid owner_id FK
+    uuid assigned_to FK
+    uuid team_id FK
+    uuid department_id FK
+    text visibility
   }
 ```
+
+`visibility` ∈ `private` | `owner` | `manager` | `hierarchy` | `department` | `organization` | `team` | `public`.
 
 `storage_strategy`:
 

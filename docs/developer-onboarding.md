@@ -5,7 +5,7 @@ Get from zero to a running CRM Lite stack and a first meaningful change.
 ## What you are joining
 
 Portfolio CRM: Go/Gin API + asynq worker + PostgreSQL + Redis + Next.js.
-Metadata-driven custom modules sit beside native leads/contacts/tasks.
+Metadata-driven dynamic modules (Forms + Tables) are the entire CRM surface.
 
 Read next (order matters):
 

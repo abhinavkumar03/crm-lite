@@ -19,10 +19,10 @@ func New(repo *repository.Repository, c *cache.Cache) *Service {
 
 func (s *Service) GetDashboard(
 	ctx context.Context,
-	ownerID string,
+	orgID string,
 	refresh bool,
 ) (*dto.DashboardResponse, error) {
-	key := cache.DashboardKey(ownerID)
+	key := cache.DashboardKey(orgID)
 
 	if !refresh {
 		var cached dto.DashboardResponse
@@ -31,22 +31,7 @@ func (s *Service) GetDashboard(
 		}
 	}
 
-	data, err := s.repository.GetMetrics(ctx, ownerID)
-	if err != nil {
-		return nil, err
-	}
-
-	data.RecentLeads, err = s.repository.RecentLeads(ctx, ownerID)
-	if err != nil {
-		return nil, err
-	}
-
-	data.UpcomingTasks, err = s.repository.UpcomingTasks(ctx, ownerID)
-	if err != nil {
-		return nil, err
-	}
-
-	data.RecentActivities, err = s.repository.RecentActivities(ctx, ownerID)
+	data, err := s.repository.GetDashboard(ctx, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +40,7 @@ func (s *Service) GetDashboard(
 	return data, nil
 }
 
-// InvalidateDashboard drops the cached dashboard for a user so the next read
-// rebuilds from Postgres.
-func InvalidateDashboard(ctx context.Context, c *cache.Cache, userID string) {
-	c.InvalidateDashboard(ctx, userID)
+// InvalidateDashboard drops the cached dashboard for an organization.
+func InvalidateDashboard(ctx context.Context, c *cache.Cache, orgID string) {
+	c.InvalidateDashboard(ctx, orgID)
 }

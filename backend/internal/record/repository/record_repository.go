@@ -13,8 +13,8 @@ import (
 )
 
 const recordColumns = `
-	id, organization_id, module_id, data, owner_id, created_by, updated_by,
-	created_at, updated_at
+	id, organization_id, module_id, data, owner_id, assigned_to, team_id, department_id,
+	visibility, created_by, updated_by, created_at, updated_at
 `
 
 type Repository struct {
@@ -28,37 +28,46 @@ func New(db *pgxpool.Pool) *Repository {
 func scanRecord(row pgx.Row, r *entity.Record) error {
 	return row.Scan(
 		&r.ID, &r.OrganizationID, &r.ModuleID, &r.Data, &r.OwnerID,
+		&r.AssignedTo, &r.TeamID, &r.DepartmentID, &r.Visibility,
 		&r.CreatedBy, &r.UpdatedBy, &r.CreatedAt, &r.UpdatedAt,
 	)
 }
 
 func (r *Repository) Create(ctx context.Context, rec *entity.Record) error {
+	if rec.Visibility == "" {
+		rec.Visibility = "organization"
+	}
 	return r.db.QueryRow(ctx, `
-		INSERT INTO records (organization_id, module_id, data, owner_id, created_by, updated_by)
-		VALUES ($1,$2,$3,$4,$5,$6)
+		INSERT INTO records (
+			organization_id, module_id, data, owner_id, assigned_to, team_id, department_id,
+			visibility, created_by, updated_by
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id, created_at, updated_at
 	`,
-		rec.OrganizationID, rec.ModuleID, rec.Data, rec.OwnerID, rec.CreatedBy, rec.UpdatedBy,
+		rec.OrganizationID, rec.ModuleID, rec.Data, rec.OwnerID, rec.AssignedTo,
+		rec.TeamID, rec.DepartmentID, rec.Visibility, rec.CreatedBy, rec.UpdatedBy,
 	).Scan(&rec.ID, &rec.CreatedAt, &rec.UpdatedAt)
 }
 
-// CreateBatch inserts many records in one COPY. IDs are assigned by the DB
-// default and are not populated on the input structs (import does not need them).
 func (r *Repository) CreateBatch(ctx context.Context, recs []*entity.Record) error {
 	if len(recs) == 0 {
 		return nil
 	}
 	rows := make([][]any, len(recs))
 	for i, rec := range recs {
+		vis := rec.Visibility
+		if vis == "" {
+			vis = "organization"
+		}
 		rows[i] = []any{
 			rec.OrganizationID, rec.ModuleID, rec.Data,
-			rec.OwnerID, rec.CreatedBy, rec.UpdatedBy,
+			rec.OwnerID, rec.CreatedBy, rec.UpdatedBy, vis,
 		}
 	}
 	_, err := r.db.CopyFrom(
 		ctx,
 		pgx.Identifier{"records"},
-		[]string{"organization_id", "module_id", "data", "owner_id", "created_by", "updated_by"},
+		[]string{"organization_id", "module_id", "data", "owner_id", "created_by", "updated_by", "visibility"},
 		pgx.CopyFromRows(rows),
 	)
 	return err
@@ -82,16 +91,24 @@ func (r *Repository) GetByID(ctx context.Context, orgID, moduleID, id string) (*
 }
 
 func (r *Repository) Update(ctx context.Context, rec *entity.Record) error {
+	if rec.Visibility == "" {
+		rec.Visibility = "organization"
+	}
 	return r.db.QueryRow(ctx, `
 		UPDATE records SET
 			data = $1,
 			owner_id = $2,
-			updated_by = $3,
+			assigned_to = $3,
+			team_id = $4,
+			department_id = $5,
+			visibility = $6,
+			updated_by = $7,
 			updated_at = NOW()
-		WHERE id = $4 AND module_id = $5 AND organization_id = $6
+		WHERE id = $8 AND module_id = $9 AND organization_id = $10
 		RETURNING updated_at
 	`,
-		rec.Data, rec.OwnerID, rec.UpdatedBy, rec.ID, rec.ModuleID, rec.OrganizationID,
+		rec.Data, rec.OwnerID, rec.AssignedTo, rec.TeamID, rec.DepartmentID,
+		rec.Visibility, rec.UpdatedBy, rec.ID, rec.ModuleID, rec.OrganizationID,
 	).Scan(&rec.UpdatedAt)
 }
 
@@ -105,16 +122,24 @@ func (r *Repository) Delete(ctx context.Context, orgID, moduleID, id string) (bo
 	return tag.RowsAffected() > 0, nil
 }
 
-// List runs the dynamic query (search + filters + sort + pagination) and returns
-// the page of records plus the total count for the same filter set. When
-// q.SkipTotal is set, COUNT(*) is skipped and total is 0.
+// ExtraWhere is an optional AND clause (already parenthesized) with args.
+type ExtraWhere struct {
+	SQL  string
+	Args []any
+}
+
 func (r *Repository) List(
 	ctx context.Context,
 	orgID, moduleID string,
 	q dto.ListQuery,
 	meta map[string]FieldMeta,
+	extra ExtraWhere,
 ) ([]entity.Record, int, error) {
 	where := BuildWhere(orgID, moduleID, q, meta)
+	if extra.SQL != "" && extra.SQL != "TRUE" {
+		where.SQL += " AND " + extra.SQL
+		where.Args = append(where.Args, extra.Args...)
+	}
 	order := BuildOrderBy(q.Sort, q.Order, meta)
 
 	var total int
@@ -150,8 +175,6 @@ func (r *Repository) List(
 	return records, total, rows.Err()
 }
 
-// DisplayValues resolves a display label for referenced records of a lookup
-// target module. If displayField is not a valid identifier, the id is used.
 func (r *Repository) DisplayValues(
 	ctx context.Context,
 	orgID, moduleID string,
@@ -188,7 +211,6 @@ func (r *Repository) DisplayValues(
 	return out, rows.Err()
 }
 
-// UserDisplays resolves user ids to their display name.
 func (r *Repository) UserDisplays(ctx context.Context, ids []string) (map[string]string, error) {
 	out := make(map[string]string)
 	if len(ids) == 0 {

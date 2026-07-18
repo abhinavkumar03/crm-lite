@@ -4,6 +4,7 @@ Phase 19 — architecture, data model, and operator/developer guides.
 
 | Doc | Audience | Contents |
 | --- | --- | --- |
+| [Roadmap](./roadmap.md) | Everyone | Tenancy-first product phases + historical mapping |
 | [Architecture](./architecture.md) | Engineers | Processes, layers, tenancy, caching, queues |
 | [ERD](./erd.md) | Engineers / DBAs | Entity-relationship diagrams by domain |
 | [Sequence diagrams](./sequences.md) | Engineers | Auth, record CRUD, import, export, notifications |

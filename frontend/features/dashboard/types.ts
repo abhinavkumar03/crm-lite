@@ -1,63 +1,24 @@
-export interface Lead {
-    id: string;
-    name: string;
-    email: string;
-    company: string;
-    status: string;
+export interface ModuleCount {
+  module_id: string;
+  api_name: string;
+  plural_label: string;
+  icon?: string;
+  color?: string;
+  record_count: number;
 }
 
-export interface Task {
-    id: string;
-    title: string;
-    status: string;
-    due_date?: string;
+export interface RecentRecord {
+  id: string;
+  module_id: string;
+  module_label: string;
+  api_name: string;
+  title: string;
+  created_at: string;
 }
 
 export interface DashboardResponse {
-    total_leads: number;
-
-    new_leads: number;
-
-    contacted_leads: number;
-
-    qualified_leads: number;
-
-    won_leads: number;
-
-    lost_leads: number;
-
-    total_contacts: number;
-
-    total_tasks: number;
-
-    pending_tasks: number;
-
-    in_progress_tasks: number;
-
-    completed_tasks: number;
-
-    recent_leads: Lead[];
-
-    upcoming_tasks: Task[];
-
-    recent_activities: DashboardActivity[];
-}
-
-export interface DashboardActivity {
-  id: string;
-
-  entity_type:
-    | "LEAD"
-    | "CONTACT"
-    | "TASK";
-
-  entity_id: string;
-
-  action: string;
-
-  description: string;
-
-  metadata: string | null;
-
-  created_at: string;
+  total_modules: number;
+  total_records: number;
+  module_counts: ModuleCount[];
+  recent_records: RecentRecord[];
 }

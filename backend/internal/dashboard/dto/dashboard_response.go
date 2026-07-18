@@ -1,36 +1,26 @@
 package dto
 
-import (
-	leadDto "github.com/abhinavkumar03/crm-lite/backend/internal/lead/dto"
-	taskDto "github.com/abhinavkumar03/crm-lite/backend/internal/task/dto"
-)
+type ModuleCount struct {
+	ModuleID     string `json:"module_id"`
+	APIName      string `json:"api_name"`
+	PluralLabel  string `json:"plural_label"`
+	Icon         string `json:"icon,omitempty"`
+	Color        string `json:"color,omitempty"`
+	RecordCount  int64  `json:"record_count"`
+}
+
+type RecentRecord struct {
+	ID          string `json:"id"`
+	ModuleID    string `json:"module_id"`
+	ModuleLabel string `json:"module_label"`
+	APIName     string `json:"api_name"`
+	Title       string `json:"title"`
+	CreatedAt   string `json:"created_at"`
+}
 
 type DashboardResponse struct {
-	TotalLeads int64 `json:"total_leads"`
-
-	NewLeads int64 `json:"new_leads"`
-
-	ContactedLeads int64 `json:"contacted_leads"`
-
-	QualifiedLeads int64 `json:"qualified_leads"`
-
-	WonLeads int64 `json:"won_leads"`
-
-	LostLeads int64 `json:"lost_leads"`
-
-	TotalContacts int64 `json:"total_contacts"`
-
-	TotalTasks int64 `json:"total_tasks"`
-
-	PendingTasks int64 `json:"pending_tasks"`
-
-	InProgressTasks int64 `json:"in_progress_tasks"`
-
-	CompletedTasks int64 `json:"completed_tasks"`
-
-	RecentLeads []leadDto.LeadResponse `json:"recent_leads"`
-
-	UpcomingTasks []taskDto.TaskResponse `json:"upcoming_tasks"`
-
-	RecentActivities []RecentActivityResponse `json:"recent_activities"`
+	TotalModules int64           `json:"total_modules"`
+	TotalRecords int64           `json:"total_records"`
+	ModuleCounts []ModuleCount   `json:"module_counts"`
+	RecentRecords []RecentRecord `json:"recent_records"`
 }

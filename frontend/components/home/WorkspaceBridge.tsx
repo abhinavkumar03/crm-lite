@@ -21,7 +21,7 @@ const stepsSignedOut = [
   {
     step: "2",
     title: "Open dashboard",
-    detail: "Land on live metrics, leads, tasks, and modules.",
+    detail: "Land on live module counts, recent records, and tools.",
     href: "/login",
     icon: LayoutDashboard,
   },
@@ -38,15 +38,15 @@ const stepsSignedIn = [
   {
     step: "1",
     title: "Your dashboard",
-    detail: "Metrics, recent leads, and quick actions are waiting.",
+    detail: "Module counts, recent records, and quick actions are waiting.",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
     step: "2",
     title: "Work the CRM",
-    detail: "Jump into leads, contacts, tasks, forms, and imports.",
-    href: "/leads",
+    detail: "Jump into forms, tables, imports, and settings.",
+    href: "/tables",
     icon: LogIn,
   },
   {

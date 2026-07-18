@@ -2,20 +2,23 @@ package entity
 
 import "time"
 
-// Organization is the persisted tenant row. Name and the free-form Settings
-// JSONB are user-editable from the Settings Center; Slug and Plan are managed
-// elsewhere (signup / billing) and are read-only here.
+// Organization is the persisted tenant row.
 type Organization struct {
-	ID        string
-	Name      string
-	Slug      string
-	Plan      string
-	Settings  []byte // raw JSONB
-	UpdatedAt time.Time
+	ID          string
+	Name        string
+	Slug        string
+	Plan        string
+	LogoURL     *string
+	Industry    *string
+	CompanySize *string
+	Country     *string
+	Status      string
+	CreatedBy   *string
+	Settings    []byte // raw JSONB
+	UpdatedAt   time.Time
 }
 
-// GeneralSettings are org-wide display/locale preferences. They are stored under
-// the "general" key of organizations.settings.
+// GeneralSettings are org-wide display/locale preferences under settings.general.
 type GeneralSettings struct {
 	Timezone   string `json:"timezone"`
 	DateFormat string `json:"date_format"`
@@ -25,17 +28,13 @@ type GeneralSettings struct {
 	WeekStart  string `json:"week_start"` // sunday | monday
 }
 
-// AutomationSettings are org-wide automation preferences (the actual provider
-// credentials live in environment config; these are behavioural toggles).
-// Stored under the "automation" key of organizations.settings.
+// AutomationSettings are org-wide automation preferences under settings.automation.
 type AutomationSettings struct {
 	NotificationsEnabled bool   `json:"notifications_enabled"`
 	DefaultChannel       string `json:"default_channel"` // whatsapp | email
 	DailyDigest          bool   `json:"daily_digest"`
 }
 
-// DefaultGeneral returns the baseline general settings used when an organization
-// has never saved any.
 func DefaultGeneral() GeneralSettings {
 	return GeneralSettings{
 		Timezone:   "UTC",
@@ -47,7 +46,6 @@ func DefaultGeneral() GeneralSettings {
 	}
 }
 
-// DefaultAutomation returns the baseline automation settings.
 func DefaultAutomation() AutomationSettings {
 	return AutomationSettings{
 		NotificationsEnabled: true,

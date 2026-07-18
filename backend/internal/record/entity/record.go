@@ -2,15 +2,17 @@ package entity
 
 import "time"
 
-// Record is a single row of a dynamic module, stored generically in the records
-// table. All user-defined field values live in the Data JSONB column keyed by
-// each field's api_name.
+// Record is a single row of a dynamic module.
 type Record struct {
 	ID             string
 	OrganizationID string
 	ModuleID       string
-	Data           []byte // JSONB
+	Data           []byte
 	OwnerID        *string
+	AssignedTo     *string
+	TeamID         *string
+	DepartmentID   *string
+	Visibility     string
 	CreatedBy      *string
 	UpdatedBy      *string
 	CreatedAt      time.Time

@@ -43,15 +43,19 @@ type RelationRef struct {
 
 // RecordResponse is the API representation of a record.
 type RecordResponse struct {
-	ID        string                 `json:"id"`
-	ModuleID  string                 `json:"module_id"`
-	Data      map[string]any         `json:"data"`
-	OwnerID   *string                `json:"owner_id"`
-	CreatedBy *string                `json:"created_by"`
-	UpdatedBy *string                `json:"updated_by"`
-	Relations map[string]RelationRef `json:"relations,omitempty"`
-	CreatedAt time.Time              `json:"created_at"`
-	UpdatedAt time.Time              `json:"updated_at"`
+	ID           string                 `json:"id"`
+	ModuleID     string                 `json:"module_id"`
+	Data         map[string]any         `json:"data"`
+	OwnerID      *string                `json:"owner_id"`
+	AssignedTo   *string                `json:"assigned_to,omitempty"`
+	TeamID       *string                `json:"team_id,omitempty"`
+	DepartmentID *string                `json:"department_id,omitempty"`
+	Visibility   string                 `json:"visibility"`
+	CreatedBy    *string                `json:"created_by"`
+	UpdatedBy    *string                `json:"updated_by"`
+	Relations    map[string]RelationRef `json:"relations,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
 // ListResult is a paginated collection of records.
@@ -66,12 +70,20 @@ type ListResult struct {
 // CreateRecordRequest creates a record. Data is validated against the module's
 // field metadata + validation rules before it is persisted.
 type CreateRecordRequest struct {
-	Data    map[string]any `json:"data" validate:"required"`
-	OwnerID *string        `json:"owner_id"`
+	Data         map[string]any `json:"data" validate:"required"`
+	OwnerID      *string        `json:"owner_id"`
+	AssignedTo   *string        `json:"assigned_to"`
+	TeamID       *string        `json:"team_id"`
+	DepartmentID *string        `json:"department_id"`
+	Visibility   *string        `json:"visibility" validate:"omitempty,oneof=private owner manager hierarchy department organization team public"`
 }
 
 // UpdateRecordRequest replaces a record's data payload.
 type UpdateRecordRequest struct {
-	Data    map[string]any `json:"data" validate:"required"`
-	OwnerID *string        `json:"owner_id"`
+	Data         map[string]any `json:"data" validate:"required"`
+	OwnerID      *string        `json:"owner_id"`
+	AssignedTo   *string        `json:"assigned_to"`
+	TeamID       *string        `json:"team_id"`
+	DepartmentID *string        `json:"department_id"`
+	Visibility   *string        `json:"visibility" validate:"omitempty,oneof=private owner manager hierarchy department organization team public"`
 }

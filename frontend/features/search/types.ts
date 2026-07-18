@@ -1,24 +1,12 @@
-export interface SearchLead {
-    id: string;
-    name: string;
-    company: string;
-    status: string;
-}
-
-export interface SearchContact {
-    id: string;
-    name: string;
-    email: string;
-}
-
-export interface SearchTask {
-    id: string;
-    title: string;
-    status: string;
+export interface SearchHit {
+  id: string;
+  module_id: string;
+  module_label: string;
+  api_name: string;
+  title: string;
+  subtitle?: string;
 }
 
 export interface SearchResponse {
-    leads: SearchLead[];
-    contacts: SearchContact[];
-    tasks: SearchTask[];
+  results: SearchHit[];
 }

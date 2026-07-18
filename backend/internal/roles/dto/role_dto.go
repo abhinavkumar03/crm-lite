@@ -16,14 +16,16 @@ type PermissionResponse struct {
 
 // RoleSummary is the list-view representation of a role.
 type RoleSummary struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Slug        string    `json:"slug"`
-	Description *string   `json:"description"`
-	IsSystem    bool      `json:"is_system"`
-	MemberCount int       `json:"member_count"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Slug           string    `json:"slug"`
+	Description    *string   `json:"description"`
+	IsSystem       bool      `json:"is_system"`
+	HierarchyLevel int       `json:"hierarchy_level"`
+	ParentRoleID   *string   `json:"parent_role_id,omitempty"`
+	MemberCount    int       `json:"member_count"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // RoleDetail is a role plus its full permission matrix and ACL.
@@ -36,15 +38,17 @@ type RoleDetail struct {
 
 // CreateRoleRequest creates a custom (non-system) role.
 type CreateRoleRequest struct {
-	Name        string  `json:"name" validate:"required,max=100"`
-	Slug        string  `json:"slug" validate:"required,max=100"`
-	Description *string `json:"description"`
+	Name           string  `json:"name" validate:"required,max=100"`
+	Slug           string  `json:"slug" validate:"required,max=100"`
+	Description    *string `json:"description"`
+	HierarchyLevel *int    `json:"hierarchy_level" validate:"omitempty,min=0,max=1000"`
 }
 
 // UpdateRoleRequest is a partial update of a role's metadata.
 type UpdateRoleRequest struct {
-	Name        *string `json:"name" validate:"omitempty,max=100"`
-	Description *string `json:"description"`
+	Name           *string `json:"name" validate:"omitempty,max=100"`
+	Description    *string `json:"description"`
+	HierarchyLevel *int    `json:"hierarchy_level" validate:"omitempty,min=0,max=1000"`
 }
 
 // SetPermissionsRequest replaces the role's global permission grants.

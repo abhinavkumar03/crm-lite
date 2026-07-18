@@ -106,11 +106,16 @@ func (s *Service) Create(ctx context.Context, orgID string, req dto.CreateRoleRe
 		return nil, ErrSlugTaken
 	}
 
+	level := 80
+	if req.HierarchyLevel != nil {
+		level = *req.HierarchyLevel
+	}
 	role := &entity.Role{
 		OrganizationID: orgID,
 		Name:           strings.TrimSpace(req.Name),
 		Slug:           slug,
 		Description:    req.Description,
+		HierarchyLevel: level,
 	}
 	if err := s.repo.Create(ctx, role); err != nil {
 		return nil, err
@@ -131,6 +136,9 @@ func (s *Service) Update(ctx context.Context, orgID, roleID string, req dto.Upda
 	}
 	if req.Description != nil {
 		role.Description = req.Description
+	}
+	if req.HierarchyLevel != nil {
+		role.HierarchyLevel = *req.HierarchyLevel
 	}
 	if err := s.repo.Update(ctx, role); err != nil {
 		return nil, err
@@ -306,13 +314,15 @@ func (s *Service) detail(ctx context.Context, role *entity.Role) (*dto.RoleDetai
 
 func toSummary(role *entity.Role, count int) dto.RoleSummary {
 	return dto.RoleSummary{
-		ID:          role.ID,
-		Name:        role.Name,
-		Slug:        role.Slug,
-		Description: role.Description,
-		IsSystem:    role.IsSystem,
-		MemberCount: count,
-		CreatedAt:   role.CreatedAt,
-		UpdatedAt:   role.UpdatedAt,
+		ID:             role.ID,
+		Name:           role.Name,
+		Slug:           role.Slug,
+		Description:    role.Description,
+		IsSystem:       role.IsSystem,
+		HierarchyLevel: role.HierarchyLevel,
+		ParentRoleID:   role.ParentRoleID,
+		MemberCount:    count,
+		CreatedAt:      role.CreatedAt,
+		UpdatedAt:      role.UpdatedAt,
 	}
 }

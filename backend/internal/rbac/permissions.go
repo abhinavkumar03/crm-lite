@@ -17,9 +17,11 @@ const (
 	PermExportRun        = "export.run"
 	PermAutomationManage = "automation.manage"
 	PermValidationManage = "validation.manage"
-	PermSettingsManage   = "settings.manage"
-	PermUserManage       = "user.manage"
-	PermRoleManage       = "role.manage"
+	PermSettingsManage     = "settings.manage"
+	PermUserManage         = "user.manage"
+	PermRoleManage         = "role.manage"
+	PermOrganizationManage = "organization.manage"
+	PermAnalyticsView      = "analytics.view"
 )
 
 // ModuleAction is a CRUD verb checked against role_module_access.

@@ -266,49 +266,61 @@ SCHEMAS = {
             "total_pages": {"type": "integer"},
         },
     },
-    # ── Dashboard / Search ────────────────────────────────────────────────
+    # ── Dashboard / Search (dynamic modules) ──────────────────────────────
+    "ModuleCount": {
+        "type": "object",
+        "properties": {
+            "module_id": _UUID,
+            "api_name": {"type": "string"},
+            "plural_label": {"type": "string"},
+            "icon": {"type": "string"},
+            "color": {"type": "string"},
+            "record_count": {"type": "integer", "format": "int64"},
+        },
+    },
+    "RecentRecord": {
+        "type": "object",
+        "properties": {
+            "id": _UUID,
+            "module_id": _UUID,
+            "module_label": {"type": "string"},
+            "api_name": {"type": "string"},
+            "title": {"type": "string"},
+            "created_at": _DT,
+        },
+    },
     "DashboardResponse": {
         "type": "object",
         "properties": {
-            "total_leads": {"type": "integer", "format": "int64"},
-            "new_leads": {"type": "integer", "format": "int64"},
-            "contacted_leads": {"type": "integer", "format": "int64"},
-            "qualified_leads": {"type": "integer", "format": "int64"},
-            "won_leads": {"type": "integer", "format": "int64"},
-            "lost_leads": {"type": "integer", "format": "int64"},
-            "total_contacts": {"type": "integer", "format": "int64"},
-            "total_tasks": {"type": "integer", "format": "int64"},
-            "pending_tasks": {"type": "integer", "format": "int64"},
-            "in_progress_tasks": {"type": "integer", "format": "int64"},
-            "completed_tasks": {"type": "integer", "format": "int64"},
-            "recent_leads": {
+            "total_modules": {"type": "integer", "format": "int64"},
+            "total_records": {"type": "integer", "format": "int64"},
+            "module_counts": {
                 "type": "array",
-                "items": {"$ref": "#/components/schemas/LeadResponse"},
+                "items": {"$ref": "#/components/schemas/ModuleCount"},
             },
-            "upcoming_tasks": {
+            "recent_records": {
                 "type": "array",
-                "items": {"$ref": "#/components/schemas/TaskResponse"},
+                "items": {"$ref": "#/components/schemas/RecentRecord"},
             },
-            "recent_activities": {
-                "type": "array",
-                "items": {"$ref": "#/components/schemas/ActivityResponse"},
-            },
+        },
+    },
+    "SearchHit": {
+        "type": "object",
+        "properties": {
+            "id": _UUID,
+            "module_id": _UUID,
+            "module_label": {"type": "string"},
+            "api_name": {"type": "string"},
+            "title": {"type": "string"},
+            "subtitle": {"type": "string"},
         },
     },
     "SearchResponse": {
         "type": "object",
         "properties": {
-            "leads": {
+            "results": {
                 "type": "array",
-                "items": {"$ref": "#/components/schemas/LeadResponse"},
-            },
-            "contacts": {
-                "type": "array",
-                "items": {"$ref": "#/components/schemas/ContactResponse"},
-            },
-            "tasks": {
-                "type": "array",
-                "items": {"$ref": "#/components/schemas/TaskResponse"},
+                "items": {"$ref": "#/components/schemas/SearchHit"},
             },
         },
     },
