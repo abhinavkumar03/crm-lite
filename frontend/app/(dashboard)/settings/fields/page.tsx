@@ -10,6 +10,7 @@ import FormSelect from "@/components/common/form/FormSelect";
 import FormTextarea from "@/components/common/form/FormTextarea";
 import Toggle from "@/components/common/form/Toggle";
 
+import { useDemo } from "@/features/demo/DemoProvider";
 import {
   createField,
   deleteField,
@@ -88,6 +89,18 @@ const EMPTY: FormState = {
   lookup_module_id: "",
 };
 
+const TUTORIAL_FIELD: FormState = {
+  ...EMPTY,
+  api_name: "company_name",
+  label: "Company Name",
+  field_type: "text",
+  is_required: true,
+  is_visible: true,
+  is_searchable: true,
+  placeholder: "Acme Corp",
+  description: "Created during the interactive CRM walkthrough",
+};
+
 function intOrNull(v: string): number | null {
   const t = v.trim();
   if (!t) return null;
@@ -96,6 +109,11 @@ function intOrNull(v: string): number | null {
 }
 
 export default function FieldsSettingsPage() {
+  const demo = useDemo();
+  const tutorialCreate =
+    demo?.mode === "running" &&
+    demo.currentStep?.step_key === "create_field";
+
   const [modules, setModules] = useState<ModuleDetail[]>([]);
   const [moduleId, setModuleId] = useState("");
   const [fields, setFields] = useState<ModuleField[]>([]);
@@ -114,7 +132,12 @@ export default function FieldsSettingsPage() {
         const data = await listModules();
         if (!active) return;
         setModules(data);
-        if (data.length) setModuleId((cur) => cur || data[0].id);
+        const tutorial = data.find((m) => m.api_name === "tutorial_lead");
+        if (tutorialCreate && tutorial) {
+          setModuleId(tutorial.id);
+        } else if (data.length) {
+          setModuleId((cur) => cur || data[0].id);
+        }
       } catch {
         toast.error("Failed to load modules");
       }
@@ -122,7 +145,7 @@ export default function FieldsSettingsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [tutorialCreate]);
 
   useEffect(() => {
     if (!moduleId) return;
@@ -147,7 +170,7 @@ export default function FieldsSettingsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm(EMPTY);
+    setForm(tutorialCreate ? TUTORIAL_FIELD : EMPTY);
     setModalOpen(true);
   }
 
@@ -312,9 +335,12 @@ export default function FieldsSettingsPage() {
           </div>
           <button
             type="button"
+            data-tutorial-action="add-field"
             onClick={openCreate}
             disabled={!moduleId}
-            className="inline-flex h-[46px] items-center gap-2 rounded-full bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className={`inline-flex h-[46px] items-center gap-2 rounded-full bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 ${
+              tutorialCreate ? "ring-4 ring-emerald-300 ring-offset-2" : ""
+            }`}
           >
             <Plus className="h-4 w-4" />
             New field
@@ -425,14 +451,27 @@ export default function FieldsSettingsPage() {
         onClose={() => setModalOpen(false)}
       >
         <div className="space-y-5">
+          {tutorialCreate && !editing && (
+            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Tutorial values are pre-filled (<strong>company_name</strong>).
+              Scroll if needed, then click <strong>Create field</strong>.
+            </p>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <FormInput
               label="API name"
               placeholder="amount_due"
               value={form.api_name}
               requiredMark={!editing}
-              disabled={!!editing}
-              helperText={editing ? "Immutable." : "Unique within the module."}
+              disabled={!!editing || (tutorialCreate && !editing)}
+              helperText={
+                editing
+                  ? "Immutable."
+                  : tutorialCreate
+                    ? "Locked for the walkthrough (company_name)."
+                    : "Unique within the module."
+              }
               onChange={(e) => patch({ api_name: e.target.value })}
             />
             <FormInput
@@ -440,6 +479,7 @@ export default function FieldsSettingsPage() {
               placeholder="Amount due"
               value={form.label}
               requiredMark
+              disabled={tutorialCreate && !editing}
               onChange={(e) => patch({ label: e.target.value })}
             />
           </div>
@@ -448,7 +488,7 @@ export default function FieldsSettingsPage() {
             <FormSelect
               label="Field type"
               value={form.field_type}
-              disabled={!!editing}
+              disabled={!!editing || (tutorialCreate && !editing)}
               helperText={editing ? "Immutable." : undefined}
               onChange={(e) =>
                 patch({ field_type: e.target.value as FieldType })
@@ -461,7 +501,7 @@ export default function FieldsSettingsPage() {
               ))}
             </FormSelect>
 
-            {showLookup && (
+            {showLookup && !(tutorialCreate && !editing) && (
               <FormSelect
                 label="Lookup module"
                 value={form.lookup_module_id}
@@ -477,140 +517,157 @@ export default function FieldsSettingsPage() {
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormInput
-              label="Placeholder"
-              value={form.placeholder}
-              onChange={(e) => patch({ placeholder: e.target.value })}
-            />
-            <FormInput
-              label="Default value"
-              value={form.default_value}
-              onChange={(e) => patch({ default_value: e.target.value })}
-            />
-          </div>
-
-          <FormTextarea
-            label="Help text"
-            rows={2}
-            value={form.help_text}
-            onChange={(e) => patch({ help_text: e.target.value })}
-          />
-
-          {showOptions && (
-            <div className="space-y-2 rounded-2xl border border-slate-200 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Options</p>
-                <button
-                  type="button"
-                  onClick={addOption}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add
-                </button>
+          {/* Full editor for normal use; walkthrough keeps a short essential form. */}
+          {!(tutorialCreate && !editing) && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="Placeholder"
+                  value={form.placeholder}
+                  onChange={(e) => patch({ placeholder: e.target.value })}
+                />
+                <FormInput
+                  label="Default value"
+                  value={form.default_value}
+                  onChange={(e) => patch({ default_value: e.target.value })}
+                />
               </div>
-              {form.options.length === 0 && (
-                <p className="text-xs text-slate-400">No options yet.</p>
-              )}
-              {form.options.map((o, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    placeholder="Label"
-                    value={o.label}
-                    onChange={(e) => updateOption(i, { label: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                  <input
-                    placeholder="Value"
-                    value={o.value}
-                    onChange={(e) => updateOption(i, { value: e.target.value })}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeOption(i)}
-                    className="rounded-lg p-2 text-red-500 hover:bg-red-50"
-                    aria-label="Remove option"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+
+              <FormTextarea
+                label="Help text"
+                rows={2}
+                value={form.help_text}
+                onChange={(e) => patch({ help_text: e.target.value })}
+              />
+
+              {showOptions && (
+                <div className="space-y-2 rounded-2xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-700">Options</p>
+                    <button
+                      type="button"
+                      onClick={addOption}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </button>
+                  </div>
+                  {form.options.length === 0 && (
+                    <p className="text-xs text-slate-400">No options yet.</p>
+                  )}
+                  {form.options.map((o, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        placeholder="Label"
+                        value={o.label}
+                        onChange={(e) =>
+                          updateOption(i, { label: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                      />
+                      <input
+                        placeholder="Value"
+                        value={o.value}
+                        onChange={(e) =>
+                          updateOption(i, { value: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeOption(i)}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                        aria-label="Remove option"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="Min length"
+                  type="number"
+                  value={form.min_length}
+                  onChange={(e) => patch({ min_length: e.target.value })}
+                />
+                <FormInput
+                  label="Max length"
+                  type="number"
+                  value={form.max_length}
+                  onChange={(e) => patch({ max_length: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="Regex pattern"
+                  value={form.regex}
+                  onChange={(e) => patch({ regex: e.target.value })}
+                />
+                <FormInput
+                  label="Validation message"
+                  value={form.validation_message}
+                  onChange={(e) => patch({ validation_message: e.target.value })}
+                />
+              </div>
+            </>
           )}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormInput
-              label="Min length"
-              type="number"
-              value={form.min_length}
-              onChange={(e) => patch({ min_length: e.target.value })}
-            />
-            <FormInput
-              label="Max length"
-              type="number"
-              value={form.max_length}
-              onChange={(e) => patch({ max_length: e.target.value })}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormInput
-              label="Regex pattern"
-              value={form.regex}
-              onChange={(e) => patch({ regex: e.target.value })}
-            />
-            <FormInput
-              label="Validation message"
-              value={form.validation_message}
-              onChange={(e) => patch({ validation_message: e.target.value })}
-            />
-          </div>
 
           <div className="grid gap-3 rounded-2xl border border-slate-200 p-4 sm:grid-cols-2">
             <Toggle
               label="Required"
               checked={form.is_required}
+              disabled={tutorialCreate && !editing}
               onChange={(v) => patch({ is_required: v })}
             />
-            <Toggle
-              label="Unique"
-              checked={form.is_unique}
-              onChange={(v) => patch({ is_unique: v })}
-            />
-            <Toggle
-              label="Read only"
-              checked={form.is_read_only}
-              onChange={(v) => patch({ is_read_only: v })}
-            />
-            <Toggle
-              label="Visible"
-              checked={form.is_visible}
-              onChange={(v) => patch({ is_visible: v })}
-            />
-            <Toggle
-              label="Searchable"
-              checked={form.is_searchable}
-              onChange={(v) => patch({ is_searchable: v })}
-            />
-            <Toggle
-              label="Filterable"
-              checked={form.is_filterable}
-              onChange={(v) => patch({ is_filterable: v })}
-            />
+            {!(tutorialCreate && !editing) && (
+              <>
+                <Toggle
+                  label="Unique"
+                  checked={form.is_unique}
+                  onChange={(v) => patch({ is_unique: v })}
+                />
+                <Toggle
+                  label="Read only"
+                  checked={form.is_read_only}
+                  onChange={(v) => patch({ is_read_only: v })}
+                />
+                <Toggle
+                  label="Visible"
+                  checked={form.is_visible}
+                  onChange={(v) => patch({ is_visible: v })}
+                />
+                <Toggle
+                  label="Searchable"
+                  checked={form.is_searchable}
+                  onChange={(v) => patch({ is_searchable: v })}
+                />
+                <Toggle
+                  label="Filterable"
+                  checked={form.is_filterable}
+                  onChange={(v) => patch({ is_filterable: v })}
+                />
+              </>
+            )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
+            {!tutorialCreate && (
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
-              className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
+              data-tutorial-action="submit-field"
               onClick={handleSubmit}
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"

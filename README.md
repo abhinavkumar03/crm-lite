@@ -22,7 +22,7 @@ metadata-driven module engine.
 - Record visibility engine (owner / manager / hierarchy / org / team / …)
 - Metadata engine: modules, fields, validation, views, dynamic records
 - Import / export (CSV & XLSX) via background workers
-- Notifications, settings center, guided tour
+- Notifications, settings center, guided tour + interactive sandbox tutorial (Explore CRM)
 - OpenAPI 3 + Swagger UI at `/api/v1/docs`
 - Redis caching, composite indexes, bulk import optimizations
 

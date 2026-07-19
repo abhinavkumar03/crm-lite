@@ -1,9 +1,10 @@
-// The guided-tour step catalogue. Steps live entirely on the client; the backend
-// only persists lightweight progress (see features/tour/api.ts). Each step
-// optionally highlights a DOM element (matched by a stable `data-tour` selector)
-// and/or navigates to a route before it is shown.
+// Client fallback catalogue for the orientation tour. Prefer metadata workflow
+// `crm_orientation_tour` via loadOrientationSteps(); progress still uses
+// tour_progress (see features/tour/api.ts).
 
-export type TourPlacement = "top" | "bottom" | "left" | "right" | "center";
+import type { GuidedPlacement } from "@/features/guided";
+
+export type TourPlacement = GuidedPlacement;
 
 export interface TourStep {
   // Stable identifier persisted in `completed_steps`. Never reorder-sensitive.

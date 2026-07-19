@@ -13,6 +13,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/attachment"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/auth"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/dashboard"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/demo"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/docs"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/exporter"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field"
@@ -113,6 +114,7 @@ func main() {
 	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	tourModule := tour.NewModule(db, authMW, orgMiddleware)
+	demoModule := demo.NewModule(db, tenantResolver, authMW)
 	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	rolesModule := roles.NewModule(db, appCache, authMW, orgMiddleware, rbacLoad, guard)
 	dashboardModule := dashboard.NewModule(db, appCache, authMW, orgMiddleware)
@@ -143,6 +145,7 @@ func main() {
 		exportEngine,
 		notificationModule,
 		tourModule,
+		demoModule,
 		settingsModule,
 		rolesModule,
 		dashboardModule,

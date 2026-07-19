@@ -15,10 +15,12 @@ import {
   CircleHelp,
   ChevronRight,
   Boxes,
+  Compass,
   type LucideIcon,
 } from "lucide-react";
 
 import api from "@/services/api";
+import { useDemo } from "@/features/demo/DemoProvider";
 
 type NavItem = {
   name: string;
@@ -88,6 +90,35 @@ type Props = {
   open: boolean;
   onClose: () => void;
 };
+
+function ExploreCrmButton({ onClose }: { onClose: () => void }) {
+  const demo = useDemo();
+  if (!demo) return null;
+  return (
+    <button
+      type="button"
+      data-demo="sidebar-explore"
+      onClick={() => {
+        onClose();
+        demo.openLauncher();
+      }}
+      className="
+        mt-6 flex w-full items-center gap-3 rounded-2xl
+        border border-emerald-200 bg-emerald-50 px-4 py-3
+        text-left text-sm font-semibold text-emerald-800
+        transition hover:bg-emerald-100
+      "
+    >
+      <Compass size={18} />
+      <span>
+        Explore CRM
+        <span className="mt-0.5 block text-xs font-normal text-emerald-700/80">
+          Interactive sandbox tutorial
+        </span>
+      </span>
+    </button>
+  );
+}
 
 function NavLink({
   name,
@@ -300,6 +331,8 @@ export default function Sidebar({ open, onClose }: Props) {
               </nav>
             </>
           )}
+
+          <ExploreCrmButton onClose={onClose} />
         </div>
       </aside>
     </>

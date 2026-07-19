@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -52,8 +52,17 @@ import {
   WorkspaceAttachment,
   WorkspaceNote,
 } from "@/features/workspace/types";
+import { useDemo } from "@/features/demo/DemoProvider";
 
 type Tab = "overview" | "notes" | "attachments" | "timeline" | "related";
+
+const VALID_TABS: Tab[] = [
+  "overview",
+  "notes",
+  "attachments",
+  "timeline",
+  "related",
+];
 
 function recordTitle(rec: RecordResponse, fields: ModuleField[]): string {
   const preferred = fields.find(
@@ -87,6 +96,12 @@ export default function RecordWorkspacePage() {
   const moduleId = params.moduleId;
   const recordId = params.recordId;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const demo = useDemo();
+  const tutorialNote =
+    demo?.mode === "running" && demo.currentStep?.step_key === "add_note";
+  const tutorialTimeline =
+    demo?.mode === "running" && demo.currentStep?.step_key === "timeline";
 
   const [module, setModule] = useState<ModuleSummary | null>(null);
   const [fields, setFields] = useState<ModuleField[]>([]);
@@ -107,6 +122,27 @@ export default function RecordWorkspacePage() {
   const [relatedRows, setRelatedRows] = useState<
     Record<string, RecordResponse[]>
   >({});
+
+  // Deep-link / demo navigation: ?tab=notes|timeline|…
+  useEffect(() => {
+    const raw = searchParams.get("tab");
+    if (raw && VALID_TABS.includes(raw as Tab)) {
+      setTab(raw as Tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (tutorialNote) {
+      setTab("notes");
+      setNoteBody((prev) =>
+        prev.trim()
+          ? prev
+          : "Followed up with the prospect — demo walkthrough note."
+      );
+    } else if (tutorialTimeline) {
+      setTab("timeline");
+    }
+  }, [tutorialNote, tutorialTimeline]);
 
   const reloadRecord = useCallback(async () => {
     const rec = await getRecord(moduleId, recordId, true);
@@ -251,6 +287,9 @@ export default function RecordWorkspacePage() {
       setNoteBody("");
       await reloadSide();
       toast.success("Note added");
+      if (tutorialNote) {
+        await demo?.validate({ silent: true });
+      }
     } catch {
       toast.error("Failed to add note");
     }
@@ -342,6 +381,13 @@ export default function RecordWorkspacePage() {
           <button
             key={t.id}
             type="button"
+            data-tutorial-action={
+              t.id === "notes"
+                ? "open-notes-tab"
+                : t.id === "timeline"
+                  ? "open-timeline-tab"
+                  : undefined
+            }
             onClick={() => setTab(t.id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               tab === t.id
@@ -425,17 +471,28 @@ export default function RecordWorkspacePage() {
       )}
 
       {tab === "notes" && (
-        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div
+          className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          data-tutorial-surface="add-note"
+        >
+          {tutorialNote && (
+            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              A follow-up note is pre-filled. Click <strong>Add</strong> to
+              continue the walkthrough.
+            </p>
+          )}
           <div className="flex gap-2">
             <textarea
               value={noteBody}
               onChange={(e) => setNoteBody(e.target.value)}
               rows={3}
               placeholder="Write a note…"
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              readOnly={tutorialNote}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 read-only:bg-slate-50"
             />
             <button
               type="button"
+              data-tutorial-action="add-note"
               onClick={handleAddNote}
               className="inline-flex h-fit items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white"
             >

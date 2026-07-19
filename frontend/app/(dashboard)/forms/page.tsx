@@ -14,6 +14,7 @@ import FormSelect from "@/components/common/form/FormSelect";
 
 import DynamicForm from "@/features/metadata/components/DynamicForm";
 
+import { useDemo } from "@/features/demo/DemoProvider";
 import {
   createRecord,
   getModuleFields,
@@ -46,6 +47,11 @@ export default function DynamicFormsPage() {
 }
 
 function DynamicFormsInner() {
+  const demo = useDemo();
+  const tutorialCreate =
+    demo?.mode === "running" &&
+    demo.currentStep?.step_key === "create_record";
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const moduleFromQuery = searchParams.get("module") ?? "";
@@ -70,11 +76,19 @@ function DynamicFormsInner() {
         const all = await getModules();
         const dynamic = all.filter((m) => m.storage_strategy === "dynamic");
         setModules(dynamic);
+        if (tutorialCreate) {
+          const tutorial = dynamic.find((m) => m.api_name === "tutorial_lead");
+          if (tutorial) {
+            setModuleId(tutorial.id);
+            const params = new URLSearchParams({ module: tutorial.id });
+            router.replace(`/forms?${params.toString()}`);
+          }
+        }
       } catch {
         toast.error("Failed to load modules");
       }
     })();
-  }, []);
+  }, [tutorialCreate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (moduleFromQuery && moduleFromQuery !== moduleId) {
@@ -137,6 +151,10 @@ function DynamicFormsInner() {
       setServerErrors({});
       setPreview({});
       toast.success("Record created");
+      if (tutorialCreate) {
+        // Stay briefly so demo validate can see the new row, then continue.
+        await demo?.validate({ silent: true });
+      }
       router.push(`/tables?module=${moduleId}`);
     } catch (err: unknown) {
       const axiosErr = err as {
@@ -158,20 +176,49 @@ function DynamicFormsInner() {
 
   const selectedModule = modules.find((m) => m.id === moduleId);
 
+  const tutorialInitialValues = useMemo<FormValues>(() => {
+    if (!tutorialCreate) return {};
+    const values: FormValues = {};
+    for (const f of fields) {
+      if (f.api_name === "company_name") {
+        values.company_name = "Acme Tutorial Co";
+      } else if (f.is_required && f.field_type === "text") {
+        values[f.api_name] = "Tutorial";
+      } else if (f.is_required && f.field_type === "email") {
+        values[f.api_name] = "demo@example.com";
+      } else if (f.is_required && (f.field_type === "number" || f.field_type === "currency")) {
+        values[f.api_name] = 1;
+      }
+    }
+    return values;
+  }, [tutorialCreate, fields]);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tutorial-surface="create-record">
       <PageHeader
         badge="Metadata Engine"
         title="Dynamic Forms"
         description="Create records with forms generated from module field metadata and backend validation."
       />
 
+      {tutorialCreate && (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Tutorial Lead is selected and <strong>company_name</strong> is
+          pre-filled. Click <strong>Create record</strong> to continue.
+        </p>
+      )}
+
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-5 md:grid-cols-2">
           <FormSelect
             label="Module"
-            helperText="Only dynamic modules are listed."
+            helperText={
+              tutorialCreate
+                ? "Locked to Tutorial Lead for the walkthrough."
+                : "Only dynamic modules are listed."
+            }
             value={moduleId}
+            disabled={tutorialCreate}
             onChange={(e) => selectModule(e.target.value)}
           >
             <option value="">Select a module...</option>
@@ -182,15 +229,17 @@ function DynamicFormsInner() {
             ))}
           </FormSelect>
 
-          <label className="flex items-end gap-3 pb-3 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={conditionalDemo}
-              onChange={(e) => setConditionalDemo(e.target.checked)}
-              className="h-4 w-4 accent-emerald-500"
-            />
-            Conditional demo: reveal fields after the first is filled
-          </label>
+          {!tutorialCreate && (
+            <label className="flex items-end gap-3 pb-3 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={conditionalDemo}
+                onChange={(e) => setConditionalDemo(e.target.checked)}
+                className="h-4 w-4 accent-emerald-500"
+              />
+              Conditional demo: reveal fields after the first is filled
+            </label>
+          )}
         </div>
       </div>
 
@@ -203,10 +252,11 @@ function DynamicFormsInner() {
       {!isLoading && moduleId && schema && fields.length > 0 && (
         <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
           <DynamicForm
-            key={`${moduleId}-${conditionalDemo}`}
+            key={`${moduleId}-${conditionalDemo}-${tutorialCreate ? "tut" : "std"}`}
             fields={fields}
             schema={schema}
             submitText={submitting ? "Creating..." : "Create record"}
+            initialValues={tutorialInitialValues}
             visibilityRules={visibilityRules}
             sectionTitle={selectedModule?.plural_label ?? "Record"}
             sectionDescription="Rendered dynamically from field metadata."
