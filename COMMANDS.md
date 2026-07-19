@@ -756,12 +756,14 @@ Implementation:
 ## 18. Guided CRM Tour (Onboarding)
 
 An interactive, spotlight-style product tour that walks a new user through the
-workspace. The **step catalogue lives on the client**; the backend persists only
-lightweight **per-user progress** so the tour **resumes across devices/sessions**
-and can be **restarted** on demand. Progress is scoped to
-`(organization, user, tour_key)` — `tour_key` leaves room for feature-specific
-tours later; the app ships one, `app`. Organization-scoped. Requires migration
-`000007` (`make migrate-up`).
+workspace (orientation only — not the hands-on sandbox). Prefer **Explore CRM**
+(§26) for the interactive tutorial. The tour **step catalogue** can load from
+workflow `crm_orientation_tour` when present, with a client fallback in
+`features/tour/steps.ts`. The backend persists lightweight **per-user progress**
+so the tour **resumes** and can be **restarted**. Progress is scoped to
+`(organization, user, tour_key)`; the app ships `app`. Organization-scoped.
+Requires migration `000007` (`make migrate-up`). Spotlight UI is shared via
+`frontend/features/guided/` (block mode — no click-through).
 
 ### Tour API
 
@@ -1172,4 +1174,78 @@ curl -X POST "http://localhost:8080/api/v1/modules/$MODULE_ID/records/$RECORD_ID
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"body":"Followed up with customer"}'
 ```
+
+---
+
+## 26. Interactive Demo Engine (sandbox tutorial)
+
+A **metadata-driven workflow engine** that teaches the CRM through real actions
+inside an isolated sandbox organization. Unlike the spotlight tour (§18), steps
+are stored in the database, progress is backend-validated, and every demo resource
+is tagged for cleanup.
+
+**Product split:** **Take a tour** (§18) = 60s orientation (spotlight + Next).
+**Explore CRM** = this engine (sandbox + required actions + validators).
+Shared spotlight primitives live in `frontend/features/guided/` (Tour = block mode,
+Demo = click-through guide mode). Migrations: **`000013`** (engine), **`000014`**
+(guided metadata), **`000015`** (curriculum). Apply with `cd backend && make migrate-up`.
+
+### Demo API
+
+Base URL: `http://localhost:8080/api/v1`. Auth required on all routes.
+
+| Method & path | Feature | Use case |
+| --- | --- | --- |
+| `GET /demo/catalog` | Workflow metadata (duration, features). | Pre-start dashboard. |
+| `GET /demo/workflows/:key` | Workflow + step definitions (no session). | Orientation sync / future tutorials. |
+| `GET /demo/session` | Active or completed-awaiting-cleanup session (or `null`). | Resume / cleanup prompt. |
+| `POST /demo/start` | Provision sandbox org, seed Product Demo module, switch tenant, create session. | Launch walkthrough. |
+| `POST /demo/restart` | Cleanup previous sandbox, then start fresh. | Restart anytime. |
+| `POST /demo/sessions/:id/validate` | Run step validator. Body: `step_key`, optional `route`, optional `client_event`. | Advance only after real action. |
+| `POST /demo/sessions/:id/skip` | Skip if `is_skippable`. | Soft steps. |
+| `POST /demo/sessions/:id/complete` | Mark completed (all required steps must be done). | Finish screen. |
+| `POST /demo/sessions/:id/cleanup` | Body `{ "keep_data": true\|false }` — keep stays on sandbox; delete restores previous org. | Keep / delete demo data. |
+| `POST /demo/sessions/:id/events` | Log `waiting` / `ui_click` / `abandoned` without advancing. | Analytics + abandon. |
+
+```bash
+# Catalog + start
+curl http://localhost:8080/api/v1/demo/catalog -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:8080/api/v1/demo/start -H "Authorization: Bearer $TOKEN"
+# => sandbox org created; active_organization_id switched
+
+# Progress
+curl http://localhost:8080/api/v1/demo/session -H "Authorization: Bearer $TOKEN"
+
+# Validate current step (example: confirm dashboard visit)
+curl -X POST "http://localhost:8080/api/v1/demo/sessions/$SESSION_ID/validate" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"step_key":"dashboard","route":"/dashboard"}'
+
+# Cleanup (delete sandbox)
+curl -X POST "http://localhost:8080/api/v1/demo/sessions/$SESSION_ID/cleanup" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"keep_data":false}'
+```
+
+### Architecture
+
+| Piece | Path | Responsibility |
+| --- | --- | --- |
+| Workflow metadata | `demo_workflows` / `demo_workflow_steps` | Step catalogue as data (new tutorials = new rows). |
+| Session + progress | `demo_sessions` / `demo_step_progress` | State machine: locked → active → completed/skipped/failed. |
+| Resources + events | `demo_resources` / `demo_events` | Cleanup inventory + analytics trail. |
+| Engine | `backend/internal/demo/` | Start / validate / skip / cleanup; sandbox via org bootstrap. |
+| Guided UX | `frontend/features/guided/` | Shared spotlight + focus (Tour block / Demo guide). |
+| UI | `frontend/features/demo/` | Launcher, catalog, resume, guide overlay, instruction panel, cleanup. |
+
+**Start behaviour:** creates org `CRM Interactive Demo`, seeds module
+`product_demo`, switches `active_organization_id`, stores
+`previous_organization_id` for restore. **Cleanup:** `keep_data:true` keeps you
+on the sandbox; `keep_data:false` deletes the sandbox org and restores the
+previous tenant.
+
+Entry points: floating **Explore CRM** button, Sidebar, User menu, Dashboard
+Quick Actions. Required actions (create module/field/record/note) cannot be
+skipped — the API rejects skip and validate until success criteria pass.
+Mentor UX auto-navigates, spotlights targets, and polls validate after actions.
 

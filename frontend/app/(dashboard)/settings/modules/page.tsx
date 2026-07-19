@@ -10,6 +10,7 @@ import FormSelect from "@/components/common/form/FormSelect";
 import FormTextarea from "@/components/common/form/FormTextarea";
 import Toggle from "@/components/common/form/Toggle";
 
+import { useDemo } from "@/features/demo/DemoProvider";
 import {
   createModule,
   deleteModule,
@@ -44,7 +45,24 @@ const EMPTY: FormState = {
   default_sort_order: "desc",
 };
 
+const TUTORIAL_MODULE: FormState = {
+  api_name: "tutorial_lead",
+  singular_label: "Tutorial Lead",
+  plural_label: "Tutorial Leads",
+  description: "Created during the interactive CRM walkthrough",
+  icon: "Target",
+  color: "#10b981",
+  is_visible_sidebar: true,
+  default_sort_field: "created_at",
+  default_sort_order: "desc",
+};
+
 export default function ModulesSettingsPage() {
+  const demo = useDemo();
+  const tutorialCreate =
+    demo?.mode === "running" &&
+    demo.currentStep?.step_key === "create_module";
+
   const [modules, setModules] = useState<ModuleDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
@@ -73,7 +91,7 @@ export default function ModulesSettingsPage() {
 
   function openCreate() {
     setEditing(null);
-    setForm(EMPTY);
+    setForm(tutorialCreate ? TUTORIAL_MODULE : EMPTY);
     setModalOpen(true);
   }
 
@@ -189,11 +207,14 @@ export default function ModulesSettingsPage() {
           </button>
           <button
             type="button"
+            data-tutorial-action="create-module"
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
+            className={`inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 ${
+              tutorialCreate ? "ring-4 ring-emerald-300 ring-offset-2" : ""
+            }`}
           >
             <Plus className="h-4 w-4" />
-            New module
+            Create module
           </button>
         </div>
       </div>
@@ -319,17 +340,26 @@ export default function ModulesSettingsPage() {
         onClose={() => setModalOpen(false)}
       >
         <div className="space-y-5">
+          {tutorialCreate && !editing && (
+            <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Tutorial values are pre-filled. Click <strong>Create module</strong>{" "}
+              to continue.
+            </p>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <FormInput
               label="API name"
               placeholder="invoices"
               value={form.api_name}
               requiredMark={!editing}
-              disabled={!!editing}
+              disabled={!!editing || (tutorialCreate && !editing)}
               helperText={
                 editing
                   ? "Immutable — changing it would orphan stored data."
-                  : "Lowercase, unique per organization."
+                  : tutorialCreate
+                    ? "Locked for the walkthrough (tutorial_lead)."
+                    : "Lowercase, unique per organization."
               }
               onChange={(e) => patch({ api_name: e.target.value })}
             />
@@ -338,12 +368,14 @@ export default function ModulesSettingsPage() {
                 label="Icon"
                 placeholder="FileText"
                 value={form.icon}
+                disabled={tutorialCreate && !editing}
                 onChange={(e) => patch({ icon: e.target.value })}
               />
               <FormInput
                 label="Color"
                 placeholder="#10b981"
                 value={form.color}
+                disabled={tutorialCreate && !editing}
                 onChange={(e) => patch({ color: e.target.value })}
               />
             </div>
@@ -355,6 +387,7 @@ export default function ModulesSettingsPage() {
               placeholder="Invoice"
               value={form.singular_label}
               requiredMark
+              disabled={tutorialCreate && !editing}
               onChange={(e) => patch({ singular_label: e.target.value })}
             />
             <FormInput
@@ -362,6 +395,7 @@ export default function ModulesSettingsPage() {
               placeholder="Invoices"
               value={form.plural_label}
               requiredMark
+              disabled={tutorialCreate && !editing}
               onChange={(e) => patch({ plural_label: e.target.value })}
             />
           </div>
@@ -370,6 +404,7 @@ export default function ModulesSettingsPage() {
             label="Description"
             rows={2}
             value={form.description}
+            disabled={tutorialCreate && !editing}
             onChange={(e) => patch({ description: e.target.value })}
           />
 
@@ -377,11 +412,13 @@ export default function ModulesSettingsPage() {
             <FormInput
               label="Default sort field"
               value={form.default_sort_field}
+              disabled={tutorialCreate && !editing}
               onChange={(e) => patch({ default_sort_field: e.target.value })}
             />
             <FormSelect
               label="Default sort order"
               value={form.default_sort_order}
+              disabled={tutorialCreate && !editing}
               onChange={(e) =>
                 patch({ default_sort_order: e.target.value as "asc" | "desc" })
               }
@@ -396,20 +433,24 @@ export default function ModulesSettingsPage() {
               label="Show in sidebar"
               description="Display this module in the main navigation."
               checked={form.is_visible_sidebar}
+              disabled={tutorialCreate && !editing}
               onChange={(v) => patch({ is_visible_sidebar: v })}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
+            {!tutorialCreate && (
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
-              className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
+              data-tutorial-action="submit-module"
               onClick={handleSubmit}
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"

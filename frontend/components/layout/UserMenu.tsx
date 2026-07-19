@@ -15,6 +15,7 @@ import {
   LogOut,
   LayoutDashboard,
   Compass,
+  Map,
   CircleHelp,
   Building2,
   Check,
@@ -22,6 +23,7 @@ import {
 import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
+import { useDemo } from "@/features/demo/DemoProvider";
 import { useTour } from "@/features/tour/TourProvider";
 import {
   listMyOrganizations,
@@ -41,6 +43,7 @@ export default function UserMenu({
   const auth = useAuth();
 
   const tour = useTour();
+  const demo = useDemo();
 
   const router = useRouter();
 
@@ -353,6 +356,31 @@ export default function UserMenu({
         </Link>
     )}
 
+    {demo && (
+        <button
+            onClick={() => {
+                setOpen(false);
+                demo.openLauncher();
+            }}
+            className="
+            flex
+            w-full
+            items-center
+            gap-3
+            rounded-2xl
+            px-4
+            py-3
+            text-slate-700
+            transition
+            hover:bg-slate-100
+            "
+        >
+            <Compass size={18} />
+
+            Explore CRM
+        </button>
+    )}
+
     {tour && (
         <button
             onClick={() => {
@@ -372,7 +400,7 @@ export default function UserMenu({
             hover:bg-slate-100
             "
         >
-            <Compass size={18} />
+            <Map size={18} />
 
             Take a tour
         </button>

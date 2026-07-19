@@ -36,6 +36,7 @@ export default function FormActions({
 
       <button
         type="submit"
+        data-tutorial-action="create-record"
         disabled={loading}
         className="
           rounded-2xl

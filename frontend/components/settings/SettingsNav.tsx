@@ -22,6 +22,7 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   description: string;
+  tutorialAction?: string;
 };
 
 const items: NavItem[] = [
@@ -36,18 +37,21 @@ const items: NavItem[] = [
     href: "/settings/modules",
     icon: Boxes,
     description: "Create & manage object types",
+    tutorialAction: "open-modules",
   },
   {
     name: "Fields",
     href: "/settings/fields",
     icon: FormInput,
     description: "Define fields per module",
+    tutorialAction: "open-fields",
   },
   {
     name: "Validation",
     href: "/settings/validation",
     icon: ShieldCheck,
     description: "Data-quality rules",
+    tutorialAction: "open-validation",
   },
   {
     name: "Members",
@@ -60,6 +64,7 @@ const items: NavItem[] = [
     href: "/settings/roles",
     icon: Shield,
     description: "Permission matrix & ACL",
+    tutorialAction: "open-roles",
   },
   {
     name: "Departments",
@@ -78,6 +83,7 @@ const items: NavItem[] = [
     href: "/settings/automation",
     icon: Zap,
     description: "Notification behaviour",
+    tutorialAction: "open-automation",
   },
   {
     name: "Data",
@@ -103,6 +109,7 @@ export default function SettingsNav() {
           <Link
             key={item.href}
             href={item.href}
+            data-tutorial-action={item.tutorialAction}
             className={`group flex items-start gap-3 rounded-2xl border px-4 py-3 transition ${
               active
                 ? "border-emerald-200 bg-emerald-50"

@@ -15,7 +15,10 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/context/AuthContext";
 
+import { getActiveDemoSession } from "@/features/demo/api";
+
 import { getTourProgress, restartTour, saveTourProgress } from "./api";
+import { loadOrientationSteps } from "./loadOrientationSteps";
 import { APP_TOUR_KEY, APP_TOUR_STEPS, TourStep } from "./steps";
 import { UpdateProgressPayload } from "./types";
 
@@ -32,6 +35,8 @@ interface TourContextValue {
   finish: () => void;
   start: () => void;
   restart: () => void;
+  /** Hide overlay without persisting skipped (used when Demo takes over). */
+  pause: () => void;
 }
 
 const TourContext = createContext<TourContextValue | null>(null);
@@ -41,7 +46,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const steps = APP_TOUR_STEPS;
+  const [steps, setSteps] = useState<TourStep[]>(APP_TOUR_STEPS);
   const totalSteps = steps.length;
 
   const [active, setActive] = useState(false);
@@ -59,19 +64,29 @@ export function TourProvider({ children }: { children: ReactNode }) {
     [steps]
   );
 
-  // Load persisted progress once, after authentication. Auto-resume only for
-  // users who have not completed or skipped the tour.
+  // Load orientation catalogue (engine metadata with client fallback) + progress.
   useEffect(() => {
     if (!auth.token || loadedRef.current) return;
     loadedRef.current = true;
 
     (async () => {
       try {
+        const catalogue = await loadOrientationSteps();
+        setSteps(catalogue);
+
+        const demoSession = await getActiveDemoSession().catch(() => null);
+        if (
+          demoSession &&
+          (demoSession.status === "active" || demoSession.status === "completed")
+        ) {
+          return;
+        }
+
         const progress = await getTourProgress(APP_TOUR_KEY);
         if (progress.status === "active") {
           const idx = Math.min(
             Math.max(progress.current_step, 0),
-            totalSteps - 1
+            Math.max(catalogue.length - 1, 0)
           );
           setStepIndex(idx);
           setActive(true);
@@ -80,7 +95,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         // Ignore: the tour is a progressive enhancement.
       }
     })();
-  }, [auth.token, totalSteps]);
+  }, [auth.token]);
 
   // Navigate to a step's route (if any) when it becomes active.
   useEffect(() => {
@@ -150,6 +165,10 @@ export function TourProvider({ children }: { children: ReactNode }) {
     restartTour(APP_TOUR_KEY).catch(() => {});
   }, []);
 
+  const pause = useCallback(() => {
+    setActive(false);
+  }, []);
+
   const value = useMemo<TourContextValue>(
     () => ({
       active,
@@ -164,6 +183,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       finish,
       start,
       restart,
+      pause,
     }),
     [
       active,
@@ -177,6 +197,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       finish,
       start,
       restart,
+      pause,
     ]
   );
 
