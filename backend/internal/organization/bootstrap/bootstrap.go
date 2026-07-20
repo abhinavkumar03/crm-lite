@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	settingsentity "github.com/abhinavkumar03/crm-lite/backend/internal/settings/entity"
 )
 
@@ -45,6 +46,7 @@ var DefaultRoles = []RoleSpec{
 type CreateOptions struct {
 	Name        string
 	Slug        string
+	Description string
 	Industry    string
 	CompanySize string
 	Country     string
@@ -52,6 +54,7 @@ type CreateOptions struct {
 	Timezone    string
 	Currency    string
 	Locale      string
+	DateFormat  string
 }
 
 type Service struct {
@@ -100,6 +103,9 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 	if loc := strings.TrimSpace(opts.Locale); loc != "" {
 		general.Locale = loc
 	}
+	if df := strings.TrimSpace(opts.DateFormat); df != "" {
+		general.DateFormat = df
+	}
 
 	settings, err := json.Marshal(map[string]any{
 		"general":    general,
@@ -109,7 +115,7 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 		return "", err
 	}
 
-	var industry, companySize, country, logoURL *string
+	var industry, companySize, country, logoURL, description *string
 	if v := strings.TrimSpace(opts.Industry); v != "" {
 		industry = &v
 	}
@@ -122,6 +128,9 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 	if v := strings.TrimSpace(opts.LogoURL); v != "" {
 		logoURL = &v
 	}
+	if v := strings.TrimSpace(opts.Description); v != "" {
+		description = &v
+	}
 
 	for attempt := 0; attempt < 5; attempt++ {
 		candidate := slug
@@ -131,11 +140,11 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 		err = s.db.QueryRow(ctx, `
 			INSERT INTO organizations (
 				name, slug, plan, status, created_by, settings,
-				industry, company_size, country, logo_url
+				industry, company_size, country, logo_url, description
 			)
-			VALUES ($1, $2, 'free', 'active', $3, $4, $5, $6, $7, $8)
+			VALUES ($1, $2, 'free', 'active', $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id
-		`, name, candidate, creatorUserID, settings, industry, companySize, country, logoURL).Scan(&orgID)
+		`, name, candidate, creatorUserID, settings, industry, companySize, country, logoURL, description).Scan(&orgID)
 		if err == nil {
 			break
 		}
@@ -147,6 +156,11 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 	}
 	if orgID == "" {
 		return "", fmt.Errorf("create organization: slug unavailable")
+	}
+
+	// Catalog must exist before role grants; seed may not have been run yet.
+	if err := s.EnsurePermissionCatalog(ctx); err != nil {
+		return "", err
 	}
 
 	roleIDs, err := s.seedRoles(ctx, orgID)
@@ -177,6 +191,12 @@ func (s *Service) CreateOrganization(ctx context.Context, opts CreateOptions, cr
 	return orgID, nil
 }
 
+// EnsureFullCatalog upserts the full 5-module field/layout catalog for an org.
+// Safe to call on existing workspaces created with an older minimal bootstrap.
+func (s *Service) EnsureFullCatalog(ctx context.Context, orgID string) error {
+	return s.seedDefaultModules(ctx, orgID)
+}
+
 func (s *Service) seedRoles(ctx context.Context, orgID string) (map[string]string, error) {
 	ids := make(map[string]string, len(DefaultRoles))
 	for _, rd := range DefaultRoles {
@@ -191,76 +211,86 @@ func (s *Service) seedRoles(ctx context.Context, orgID string) (map[string]strin
 		}
 		ids[rd.Slug] = roleID
 
-		if rd.AllPermissions {
-			_, err = s.db.Exec(ctx, `
-				INSERT INTO role_permissions (role_id, permission_id)
-				SELECT $1, p.id FROM permissions p
-				ON CONFLICT DO NOTHING
-			`, roleID)
-		} else {
-			_, err = s.db.Exec(ctx, `
-				INSERT INTO role_permissions (role_id, permission_id)
-				SELECT $1, p.id FROM permissions p WHERE p.key = ANY($2)
-				ON CONFLICT DO NOTHING
-			`, roleID, rd.PermissionKeys)
-		}
-		if err != nil {
+		if err := s.grantRolePermissions(ctx, roleID, rd); err != nil {
 			return nil, fmt.Errorf("grant role %s: %w", rd.Slug, err)
 		}
 	}
 	return ids, nil
 }
 
-func (s *Service) seedDefaultModules(ctx context.Context, orgID string) error {
-	type mod struct {
-		API, Singular, Plural, Icon, Color string
-		Sort                               int
-	}
-	mods := []mod{
-		{"company", "Company", "Companies", "building-2", "#8b5cf6", 1},
-		{"deal", "Deal", "Deals", "handshake", "#ec4899", 2},
-	}
-	moduleIDs := map[string]string{}
-	for _, m := range mods {
-		var id string
-		err := s.db.QueryRow(ctx, `
-			INSERT INTO modules (
-				organization_id, api_name, singular_label, plural_label,
-				icon, color, storage_strategy, is_system, sort_order,
-				is_enabled, is_visible_sidebar
-			) VALUES ($1,$2,$3,$4,$5,$6,'dynamic',TRUE,$7,TRUE,TRUE)
-			RETURNING id
-		`, orgID, m.API, m.Singular, m.Plural, m.Icon, m.Color, m.Sort).Scan(&id)
-		if err != nil {
-			return fmt.Errorf("seed module %s: %w", m.API, err)
-		}
-		moduleIDs[m.API] = id
-	}
-
-	type field struct {
-		Module, API, Label, Type string
-		Required, Searchable     bool
-	}
-	fields := []field{
-		{"company", "name", "Company Name", "text", true, true},
-		{"company", "industry", "Industry", "text", false, false},
-		{"company", "city", "City", "text", false, true},
-		{"deal", "title", "Deal Title", "text", true, true},
-		{"deal", "amount", "Amount", "currency", false, false},
-		{"deal", "stage", "Stage", "text", false, true},
-	}
-	for i, f := range fields {
+// EnsurePermissionCatalog upserts every known permission key so Owner/Admin
+// grants never land on an empty catalog (common when migrate ran but seed did not).
+func (s *Service) EnsurePermissionCatalog(ctx context.Context) error {
+	for _, p := range rbac.PermissionCatalog {
 		_, err := s.db.Exec(ctx, `
-			INSERT INTO fields (
-				organization_id, module_id, api_name, label, field_type,
-				is_required, is_searchable, is_filterable, options, sort_order, is_system
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE,'[]'::jsonb,$8,TRUE)
-		`, orgID, moduleIDs[f.Module], f.API, f.Label, f.Type, f.Required, f.Searchable, i+1)
+			INSERT INTO permissions (key, category, description)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (key) DO UPDATE
+			SET category = EXCLUDED.category,
+			    description = EXCLUDED.description
+		`, p.Key, p.Category, p.Desc)
 		if err != nil {
-			return fmt.Errorf("seed field %s.%s: %w", f.Module, f.API, err)
+			return fmt.Errorf("ensure permission %s: %w", p.Key, err)
 		}
 	}
 	return nil
+}
+
+// RepairFullAccessRoles grants the full catalog to Owner / Super Admin / Admin
+// for every organization. Safe to run repeatedly (ON CONFLICT DO NOTHING).
+// Returns the role IDs that were targeted so callers can invalidate RBAC cache.
+func (s *Service) RepairFullAccessRoles(ctx context.Context) ([]string, error) {
+	if err := s.EnsurePermissionCatalog(ctx); err != nil {
+		return nil, err
+	}
+	_, err := s.db.Exec(ctx, `
+		INSERT INTO role_permissions (role_id, permission_id)
+		SELECT r.id, p.id
+		FROM roles r
+		CROSS JOIN permissions p
+		WHERE r.is_system = TRUE
+		  AND r.slug IN ('owner', 'super_admin', 'admin')
+		ON CONFLICT DO NOTHING
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("repair full-access roles: %w", err)
+	}
+
+	rows, err := s.db.Query(ctx, `
+		SELECT id::text FROM roles
+		WHERE is_system = TRUE AND slug IN ('owner', 'super_admin', 'admin')
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (s *Service) grantRolePermissions(ctx context.Context, roleID string, rd RoleSpec) error {
+	if rd.AllPermissions {
+		_, err := s.db.Exec(ctx, `
+			INSERT INTO role_permissions (role_id, permission_id)
+			SELECT $1, p.id FROM permissions p
+			ON CONFLICT DO NOTHING
+		`, roleID)
+		return err
+	}
+	_, err := s.db.Exec(ctx, `
+		INSERT INTO role_permissions (role_id, permission_id)
+		SELECT $1, p.id FROM permissions p WHERE p.key = ANY($2)
+		ON CONFLICT DO NOTHING
+	`, roleID, rd.PermissionKeys)
+	return err
 }
 
 func normalizeSlug(s string) string {

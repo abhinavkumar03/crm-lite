@@ -15,7 +15,8 @@ const fieldColumns = `
 	is_required, is_unique, is_read_only, default_value, placeholder,
 	description, help_text, min_length, max_length, regex, validation_message,
 	options, lookup_module_id, sort_order, is_visible, is_searchable,
-	is_filterable, is_nullable, is_indexed, is_system, created_at, updated_at
+	is_filterable, is_nullable, is_indexed, is_system,
+	lock_mode, editable_by, viewable_by, created_at, updated_at
 `
 
 type Repository struct {
@@ -32,7 +33,8 @@ func scanField(row pgx.Row, f *entity.Field) error {
 		&f.IsRequired, &f.IsUnique, &f.IsReadOnly, &f.DefaultValue, &f.Placeholder,
 		&f.Description, &f.HelpText, &f.MinLength, &f.MaxLength, &f.Regex, &f.ValidationMessage,
 		&f.Options, &f.LookupModuleID, &f.SortOrder, &f.IsVisible, &f.IsSearchable,
-		&f.IsFilterable, &f.IsNullable, &f.IsIndexed, &f.IsSystem, &f.CreatedAt, &f.UpdatedAt,
+		&f.IsFilterable, &f.IsNullable, &f.IsIndexed, &f.IsSystem,
+		&f.LockMode, &f.EditableBy, &f.ViewableBy, &f.CreatedAt, &f.UpdatedAt,
 	)
 }
 
@@ -72,11 +74,11 @@ func (r *Repository) Create(ctx context.Context, f *entity.Field) error {
 			is_required, is_unique, is_read_only, default_value, placeholder,
 			description, help_text, min_length, max_length, regex, validation_message,
 			options, lookup_module_id, sort_order, is_visible, is_searchable,
-			is_filterable, is_system
+			is_filterable, is_system, lock_mode, editable_by, viewable_by
 		)
 		VALUES (
 			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
-			$17,$18,$19,$20,$21,$22,$23
+			$17,$18,$19,$20,$21,$22,$23,$24,$25,$26
 		)
 		RETURNING id, is_nullable, is_indexed, created_at, updated_at
 	`
@@ -85,7 +87,7 @@ func (r *Repository) Create(ctx context.Context, f *entity.Field) error {
 		f.IsRequired, f.IsUnique, f.IsReadOnly, f.DefaultValue, f.Placeholder,
 		f.Description, f.HelpText, f.MinLength, f.MaxLength, f.Regex, f.ValidationMessage,
 		f.Options, f.LookupModuleID, f.SortOrder, f.IsVisible, f.IsSearchable,
-		f.IsFilterable, f.IsSystem,
+		f.IsFilterable, f.IsSystem, f.LockMode, f.EditableBy, f.ViewableBy,
 	).Scan(&f.ID, &f.IsNullable, &f.IsIndexed, &f.CreatedAt, &f.UpdatedAt)
 }
 
@@ -148,14 +150,18 @@ func (r *Repository) Update(ctx context.Context, f *entity.Field) error {
 			is_visible = $14,
 			is_searchable = $15,
 			is_filterable = $16,
+			lock_mode = $17,
+			editable_by = $18,
+			viewable_by = $19,
 			updated_at = NOW()
-		WHERE id = $17 AND module_id = $18 AND organization_id = $19
+		WHERE id = $20 AND module_id = $21 AND organization_id = $22
 		RETURNING updated_at
 	`,
 		f.Label, f.IsRequired, f.IsUnique, f.IsReadOnly, f.DefaultValue,
 		f.Placeholder, f.Description, f.HelpText, f.MinLength, f.MaxLength,
 		f.Regex, f.ValidationMessage, f.Options, f.IsVisible, f.IsSearchable,
-		f.IsFilterable, f.ID, f.ModuleID, f.OrganizationID,
+		f.IsFilterable, f.LockMode, f.EditableBy, f.ViewableBy,
+		f.ID, f.ModuleID, f.OrganizationID,
 	).Scan(&f.UpdatedAt)
 }
 

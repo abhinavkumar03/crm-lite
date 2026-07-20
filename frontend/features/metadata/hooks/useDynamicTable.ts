@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import { filterRows, paginate, sortRows } from "../lib/table";
 import {
@@ -19,6 +19,8 @@ interface UseDynamicTableArgs {
   rows: TableRow[];
   fields: ModuleField[];
   pageSize?: number;
+  /** Org default list columns from GET /layouts/list (excludes _actions). */
+  initialColumns?: string[];
 }
 
 const EMPTY_SORT: ViewSort = { field: "", order: "" };
@@ -30,14 +32,24 @@ export function useDynamicTable({
   rows,
   fields,
   pageSize: initialPageSize = 10,
+  initialColumns,
 }: UseDynamicTableArgs) {
   const [columns, setColumns] = useState<string[]>(() =>
-    fields.map((f) => f.api_name)
+    initialColumns?.length
+      ? initialColumns
+      : fields.map((f) => f.api_name)
   );
   const [filters, setFilters] = useState<ViewFilter[]>([]);
   const [sort, setSort] = useState<ViewSort>(EMPTY_SORT);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
+
+  // Apply org list layout when it arrives after first paint.
+  useEffect(() => {
+    if (initialColumns?.length) {
+      setColumns(initialColumns);
+    }
+  }, [initialColumns]);
 
   const processed = useMemo(() => {
     const filtered = filterRows(rows, filters);

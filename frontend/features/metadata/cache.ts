@@ -1,7 +1,7 @@
 /**
  * Lightweight in-memory TTL cache for rarely-changing metadata
  * (modules, fields, validation schemas). Avoids refetching on every
- * navigation between Forms / Tables / Import / Export.
+ * navigation between Form Designer / Listing Columns / Import / Export.
  */
 
 const DEFAULT_TTL_MS = 60_000;

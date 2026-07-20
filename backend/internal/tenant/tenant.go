@@ -66,7 +66,9 @@ func (r *Resolver) MembershipForUser(ctx context.Context, userID, preferredOrgID
 		FROM organization_members om
 		LEFT JOIN roles rl ON rl.id = om.role_id
 		LEFT JOIN users u ON u.id = om.user_id
+		JOIN organizations o ON o.id = om.organization_id
 		WHERE om.user_id = $1 AND om.status = 'active'
+		  AND o.deleted_at IS NULL
 		ORDER BY
 		  CASE WHEN u.active_organization_id IS NOT NULL
 		            AND om.organization_id = u.active_organization_id THEN 0
@@ -96,9 +98,11 @@ func (r *Resolver) membershipInOrg(ctx context.Context, userID, orgID string) (*
 		       COALESCE(rl.slug, '')
 		FROM organization_members om
 		LEFT JOIN roles rl ON rl.id = om.role_id
+		JOIN organizations o ON o.id = om.organization_id
 		WHERE om.user_id = $1
 		  AND om.organization_id = $2
 		  AND om.status = 'active'
+		  AND o.deleted_at IS NULL
 	`, userID, orgID).Scan(&m.OrganizationID, &m.RoleID, &m.RoleSlug)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -121,6 +125,7 @@ func (r *Resolver) ListMemberships(ctx context.Context, userID string) ([]Member
 		JOIN organizations o ON o.id = om.organization_id
 		LEFT JOIN roles rl ON rl.id = om.role_id
 		WHERE om.user_id = $1 AND om.status = 'active'
+		  AND o.deleted_at IS NULL
 		ORDER BY o.name ASC
 	`, userID)
 	if err != nil {
@@ -164,6 +169,14 @@ func (r *Resolver) SetActiveOrganization(ctx context.Context, userID, orgID stri
 	}
 	r.cache.InvalidateMembership(ctx, userID)
 	return nil
+}
+
+// InvalidateMembershipCache drops the Redis membership cache for a user.
+func (r *Resolver) InvalidateMembershipCache(ctx context.Context, userID string) {
+	if r == nil || r.cache == nil {
+		return
+	}
+	r.cache.InvalidateMembership(ctx, userID)
 }
 
 var ErrNotMember = errors.New("not a member of organization")

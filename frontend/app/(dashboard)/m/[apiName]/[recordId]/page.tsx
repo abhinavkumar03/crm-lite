@@ -39,6 +39,7 @@ import {
   deleteRecordAttachment,
   deleteRecordNote,
   getDetailLayout,
+  getFormLayout,
   listRecordActivities,
   listRecordAttachments,
   listRecordNotes,
@@ -47,6 +48,7 @@ import {
 } from "@/features/workspace/api";
 import {
   DetailLayout,
+  FormLayout,
   RelatedDescriptor,
   WorkspaceActivity,
   WorkspaceAttachment,
@@ -91,9 +93,9 @@ function formatValue(field: ModuleField, rec: RecordResponse): string {
   return String(v);
 }
 
-export default function RecordWorkspacePage() {
-  const params = useParams<{ moduleId: string; recordId: string }>();
-  const moduleId = params.moduleId;
+export default function ModuleRecordPage() {
+  const params = useParams<{ apiName: string; recordId: string }>();
+  const apiName = decodeURIComponent(params.apiName ?? "");
   const recordId = params.recordId;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,10 +105,12 @@ export default function RecordWorkspacePage() {
   const tutorialTimeline =
     demo?.mode === "running" && demo.currentStep?.step_key === "timeline";
 
+  const [moduleId, setModuleId] = useState("");
   const [module, setModule] = useState<ModuleSummary | null>(null);
   const [fields, setFields] = useState<ModuleField[]>([]);
   const [schema, setSchema] = useState<ValidationSchema | null>(null);
   const [layout, setLayout] = useState<DetailLayout | null>(null);
+  const [formLayout, setFormLayout] = useState<FormLayout | null>(null);
   const [record, setRecord] = useState<RecordResponse | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
@@ -123,11 +127,14 @@ export default function RecordWorkspacePage() {
     Record<string, RecordResponse[]>
   >({});
 
-  // Deep-link / demo navigation: ?tab=notes|timeline|…
+  // Deep-link / demo navigation: ?tab=notes|timeline|… and ?edit=1
   useEffect(() => {
     const raw = searchParams.get("tab");
     if (raw && VALID_TABS.includes(raw as Tab)) {
       setTab(raw as Tab);
+    }
+    if (searchParams.get("edit") === "1") {
+      setEditing(true);
     }
   }, [searchParams]);
 
@@ -145,11 +152,13 @@ export default function RecordWorkspacePage() {
   }, [tutorialNote, tutorialTimeline]);
 
   const reloadRecord = useCallback(async () => {
+    if (!moduleId) return;
     const rec = await getRecord(moduleId, recordId, true);
     setRecord(rec);
   }, [moduleId, recordId]);
 
   const reloadSide = useCallback(async () => {
+    if (!moduleId) return;
     const [n, a, t, r] = await Promise.all([
       listRecordNotes(moduleId, recordId),
       listRecordAttachments(moduleId, recordId),
@@ -167,22 +176,46 @@ export default function RecordWorkspacePage() {
     (async () => {
       try {
         setLoading(true);
-        const [mods, f, s, lay] = await Promise.all([
-          getModules(),
-          getModuleFields(moduleId),
-          getValidationSchema(moduleId),
-          getDetailLayout(moduleId),
+        const mods = await getModules();
+        const mod =
+          mods.find((m) => m.api_name.toLowerCase() === apiName.toLowerCase()) ??
+          null;
+        if (!mod) {
+          toast.error("Module not found");
+          router.replace("/dashboard");
+          return;
+        }
+        if (!active) return;
+        setModule(mod);
+        setModuleId(mod.id);
+        const [f, s, lay, formLay] = await Promise.all([
+          getModuleFields(mod.id),
+          getValidationSchema(mod.id),
+          getDetailLayout(mod.id),
+          getFormLayout(mod.id, "edit"),
         ]);
         if (!active) return;
-        setModule(mods.find((m) => m.id === moduleId) ?? null);
         setFields(f);
         setSchema(s);
         setLayout(lay);
-        await reloadRecord();
-        await reloadSide();
+        setFormLayout(formLay);
+        const rec = await getRecord(mod.id, recordId, true);
+        if (!active) return;
+        setRecord(rec);
+        const [n, a, t, r] = await Promise.all([
+          listRecordNotes(mod.id, recordId),
+          listRecordAttachments(mod.id, recordId),
+          listRecordActivities(mod.id, recordId),
+          listRelatedDescriptors(mod.id),
+        ]);
+        if (!active) return;
+        setNotes(n);
+        setAttachments(a);
+        setActivities(t);
+        setRelated(r);
       } catch {
         toast.error("Failed to load record workspace");
-        router.replace("/tables");
+        router.replace(apiName ? `/m/${encodeURIComponent(apiName)}` : "/dashboard");
       } finally {
         if (active) setLoading(false);
       }
@@ -190,7 +223,7 @@ export default function RecordWorkspacePage() {
     return () => {
       active = false;
     };
-  }, [moduleId, recordId, reloadRecord, reloadSide, router]);
+  }, [apiName, recordId, router]);
 
   useEffect(() => {
     if (tab !== "related" || related.length === 0) return;
@@ -248,7 +281,7 @@ export default function RecordWorkspacePage() {
   );
 
   async function handleSave(values: FormValues) {
-    if (!record) return;
+    if (!record || !moduleId) return;
     try {
       setSaving(true);
       setEditErrors({});
@@ -270,25 +303,25 @@ export default function RecordWorkspacePage() {
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this record?")) return;
+    if (!moduleId || !confirm("Delete this record?")) return;
     try {
       await deleteRecord(moduleId, recordId);
       toast.success("Record deleted");
-      router.replace(`/tables?module=${moduleId}`);
+      router.replace(`/m/${encodeURIComponent(apiName)}`);
     } catch {
       toast.error("Failed to delete");
     }
   }
 
   async function handleAddNote() {
-    if (!noteBody.trim()) return;
+    if (!moduleId || !noteBody.trim()) return;
     try {
       await createRecordNote(moduleId, recordId, noteBody.trim());
       setNoteBody("");
       await reloadSide();
       toast.success("Note added");
       if (tutorialNote) {
-        await demo?.validate({ silent: true });
+        await demo?.validate({ silent: true, stepKey: "add_note" });
       }
     } catch {
       toast.error("Failed to add note");
@@ -296,7 +329,7 @@ export default function RecordWorkspacePage() {
   }
 
   async function handleUpload(file: File | null) {
-    if (!file) return;
+    if (!moduleId || !file) return;
     try {
       await uploadRecordAttachment(moduleId, recordId, file);
       await reloadSide();
@@ -327,7 +360,7 @@ export default function RecordWorkspacePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
         <Link
-          href={`/tables?module=${moduleId}`}
+          href={`/m/${encodeURIComponent(apiName)}`}
           className="inline-flex items-center gap-1 font-medium text-emerald-600 hover:text-emerald-700"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -401,12 +434,13 @@ export default function RecordWorkspacePage() {
       </div>
 
       {tab === "overview" && (
-        <div className="space-y-5">
+        <div className="space-y-5" data-tutorial-surface="record-overview">
           {editing ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <DynamicForm
                 fields={fields}
                 schema={schema}
+                formLayout={formLayout}
                 initialValues={record.data as FormValues}
                 externalErrors={editErrors}
                 submitText={saving ? "Saving…" : "Save changes"}
@@ -580,7 +614,10 @@ export default function RecordWorkspacePage() {
       )}
 
       {tab === "timeline" && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div
+          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          data-tutorial-surface="record-timeline"
+        >
           <ul className="space-y-4">
             {activities.length === 0 ? (
               <li className="text-sm text-slate-400">No activity yet.</li>
@@ -620,10 +657,10 @@ export default function RecordWorkspacePage() {
                       {d.child_module_name}
                     </h2>
                     <Link
-                      href={`/forms?module=${d.child_module_id}`}
+                      href={`/m/${encodeURIComponent(d.child_api_name)}?create=1`}
                       className="text-sm font-semibold text-emerald-600"
                     >
-                      Quick create
+                      Add record
                     </Link>
                   </div>
                   {rows.length === 0 ? (
@@ -633,7 +670,7 @@ export default function RecordWorkspacePage() {
                       {rows.map((r) => (
                         <li key={r.id}>
                           <Link
-                            href={`/tables/${d.child_module_id}/${r.id}`}
+                            href={`/m/${encodeURIComponent(d.child_api_name)}/${r.id}`}
                             className="block py-2 text-sm font-medium text-slate-700 hover:text-emerald-600"
                           >
                             {String(

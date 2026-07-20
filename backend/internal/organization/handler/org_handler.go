@@ -71,6 +71,67 @@ func (h *Handler) CreateOrg(c *gin.Context) {
 	response.Created(c, "Organization created", gin.H{"id": id})
 }
 
+func (h *Handler) GetCurrentOrg(c *gin.Context) {
+	org, err := h.svc.GetCurrentOrg(c.Request.Context(), tenant.OrgID(c))
+	if errors.Is(err, service.ErrNotFound) {
+		response.NotFound(c, "Organization not found")
+		return
+	}
+	if err != nil {
+		response.InternalServerError(c, "Unable to fetch organization")
+		return
+	}
+	response.OK(c, "Organization fetched", org)
+}
+
+func (h *Handler) UpdateCurrentOrg(c *gin.Context) {
+	var req dto.UpdateOrgRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid payload", nil)
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		response.BadRequest(c, "Validation failed", nil)
+		return
+	}
+	org, err := h.svc.UpdateCurrentOrg(c.Request.Context(), tenant.OrgID(c), req)
+	if errors.Is(err, service.ErrNotFound) {
+		response.NotFound(c, "Organization not found")
+		return
+	}
+	if err != nil {
+		response.InternalServerError(c, "Unable to update organization")
+		return
+	}
+	response.OK(c, "Organization updated", org)
+}
+
+func (h *Handler) DeleteCurrentOrg(c *gin.Context) {
+	err := h.svc.SoftDeleteCurrentOrg(
+		c.Request.Context(),
+		c.GetString("userID"),
+		tenant.OrgID(c),
+		tenant.RoleSlug(c),
+	)
+	if errors.Is(err, service.ErrNotFound) {
+		response.NotFound(c, "Organization not found")
+		return
+	}
+	if errors.Is(err, service.ErrForbidden) {
+		response.Forbidden(c, "Only owners and admins can delete a workspace")
+		return
+	}
+	if errors.Is(err, service.ErrLastWorkspace) {
+		response.BadRequest(c, "Cannot delete your last workspace", nil)
+		return
+	}
+	if err != nil {
+		response.InternalServerError(c, "Unable to delete organization")
+		return
+	}
+	response.OK(c, "Organization deleted", nil)
+}
+
 func (h *Handler) ListMembers(c *gin.Context) {
 	members, err := h.svc.ListMembers(c.Request.Context(), tenant.OrgID(c))
 	if err != nil {

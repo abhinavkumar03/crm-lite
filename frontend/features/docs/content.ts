@@ -275,7 +275,7 @@ export const DOC_GUIDES: DocGuide[] = [
     title: "Metadata guide",
     eyebrow: "Customization",
     summary:
-      "Modules, fields, validation, views, and the dynamic record runtime that powers Forms / Tables.",
+      "Modules, fields, validation, views, and the dynamic record runtime that powers module pages and Form Designer.",
     readingTime: "5 min",
     blocks: [
       {
@@ -301,7 +301,7 @@ export const DOC_GUIDES: DocGuide[] = [
           { title: "Module", detail: "Settings → Modules (storage_strategy = dynamic)" },
           { title: "Fields", detail: "Add typed fields + options / lookups" },
           { title: "Validation", detail: "Attach rules (required, min_length, …)" },
-          { title: "Use", detail: "Forms / Tables / Import / Export consume the catalog" },
+          { title: "Use", detail: "Module listings / Form Designer / Import / Export consume the catalog" },
         ],
       },
       {
@@ -441,7 +441,7 @@ export const DOC_GUIDES: DocGuide[] = [
         title: "Demo logins",
         headers: ["Email", "Password", "Role"],
         rows: [
-          ["admin@crmlite.com", "Admin@12345", "Administrator"],
+          ["admin@crm.com", "Admin@123", "Organization Owner"],
           ["priya@crmlite.com", "Password@123", "Sales Manager"],
           ["vikram@crmlite.com", "Password@123", "Sales Rep"],
           ["arjun@crmlite.com", "Password@123", "Viewer"],
@@ -451,7 +451,7 @@ export const DOC_GUIDES: DocGuide[] = [
         type: "bullets",
         title: "First 30 minutes",
         items: [
-          "Login as admin → Dashboard, Forms, Tables, Settings → Modules",
+          "Login as admin → Dashboard, module pages, Form Designer, Settings → Modules",
           "Open Swagger at /api/v1/docs and Authorize with a JWT",
           "Walk Settings → Modules / Fields / Validation / Roles",
           "Run an import with the worker running",

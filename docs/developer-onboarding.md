@@ -5,7 +5,7 @@ Get from zero to a running CRM Lite stack and a first meaningful change.
 ## What you are joining
 
 Portfolio CRM: Go/Gin API + asynq worker + PostgreSQL + Redis + Next.js.
-Metadata-driven dynamic modules (Forms + Tables) are the entire CRM surface.
+Metadata-driven dynamic modules (module listings + Form Designer preview) are the entire CRM surface.
 
 Read next (order matters):
 
@@ -68,14 +68,17 @@ npm run dev
 
 | Email | Password | Role |
 | --- | --- | --- |
-| `admin@crmlite.com` | `Admin@12345` | Administrator |
+| `demo@crmlite.com` | `Password@123` | Owner of all 5 demo workspaces |
+| `admin@crm.com` | `Admin@123` | Owner on CRM Lite Demo |
 | `priya@crmlite.com` | `Password@123` | Sales Manager |
-| `vikram@crmlite.com` | `Password@123` | Sales Representative |
+| `vikram@crmlite.com` | `Password@123` | Sales Executive |
 | `arjun@crmlite.com` | `Password@123` | Viewer |
+
+Switch workspaces from the sidebar switcher (no re-login required).
 
 ## First 30 minutes
 
-1. Login as admin → open Dashboard, Leads, a dynamic module (Tables/Forms).
+1. Login as `demo@crmlite.com` → switch workspaces → open Dashboard and module pages.
 2. Hit Swagger → Authorize with a token from `POST /auth/login`.
 3. Walk Settings → Modules / Fields / Validation / Roles.
 4. Run an import on a dynamic module (`/imports`) with worker running.

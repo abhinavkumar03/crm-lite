@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  Eye,
+  Pencil,
   Trash2,
 } from "lucide-react";
 
@@ -31,6 +33,8 @@ interface Props {
   pageSize: number;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
+  onViewRow?: (row: TableRow) => void;
+  onEditRow?: (row: TableRow) => void;
   onDeleteRow?: (row: TableRow) => void;
   onRowClick?: (row: TableRow) => void;
 }
@@ -116,6 +120,8 @@ export default function DynamicTable({
   pageSize,
   onPage,
   onPageSize,
+  onViewRow,
+  onEditRow,
   onDeleteRow,
   onRowClick,
 }: Props) {
@@ -123,6 +129,8 @@ export default function DynamicTable({
   const visible = columns
     .map((name) => fieldByName.get(name))
     .filter((f): f is ModuleField => Boolean(f));
+  const hasActions = Boolean(onViewRow || onEditRow || onDeleteRow);
+  const actionColSpan = visible.length + (hasActions ? 1 : 0);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -148,7 +156,11 @@ export default function DynamicTable({
                   </th>
                 );
               })}
-              {onDeleteRow && <th className="w-12 px-4 py-3" />}
+              {hasActions && (
+                <th className="w-28 px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Actions
+                </th>
+              )}
             </tr>
             {showFilters && (
               <tr className="border-b border-slate-200 bg-white">
@@ -161,7 +173,7 @@ export default function DynamicTable({
                     />
                   </th>
                 ))}
-                {onDeleteRow && <th className="px-3 py-2" />}
+                {hasActions && <th className="px-3 py-2" />}
               </tr>
             )}
           </thead>
@@ -169,7 +181,7 @@ export default function DynamicTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={Math.max(1, visible.length + (onDeleteRow ? 1 : 0))}
+                  colSpan={Math.max(1, actionColSpan)}
                   className="px-4 py-10 text-center text-sm text-slate-400"
                 >
                   No records to display.
@@ -189,19 +201,52 @@ export default function DynamicTable({
                       <TableCell field={field} value={row[field.api_name]} />
                     </td>
                   ))}
-                  {onDeleteRow && (
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteRow(row);
-                        }}
-                        className="text-slate-300 transition hover:text-red-500"
-                        aria-label="Delete record"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  {hasActions && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        {onViewRow && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewRow(row);
+                            }}
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-emerald-600"
+                            aria-label="View record"
+                            title="View"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        )}
+                        {onEditRow && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditRow(row);
+                            }}
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-emerald-600"
+                            aria-label="Edit record"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
+                        {onDeleteRow && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteRow(row);
+                            }}
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                            aria-label="Delete record"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

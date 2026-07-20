@@ -199,7 +199,7 @@ export default function ImportsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tutorial-surface="imports">
       <PageHeader
         badge="Data"
         title="Import Engine"

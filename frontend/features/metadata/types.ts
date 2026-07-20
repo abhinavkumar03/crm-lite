@@ -8,9 +8,12 @@ export type FieldType =
   | "phone"
   | "number"
   | "currency"
+  | "percentage"
   | "date"
   | "datetime"
+  | "time"
   | "boolean"
+  | "toggle"
   | "dropdown"
   | "multiselect"
   | "radio"
@@ -22,7 +25,15 @@ export type FieldType =
   | "lookup"
   | "formula"
   | "json"
-  | "richtext";
+  | "richtext"
+  | "gst"
+  | "pan"
+  | "address"
+  | "auto_number"
+  | "barcode"
+  | "serial_number";
+
+export type LockMode = "never" | "after_create" | "always";
 
 export type FieldOption = {
   label: string;
@@ -60,6 +71,9 @@ export interface ModuleField {
   is_nullable: boolean;
   is_indexed: boolean;
   is_system: boolean;
+  lock_mode?: LockMode;
+  editable_by?: string;
+  viewable_by?: string;
   storage: StorageDescriptor;
   created_at: string;
   updated_at: string;
@@ -211,8 +225,14 @@ export interface RecordResponse {
   updated_at: string;
 }
 
+export interface RecordListColumn {
+  field: string;
+  label: string;
+}
+
 export interface RecordListResult {
   records: RecordResponse[];
+  columns?: RecordListColumn[];
   page: number;
   page_size: number;
   total: number;

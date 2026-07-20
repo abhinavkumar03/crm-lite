@@ -14,6 +14,11 @@ type Props = {
    * no blocker panes — so wheel/scroll and form interaction keep working.
    */
   captureOutside?: boolean;
+  /**
+   * focus = mentor spotlight (dim + optional blockers).
+   * highlight = view-only ring around a data area; never blocks scroll.
+   */
+  variant?: "focus" | "highlight";
 };
 
 /**
@@ -27,12 +32,15 @@ export default function SpotlightLayer({
   pulse = false,
   zIndex = 60,
   captureOutside = true,
+  variant = "focus",
 }: Props) {
   const pad = SPOTLIGHT_PADDING;
+  const isHighlight = variant === "highlight";
 
   if (!rect) {
-    // Guide mode: never trap the whole UI when the target isn't found yet.
-    if (mode === "guide") {
+    // View highlight: wait silently until the data area mounts.
+    if (isHighlight || mode === "guide") {
+      if (isHighlight) return null;
       return (
         <div
           className="pointer-events-none fixed inset-0 bg-slate-900/40"
@@ -55,7 +63,9 @@ export default function SpotlightLayer({
   const width = rect.width + pad * 2;
   const height = rect.height + pad * 2;
 
-  const showBlockers = mode === "block" || (mode === "guide" && captureOutside);
+  const showBlockers =
+    !isHighlight &&
+    (mode === "block" || (mode === "guide" && captureOutside));
 
   return (
     <div
@@ -63,7 +73,6 @@ export default function SpotlightLayer({
       style={{ zIndex }}
       aria-hidden
     >
-      {/* Visual hole + dim (never captures clicks) */}
       <div
         className={`
           absolute rounded-xl ring-2 ring-emerald-400
@@ -75,15 +84,16 @@ export default function SpotlightLayer({
           left,
           width,
           height,
-          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.55)",
+          boxShadow: isHighlight
+            ? "0 0 0 3px rgba(16, 185, 129, 0.35), 0 0 0 9999px rgba(15, 23, 42, 0.28)"
+            : "0 0 0 9999px rgba(15, 23, 42, 0.55)",
         }}
       />
 
-      {mode === "block" ? (
+      {mode === "block" && !isHighlight ? (
         <div className="pointer-events-auto absolute inset-0" />
       ) : showBlockers ? (
         <>
-          {/* Four panes block outside the hole; hole has no pane → click-through */}
           <div
             className="pointer-events-auto absolute left-0 right-0 top-0"
             style={{ height: Math.max(0, top) }}

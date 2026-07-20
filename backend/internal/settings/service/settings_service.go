@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/entity"
@@ -60,7 +61,21 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 	}
 	logo := org.LogoURL
 	if req.LogoURL != nil {
-		logo = req.LogoURL
+		v := strings.TrimSpace(*req.LogoURL)
+		if v == "" {
+			logo = nil
+		} else {
+			logo = &v
+		}
+	}
+	desc := org.Description
+	if req.Description != nil {
+		v := strings.TrimSpace(*req.Description)
+		if v == "" {
+			desc = nil
+		} else {
+			desc = &v
+		}
 	}
 	industry := org.Industry
 	if req.Industry != nil {
@@ -96,6 +111,7 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 	updated, err := s.repo.Update(ctx, orgID, repository.ProfileUpdate{
 		Name:        name,
 		LogoURL:     logo,
+		Description: desc,
 		Industry:    industry,
 		CompanySize: size,
 		Country:     country,
@@ -186,6 +202,7 @@ func toResponse(org *entity.Organization, general entity.GeneralSettings, automa
 		Plan:             org.Plan,
 		SubscriptionPlan: org.Plan,
 		LogoURL:          org.LogoURL,
+		Description:      org.Description,
 		Industry:         org.Industry,
 		CompanySize:      org.CompanySize,
 		Country:          org.Country,

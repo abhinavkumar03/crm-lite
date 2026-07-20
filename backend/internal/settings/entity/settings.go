@@ -9,6 +9,7 @@ type Organization struct {
 	Slug        string
 	Plan        string
 	LogoURL     *string
+	Description *string
 	Industry    *string
 	CompanySize *string
 	Country     *string

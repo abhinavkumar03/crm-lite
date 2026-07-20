@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import OrgGate from "@/components/organization/OrgGate";
+import { OrgProvider } from "@/features/organization/OrgContext";
 import { DemoProvider } from "@/features/demo/DemoProvider";
 import DemoShell from "@/features/demo/DemoShell";
 import { TourProvider } from "@/features/tour/TourProvider";
@@ -42,27 +43,29 @@ export default function DashboardLayout({
 
   return (
     <OrgGate>
-      <TourProvider>
-        <DemoProvider>
-          <div className="flex h-screen overflow-hidden bg-slate-50">
-            <Suspense fallback={null}>
-              <Sidebar
-                open={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-              />
-            </Suspense>
+      <OrgProvider>
+        <TourProvider>
+          <DemoProvider>
+            <div className="flex h-screen overflow-hidden bg-slate-50">
+              <Suspense fallback={null}>
+                <Sidebar
+                  open={sidebarOpen}
+                  onClose={() => setSidebarOpen(false)}
+                />
+              </Suspense>
 
-            <div className="flex min-w-0 flex-1 flex-col">
-              <Topbar onMenuClick={() => setSidebarOpen(true)} />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Topbar onMenuClick={() => setSidebarOpen(true)} />
 
-              <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
+                <main className="flex-1 overflow-auto p-6 lg:p-8">{children}</main>
+              </div>
             </div>
-          </div>
 
-          <TourOverlay />
-          <DemoShell />
-        </DemoProvider>
-      </TourProvider>
+            <TourOverlay />
+            <DemoShell />
+          </DemoProvider>
+        </TourProvider>
+      </OrgProvider>
     </OrgGate>
   );
 }

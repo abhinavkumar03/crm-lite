@@ -270,7 +270,7 @@ export default function ExportsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tutorial-surface="exports">
       <PageHeader
         badge="Data"
         title="Export Engine"

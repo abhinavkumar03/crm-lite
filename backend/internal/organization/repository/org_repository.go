@@ -25,13 +25,14 @@ func New(db *pgxpool.Pool) *Repository {
 
 func (r *Repository) ListOrgsForUser(ctx context.Context, userID string) ([]dto.OrgSummary, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT o.id, o.name, o.slug, COALESCE(rl.slug, ''),
+		SELECT o.id, o.name, o.slug, o.logo_url, o.description, COALESCE(rl.slug, ''),
 		       (u.active_organization_id IS NOT NULL AND u.active_organization_id = o.id)
 		FROM organization_members om
 		JOIN organizations o ON o.id = om.organization_id
 		JOIN users u ON u.id = om.user_id
 		LEFT JOIN roles rl ON rl.id = om.role_id
 		WHERE om.user_id = $1 AND om.status = 'active'
+		  AND o.deleted_at IS NULL
 		ORDER BY o.name ASC
 	`, userID)
 	if err != nil {
@@ -42,12 +43,183 @@ func (r *Repository) ListOrgsForUser(ctx context.Context, userID string) ([]dto.
 	out := make([]dto.OrgSummary, 0)
 	for rows.Next() {
 		var s dto.OrgSummary
-		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.RoleSlug, &s.IsActive); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.LogoURL, &s.Description, &s.RoleSlug, &s.IsActive); err != nil {
 			return nil, err
 		}
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// OrgRow is the raw organization profile used by Get/Update current workspace.
+type OrgRow struct {
+	ID          string
+	Name        string
+	Slug        string
+	Plan        string
+	LogoURL     *string
+	Description *string
+	Industry    *string
+	CompanySize *string
+	Country     *string
+	Status      string
+	CreatedBy   *string
+	Settings    []byte
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (r *Repository) GetOrgByID(ctx context.Context, orgID string) (*OrgRow, error) {
+	var o OrgRow
+	err := r.db.QueryRow(ctx, `
+		SELECT id, name, slug, plan, logo_url, description, industry, company_size,
+		       country, status, created_by::text, settings, created_at, updated_at
+		FROM organizations
+		WHERE id = $1 AND deleted_at IS NULL
+	`, orgID).Scan(
+		&o.ID, &o.Name, &o.Slug, &o.Plan, &o.LogoURL, &o.Description,
+		&o.Industry, &o.CompanySize, &o.Country, &o.Status, &o.CreatedBy,
+		&o.Settings, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	o.CreatedBy = nullEmpty(o.CreatedBy)
+	return &o, nil
+}
+
+type OrgProfileUpdate struct {
+	Name        string
+	LogoURL     *string
+	Description *string
+	Industry    *string
+	CompanySize *string
+	Country     *string
+	Settings    []byte
+}
+
+func (r *Repository) UpdateOrg(ctx context.Context, orgID string, p OrgProfileUpdate) (*OrgRow, error) {
+	var o OrgRow
+	err := r.db.QueryRow(ctx, `
+		UPDATE organizations
+		SET name = $2,
+		    logo_url = $3,
+		    description = $4,
+		    industry = $5,
+		    company_size = $6,
+		    country = $7,
+		    settings = $8,
+		    updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, name, slug, plan, logo_url, description, industry, company_size,
+		          country, status, created_by::text, settings, created_at, updated_at
+	`, orgID, p.Name, p.LogoURL, p.Description, p.Industry, p.CompanySize, p.Country, p.Settings).Scan(
+		&o.ID, &o.Name, &o.Slug, &o.Plan, &o.LogoURL, &o.Description,
+		&o.Industry, &o.CompanySize, &o.Country, &o.Status, &o.CreatedBy,
+		&o.Settings, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	o.CreatedBy = nullEmpty(o.CreatedBy)
+	return &o, nil
+}
+
+// SoftDeleteOrg marks the org deleted and clears active_organization_id for members
+// who had it selected. Returns member user IDs that need tenant cache invalidation.
+func (r *Repository) SoftDeleteOrg(ctx context.Context, orgID string) ([]string, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE organizations
+		SET deleted_at = NOW(), status = 'inactive', updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, ErrNotFound
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT user_id::text FROM organization_members
+		WHERE organization_id = $1 AND status = 'active'
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	memberIDs := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		memberIDs = append(memberIDs, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE users
+		SET active_organization_id = NULL, updated_at = NOW()
+		WHERE active_organization_id = $1
+	`, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Point survivors at another active (non-deleted) membership when available.
+	for _, uid := range memberIDs {
+		_, err = tx.Exec(ctx, `
+			UPDATE users u
+			SET active_organization_id = sub.org_id, updated_at = NOW()
+			FROM (
+				SELECT om.organization_id AS org_id
+				FROM organization_members om
+				JOIN organizations o ON o.id = om.organization_id
+				WHERE om.user_id = $1
+				  AND om.status = 'active'
+				  AND o.deleted_at IS NULL
+				ORDER BY om.created_at ASC
+				LIMIT 1
+			) sub
+			WHERE u.id = $1 AND u.active_organization_id IS NULL
+		`, uid)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return memberIDs, nil
+}
+
+// CountActiveMemberships returns how many non-deleted orgs the user still belongs to.
+func (r *Repository) CountActiveMemberships(ctx context.Context, userID string) (int, error) {
+	var n int
+	err := r.db.QueryRow(ctx, `
+		SELECT count(*)
+		FROM organization_members om
+		JOIN organizations o ON o.id = om.organization_id
+		WHERE om.user_id = $1 AND om.status = 'active' AND o.deleted_at IS NULL
+	`, userID).Scan(&n)
+	return n, err
 }
 
 func (r *Repository) ListMembers(ctx context.Context, orgID string) ([]dto.MemberResponse, error) {
@@ -227,8 +399,9 @@ func (r *Repository) AcceptInvite(ctx context.Context, inv *PendingInvite, name,
 }
 
 var (
-	ErrInviteExpired     = errors.New("invitation expired")
-	ErrPasswordRequired  = errors.New("name and password required for new users")
+	ErrInviteExpired    = errors.New("invitation expired")
+	ErrPasswordRequired = errors.New("name and password required for new users")
+	ErrNotFound         = errors.New("not found")
 )
 
 func randomToken(n int) (string, error) {

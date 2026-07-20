@@ -24,6 +24,7 @@ import (
 	moduleengine "github.com/abhinavkumar03/crm-lite/backend/internal/module"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notification"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/organization"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/organization/bootstrap"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/rbac"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/roles"
@@ -78,6 +79,22 @@ func main() {
 
 	appCache := cache.New(redisClient)
 
+	// Org creators are Owner with full grants — but only if the permission
+	// catalog exists. Repair fills catalog + Owner/Admin grants for any org
+	// created before seed ran (fixes "Missing permission: module.manage").
+	{
+		boot := bootstrap.New(db)
+		roleIDs, err := boot.RepairFullAccessRoles(context.Background())
+		if err != nil {
+			log.Sugar().Warnf("permission repair skipped: %v", err)
+		} else {
+			for _, id := range roleIDs {
+				appCache.InvalidateRole(context.Background(), id)
+			}
+			log.Sugar().Infof("permission catalog ready (%d full-access roles)", len(roleIDs))
+		}
+	}
+
 	// The producer enqueues async work onto the asynq queue; the worker that
 	// consumes it runs as a separate process (cmd/worker).
 	producer := jobs.NewProducer(jobs.RedisOpt(
@@ -109,7 +126,9 @@ func main() {
 	viewEngine := view.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
 	recordEngine := record.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, appCache) // cache: invalidate org dashboard on CUD
 	workspaceModule := workspace.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
+	fieldEngine.Service.SetLayoutSync(workspaceModule.Service)
 	recordEngine.Service.SetActivityLogger(workspaceModule.Service)
+	recordEngine.Service.SetListLayoutReader(workspaceModule.Service)
 	importEngine := importer.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)

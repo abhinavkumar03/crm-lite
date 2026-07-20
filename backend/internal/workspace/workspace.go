@@ -31,6 +31,21 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 	mod.Use(m.auth, m.org, m.load)
 
 	mod.GET("/layouts/detail", m.guard.RequireModule(rbac.ActionView), m.Handler.GetLayout)
+	mod.PUT("/layouts/detail", m.guard.Require(rbac.PermFieldManage), m.Handler.UpdateLayout)
+
+	mod.GET("/layouts/form", m.guard.RequireModule(rbac.ActionView), m.Handler.GetFormLayout)
+	mod.PUT("/layouts/form", m.guard.Require(rbac.PermFieldManage), m.Handler.UpdateFormLayout)
+	mod.PUT("/layouts/form/reorder", m.guard.Require(rbac.PermFieldManage), m.Handler.ReorderFormFields)
+	mod.POST("/layouts/form/sections", m.guard.Require(rbac.PermFieldManage), m.Handler.CreateFormSection)
+	mod.PUT("/layouts/form/sections/:sectionId", m.guard.Require(rbac.PermFieldManage), m.Handler.UpdateFormSection)
+	mod.DELETE("/layouts/form/sections/:sectionId", m.guard.Require(rbac.PermFieldManage), m.Handler.DeleteFormSection)
+
+	mod.GET("/layouts/list", m.guard.RequireModule(rbac.ActionView), m.Handler.GetListLayout)
+	mod.PUT("/layouts/list", m.guard.Require(rbac.PermFieldManage), m.Handler.UpdateListLayout)
+	mod.PUT("/layouts/list/reorder", m.guard.Require(rbac.PermFieldManage), m.Handler.ReorderListColumns)
+	mod.PUT("/layouts/list/toggle", m.guard.Require(rbac.PermFieldManage), m.Handler.ToggleListColumn)
+	mod.POST("/layouts/list/reset", m.guard.Require(rbac.PermFieldManage), m.Handler.ResetListLayout)
+
 	mod.GET("/related", m.guard.RequireModule(rbac.ActionView), m.Handler.ListRelated)
 
 	rec := mod.Group("/records/:recordId")

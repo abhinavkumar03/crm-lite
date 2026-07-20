@@ -14,6 +14,7 @@ type SettingsResponse struct {
 	Plan            string                    `json:"plan"`
 	SubscriptionPlan string                   `json:"subscription_plan"` // alias of plan
 	LogoURL         *string                   `json:"logo_url,omitempty"`
+	Description     *string                   `json:"description,omitempty"`
 	Industry        *string                   `json:"industry,omitempty"`
 	CompanySize     *string                   `json:"company_size,omitempty"`
 	Country         *string                   `json:"country,omitempty"`
@@ -27,6 +28,7 @@ type SettingsResponse struct {
 type UpdateSettingsRequest struct {
 	Name        *string                    `json:"name" validate:"omitempty,min=1,max=200"`
 	LogoURL     *string                    `json:"logo_url"`
+	Description *string                    `json:"description" validate:"omitempty,max=2000"`
 	Industry    *string                    `json:"industry" validate:"omitempty,max=120"`
 	CompanySize *string                    `json:"company_size" validate:"omitempty,max=40"`
 	Country     *string                    `json:"country" validate:"omitempty,max=80"`

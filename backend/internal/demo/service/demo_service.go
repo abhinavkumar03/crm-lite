@@ -195,6 +195,14 @@ func (s *Service) Validate(ctx context.Context, userID, sessionID, stepKey strin
 	}
 
 	_ = s.repo.SetStepStatus(ctx, sess.ID, stepKey, "validating", "")
+	// Only the active step may be validated — prevents double-submit from
+	// completing the following view/navigate step in the same click burst.
+	if sess.CurrentStepKey == nil || *sess.CurrentStepKey != stepKey {
+		msg := "This step is not active — continue from the instruction panel"
+		_ = s.repo.SetStepStatus(ctx, sess.ID, stepKey, "failed", msg)
+		return &dto.ValidateResult{OK: false, Message: msg}, nil
+	}
+
 	route := visitedRoute
 	if clientEvent != nil && clientEvent.Path != "" && route == "" {
 		route = clientEvent.Path
@@ -420,7 +428,7 @@ func (s *Service) runValidator(ctx context.Context, orgID string, step *reposito
 		mod, _ := params["module_api_name"].(string)
 		ok, err := s.repo.RecordExists(ctx, orgID, mod)
 		if err != nil || !ok {
-			return false, "No records yet — create one via Forms or Tables"
+			return false, "No records yet — create one from the Tutorial Lead module (Add)"
 		}
 		return true, "Record found"
 	case "note_exists":
@@ -447,8 +455,9 @@ func (s *Service) runValidator(ctx context.Context, orgID string, step *reposito
 		if clientEvent != nil && clientEvent.Path != "" {
 			path = clientEvent.Path
 		}
-		if path != "" && strings.HasPrefix(path, "/tables/") {
+		if path != "" && (strings.HasPrefix(path, "/tables/") || strings.HasPrefix(path, "/settings/tables/") || strings.HasPrefix(path, "/m/")) {
 			parts := strings.Split(strings.Trim(path, "/"), "/")
+			// /m/{apiName}/{recordId} or legacy /settings/tables/{moduleId}/{recordId}
 			if len(parts) >= 3 {
 				return true, "Record workspace opened"
 			}

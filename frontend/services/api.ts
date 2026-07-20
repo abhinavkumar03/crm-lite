@@ -11,6 +11,12 @@ api.interceptors.request.use((config) => {
         const token = localStorage.getItem("token");
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            // Only attach workspace scope on authenticated requests so login/register
+            // preflights are not blocked by CORS when a stale org id is in storage.
+            const orgId = localStorage.getItem("active_organization_id");
+            if (orgId) {
+                config.headers["X-Organization-Id"] = orgId;
+            }
         }
     }
 

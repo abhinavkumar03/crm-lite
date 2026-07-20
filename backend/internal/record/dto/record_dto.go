@@ -58,9 +58,16 @@ type RecordResponse struct {
 	UpdatedAt    time.Time              `json:"updated_at"`
 }
 
+// ListColumnMeta describes a visible listing column for table rendering.
+type ListColumnMeta struct {
+	Field string `json:"field"`
+	Label string `json:"label"`
+}
+
 // ListResult is a paginated collection of records.
 type ListResult struct {
 	Records    []RecordResponse `json:"records"`
+	Columns    []ListColumnMeta `json:"columns,omitempty"`
 	Page       int              `json:"page"`
 	PageSize   int              `json:"page_size"`
 	Total      int              `json:"total"`

@@ -107,7 +107,7 @@ export default function DocsSection() {
         <div className="mt-6 grid gap-6 lg:mt-12 lg:grid-cols-[260px_minmax(0,1fr)]">
           <nav
             aria-label="How it works guides"
-            className="hidden h-fit rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:top-24 lg:block"
+            className="hidden h-fit rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:block"
           >
             <div className="mb-3 px-3 pt-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">

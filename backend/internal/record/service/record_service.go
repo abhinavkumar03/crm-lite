@@ -13,6 +13,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/record/repository"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/cache"
 	vdto "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/dto"
+	workspacedto "github.com/abhinavkumar03/crm-lite/backend/internal/workspace/dto"
 )
 
 const (
@@ -64,13 +65,19 @@ type ActivityLogger interface {
 	LogRecordActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) error
 }
 
+// ListLayoutReader loads org-default list columns for embedding on list responses.
+type ListLayoutReader interface {
+	GetListLayout(ctx context.Context, orgID, moduleID string, includeHidden bool) (*workspacedto.ListLayoutResponse, error)
+}
+
 type Service struct {
-	repo      RecordRepository
-	fields    FieldReader
-	validator Validator
-	cache     *cache.Cache
-	access    *access.Service
-	activity  ActivityLogger
+	repo       RecordRepository
+	fields     FieldReader
+	validator  Validator
+	cache      *cache.Cache
+	access     *access.Service
+	activity   ActivityLogger
+	listLayout ListLayoutReader
 }
 
 func New(repo RecordRepository, fields FieldReader, validator Validator, appCache *cache.Cache, accessSvc *access.Service) *Service {
@@ -79,6 +86,10 @@ func New(repo RecordRepository, fields FieldReader, validator Validator, appCach
 
 func (s *Service) SetActivityLogger(logger ActivityLogger) {
 	s.activity = logger
+}
+
+func (s *Service) SetListLayoutReader(reader ListLayoutReader) {
+	s.listLayout = reader
 }
 
 func (s *Service) logActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) {
@@ -320,13 +331,39 @@ func (s *Service) List(ctx context.Context, orgID, moduleID, userID string, q dt
 		totalPages = int(math.Max(1, math.Ceil(float64(total)/float64(q.PageSize))))
 	}
 
-	return &dto.ListResult{
+	result := &dto.ListResult{
 		Records:    responses,
 		Page:       q.Page,
 		PageSize:   q.PageSize,
 		Total:      total,
 		TotalPages: totalPages,
-	}, nil
+	}
+	if cols := s.listColumns(ctx, orgID, moduleID); len(cols) > 0 {
+		result.Columns = cols
+	}
+	return result, nil
+}
+
+func (s *Service) listColumns(ctx context.Context, orgID, moduleID string) []dto.ListColumnMeta {
+	if s.listLayout == nil {
+		return nil
+	}
+	layout, err := s.listLayout.GetListLayout(ctx, orgID, moduleID, false)
+	if err != nil || layout == nil {
+		return nil
+	}
+	out := make([]dto.ListColumnMeta, 0, len(layout.Columns))
+	for _, c := range layout.Columns {
+		if c.System || c.FieldKey == workspacedto.ActionsColumnKey || !c.Visible {
+			continue
+		}
+		label := c.Label
+		if label == "" {
+			label = c.FieldKey
+		}
+		out = append(out, dto.ListColumnMeta{Field: c.FieldKey, Label: label})
+	}
+	return out
 }
 
 func (s *Service) Delete(ctx context.Context, orgID, moduleID, id, userID string) error {

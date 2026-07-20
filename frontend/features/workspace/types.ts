@@ -1,6 +1,10 @@
 export interface LayoutSection {
   key: string;
   label: string;
+  description?: string;
+  order?: number;
+  collapsed?: boolean;
+  columns?: number;
   fields: string[];
 }
 
@@ -15,6 +19,64 @@ export interface DetailLayout {
   layout_type: string;
   is_default: boolean;
   config: DetailLayoutConfig;
+}
+
+/** Hydrated form layout from GET /layouts/form */
+export interface FormLayoutField {
+  id: string;
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  editable: boolean;
+  locked: boolean;
+  display_order: number;
+  placeholder?: string | null;
+  description?: string | null;
+  default_value?: string | null;
+  lock_mode?: string;
+  lookup_module_id?: string | null;
+  options?: { label: string; value: string }[];
+}
+
+export interface FormLayoutSection {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  collapsed: boolean;
+  columns: number;
+  fields: FormLayoutField[];
+}
+
+export interface FormLayout {
+  id: string;
+  name: string;
+  layout_type: string;
+  is_default: boolean;
+  mode: string;
+  sections: FormLayoutSection[];
+}
+
+export interface ListColumn {
+  field_key: string;
+  field_id?: string;
+  label?: string;
+  visible: boolean;
+  order: number;
+  sortable: boolean;
+  searchable: boolean;
+  system: boolean;
+  locked?: boolean;
+  width?: number | null;
+}
+
+export interface ListLayout {
+  id: string;
+  name: string;
+  layout_type: string;
+  is_default: boolean;
+  columns: ListColumn[];
 }
 
 export interface WorkspaceNote {

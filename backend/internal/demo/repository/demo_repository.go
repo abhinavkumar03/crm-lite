@@ -397,5 +397,29 @@ func (r *Repository) SeedProductDemoModule(ctx context.Context, orgID, userID st
 			return err
 		}
 	}
-	return nil
+
+	layout := `{
+		"sections":[
+			{"key":"basics","label":"Basics","fields":["name","priority","score"]},
+			{"key":"schedule","label":"Schedule","fields":["due_date","tags"]},
+			{"key":"notes","label":"Notes","fields":["notes"]},
+			{"key":"system","label":"System Fields","fields":["owner_id","assigned_to","visibility","created_at","updated_at"]}
+		],
+		"tabs":["overview","notes","attachments","timeline","related"]
+	}`
+	var existingLayout string
+	_ = r.db.QueryRow(ctx, `
+		SELECT id::text FROM layouts
+		WHERE organization_id = $1 AND module_id = $2 AND layout_type = 'detail' AND is_default = TRUE
+		LIMIT 1
+	`, orgID, moduleID).Scan(&existingLayout)
+	if existingLayout != "" {
+		_, err = r.db.Exec(ctx, `UPDATE layouts SET config = $2::jsonb, updated_at = NOW() WHERE id = $1`, existingLayout, layout)
+	} else {
+		_, err = r.db.Exec(ctx, `
+			INSERT INTO layouts (organization_id, module_id, name, layout_type, is_default, config)
+			VALUES ($1, $2, 'Default Detail', 'detail', TRUE, $3::jsonb)
+		`, orgID, moduleID, layout)
+	}
+	return err
 }

@@ -8,6 +8,9 @@ import FormInput from "@/components/common/form/FormInput";
 import FormSelect from "@/components/common/form/FormSelect";
 
 import { getSettings, updateSettings } from "@/features/settings/api";
+import OrgLogoUploader, {
+  notifyOrgBrandingUpdated,
+} from "@/features/settings/components/OrgLogoUploader";
 import { GeneralSettings, OrgSettings } from "@/features/settings/types";
 
 const TIMEZONES = [
@@ -80,7 +83,7 @@ export default function GeneralSettingsPage() {
       setSaving(true);
       const updated = await updateSettings({
         name: name.trim(),
-        logo_url: logoUrl.trim() || null,
+        logo_url: logoUrl.trim(),
         industry: industry.trim() || null,
         company_size: companySize.trim() || null,
         country: country.trim() || null,
@@ -93,6 +96,10 @@ export default function GeneralSettingsPage() {
       setCompanySize(updated.company_size ?? "");
       setCountry(updated.country ?? "");
       setGeneral(updated.general);
+      notifyOrgBrandingUpdated({
+        name: updated.name,
+        logo_url: updated.logo_url ?? null,
+      });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -110,7 +117,7 @@ export default function GeneralSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-tutorial-surface="settings-home">
       <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Organization</h2>
@@ -127,6 +134,13 @@ export default function GeneralSettingsPage() {
           onChange={(e) => setName(e.target.value)}
         />
 
+        <OrgLogoUploader
+          value={logoUrl}
+          orgName={name}
+          disabled={saving}
+          onChange={setLogoUrl}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <p className="text-sm font-semibold text-slate-700">Slug</p>
@@ -141,13 +155,6 @@ export default function GeneralSettingsPage() {
             </div>
           </div>
         </div>
-
-        <FormInput
-          label="Logo URL"
-          value={logoUrl}
-          placeholder="https://…"
-          onChange={(e) => setLogoUrl(e.target.value)}
-        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormInput

@@ -191,7 +191,7 @@ def build_paths():
             op_id="login",
             req=json_body(
                 "#/components/schemas/LoginRequest",
-                {"email": "admin@crmlite.com", "password": "Admin@12345"},
+                {"email": "admin@crm.com", "password": "Admin@123"},
             ),
             responses={
                 **ok(
@@ -204,7 +204,7 @@ def build_paths():
                             "user": {
                                 "id": "…",
                                 "name": "Admin",
-                                "email": "admin@crmlite.com",
+                                "email": "admin@crm.com",
                             },
                         },
                     },
@@ -1004,6 +1004,77 @@ def build_paths():
         )
     }
 
+    paths["/me/organizations"] = {
+        "get": op(
+            "List my workspaces",
+            "Organizations",
+            op_id="listMyOrganizations",
+            description="Returns every non-deleted organization the caller belongs to.",
+            responses={
+                **ok("#/components/schemas/OrgSummaryList"),
+                **err_refs("Unauthorized"),
+            },
+        ),
+    }
+    paths["/me/organizations/switch"] = {
+        "post": op(
+            "Switch active workspace",
+            "Organizations",
+            op_id="switchOrganization",
+            description="Updates users.active_organization_id. JWT stays user-only.",
+            req=json_body("#/components/schemas/SwitchOrgRequest"),
+            responses={
+                **ok(),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest"),
+            },
+        )
+    }
+    paths["/organizations"] = {
+        "post": op(
+            "Create workspace",
+            "Organizations",
+            op_id="createOrganization",
+            description="Bootstraps roles, full module catalog, and owner membership.",
+            req=json_body("#/components/schemas/CreateOrgRequest"),
+            responses={
+                **ok(None, {"id": "11111111-1111-1111-1111-111111111111"}, code="201"),
+                **err_refs("Unauthorized", "BadRequest"),
+            },
+        )
+    }
+    paths["/organizations/current"] = {
+        "get": op(
+            "Get current workspace",
+            "Organizations",
+            op_id="getCurrentOrganization",
+            responses={
+                **ok("#/components/schemas/OrgDetail"),
+                **err_refs("Unauthorized", "NotFound"),
+            },
+        ),
+        "patch": op(
+            "Update current workspace",
+            "Organizations",
+            op_id="updateCurrentOrganization",
+            description="Requires `organization.manage`.",
+            req=json_body("#/components/schemas/UpdateOrgRequest"),
+            responses={
+                **ok("#/components/schemas/OrgDetail"),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest", "NotFound"),
+            },
+        ),
+        "delete": op(
+            "Soft-delete current workspace",
+            "Organizations",
+            op_id="deleteCurrentOrganization",
+            description="Requires `organization.manage`. Blocked when it is the caller's last workspace.",
+            responses={
+                **ok(),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest", "NotFound"),
+            },
+        ),
+    }
+
     paths["/settings"] = {
         "get": op(
             "Get organization settings",
@@ -1235,6 +1306,7 @@ def main():
                 "Export",
                 "Notifications",
                 "Tour",
+                "Organizations",
                 "Settings",
                 "Roles",
             ]

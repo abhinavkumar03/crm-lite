@@ -46,7 +46,7 @@ const stepsSignedIn = [
     step: "2",
     title: "Work the CRM",
     detail: "Jump into forms, tables, imports, and settings.",
-    href: "/tables",
+    href: "/dashboard",
     icon: LogIn,
   },
   {

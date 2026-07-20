@@ -55,7 +55,8 @@ docker compose up --build
 - API: http://localhost:8080/api/v1/health  
 - Swagger: http://localhost:8080/api/v1/docs  
 
-Demo admin: `admin@crmlite.com` / `Admin@12345` (after seed).
+Demo login: `demo@crmlite.com` / `Password@123` (owner of 5 workspaces after seed).  
+Also available: `admin@crm.com` / `Admin@123` on the primary workspace.
 
 Hybrid (local API + Docker Postgres/Redis): see
 [developer onboarding](./docs/developer-onboarding.md).

@@ -115,6 +115,8 @@ export interface CreateFieldPayload {
   is_visible?: boolean;
   is_searchable?: boolean;
   is_filterable?: boolean;
+  /** Detail layout section key (defaults to "general" on the server). */
+  section_key?: string;
 }
 
 export interface UpdateFieldPayload {

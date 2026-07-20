@@ -219,7 +219,10 @@ export default function ModulesSettingsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div
+        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+        data-tutorial-surface="modules-list"
+      >
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">

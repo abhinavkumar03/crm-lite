@@ -9,7 +9,10 @@ import {
   FormInput,
   ShieldCheck,
   Zap,
-  Database,
+  Upload,
+  Download,
+  LayoutTemplate,
+  Table2,
   Shield,
   Users,
   Building2,
@@ -47,11 +50,38 @@ const items: NavItem[] = [
     tutorialAction: "open-fields",
   },
   {
+    name: "Form Designer",
+    href: "/settings/forms",
+    icon: LayoutTemplate,
+    description: "Preview metadata-driven forms",
+    tutorialAction: "open-forms",
+  },
+  {
+    name: "Listing Columns",
+    href: "/settings/tables",
+    icon: Table2,
+    description: "Table column visibility & order",
+  },
+  {
     name: "Validation",
     href: "/settings/validation",
     icon: ShieldCheck,
     description: "Data-quality rules",
     tutorialAction: "open-validation",
+  },
+  {
+    name: "Import",
+    href: "/settings/imports",
+    icon: Upload,
+    description: "CSV / Excel into modules",
+    tutorialAction: "open-imports",
+  },
+  {
+    name: "Export",
+    href: "/settings/exports",
+    icon: Download,
+    description: "CSV / Excel out of modules",
+    tutorialAction: "open-exports",
   },
   {
     name: "Members",
@@ -84,12 +114,6 @@ const items: NavItem[] = [
     icon: Zap,
     description: "Notification behaviour",
     tutorialAction: "open-automation",
-  },
-  {
-    name: "Data",
-    href: "/settings/data",
-    icon: Database,
-    description: "Import & export",
   },
 ];
 

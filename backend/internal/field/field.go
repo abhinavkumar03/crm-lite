@@ -13,6 +13,7 @@ import (
 // Module is the dynamic-field engine composition root.
 type Module struct {
 	Handler *handler.FieldHandler
+	Service *service.Service
 	auth    gin.HandlerFunc
 	org     gin.HandlerFunc
 	load    gin.HandlerFunc
@@ -26,6 +27,7 @@ func NewModule(db *pgxpool.Pool, auth, org, load gin.HandlerFunc, guard *rbac.Gu
 
 	return &Module{
 		Handler: h,
+		Service: svc,
 		auth:    auth,
 		org:     org,
 		load:    load,

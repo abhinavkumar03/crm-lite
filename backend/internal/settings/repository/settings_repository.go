@@ -20,7 +20,7 @@ func New(db *pgxpool.Pool) *Repository {
 
 const orgCols = `
 	id, name, slug, plan,
-	logo_url, industry, company_size, country, status, created_by,
+	logo_url, description, industry, company_size, country, status, created_by,
 	settings, updated_at
 `
 
@@ -28,7 +28,7 @@ func scanOrg(row pgx.Row) (*entity.Organization, error) {
 	var o entity.Organization
 	err := row.Scan(
 		&o.ID, &o.Name, &o.Slug, &o.Plan,
-		&o.LogoURL, &o.Industry, &o.CompanySize, &o.Country, &o.Status, &o.CreatedBy,
+		&o.LogoURL, &o.Description, &o.Industry, &o.CompanySize, &o.Country, &o.Status, &o.CreatedBy,
 		&o.Settings, &o.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -42,13 +42,14 @@ func scanOrg(row pgx.Row) (*entity.Organization, error) {
 
 func (r *Repository) GetByID(ctx context.Context, orgID string) (*entity.Organization, error) {
 	return scanOrg(r.db.QueryRow(ctx, `
-		SELECT `+orgCols+` FROM organizations WHERE id = $1
+		SELECT `+orgCols+` FROM organizations WHERE id = $1 AND deleted_at IS NULL
 	`, orgID))
 }
 
 type ProfileUpdate struct {
 	Name        string
 	LogoURL     *string
+	Description *string
 	Industry    *string
 	CompanySize *string
 	Country     *string
@@ -61,13 +62,14 @@ func (r *Repository) Update(ctx context.Context, orgID string, p ProfileUpdate) 
 		UPDATE organizations
 		SET name = $2,
 		    logo_url = $3,
-		    industry = $4,
-		    company_size = $5,
-		    country = $6,
-		    status = $7,
-		    settings = $8,
+		    description = $4,
+		    industry = $5,
+		    company_size = $6,
+		    country = $7,
+		    status = $8,
+		    settings = $9,
 		    updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 		RETURNING `+orgCols+`
-	`, orgID, p.Name, p.LogoURL, p.Industry, p.CompanySize, p.Country, p.Status, p.Settings))
+	`, orgID, p.Name, p.LogoURL, p.Description, p.Industry, p.CompanySize, p.Country, p.Status, p.Settings))
 }

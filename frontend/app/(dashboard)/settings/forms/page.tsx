@@ -6,17 +6,17 @@ import {
   useMemo,
   useState,
 } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowRight, Monitor, Smartphone } from "lucide-react";
 
 import PageHeader from "@/components/common/PageHeader";
 import FormSelect from "@/components/common/form/FormSelect";
 
 import DynamicForm from "@/features/metadata/components/DynamicForm";
 
-import { useDemo } from "@/features/demo/DemoProvider";
 import {
-  createRecord,
   getModuleFields,
   getModules,
   getValidationSchema,
@@ -30,28 +30,26 @@ import {
   VisibilityRule,
 } from "@/features/metadata/types";
 
-import { errorListToMap } from "@/features/metadata/lib/validation";
+import { getFormLayout } from "@/features/workspace/api";
+import type { FormLayout } from "@/features/workspace/types";
 
-export default function DynamicFormsPage() {
+type PreviewMode = "desktop" | "mobile";
+
+export default function FormDesignerPage() {
   return (
     <Suspense
       fallback={
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-          Loading forms...
+          Loading form designer...
         </div>
       }
     >
-      <DynamicFormsInner />
+      <FormDesignerInner />
     </Suspense>
   );
 }
 
-function DynamicFormsInner() {
-  const demo = useDemo();
-  const tutorialCreate =
-    demo?.mode === "running" &&
-    demo.currentStep?.step_key === "create_record";
-
+function FormDesignerInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const moduleFromQuery = searchParams.get("module") ?? "";
@@ -61,12 +59,12 @@ function DynamicFormsInner() {
 
   const [fields, setFields] = useState<ModuleField[]>([]);
   const [schema, setSchema] = useState<ValidationSchema | null>(null);
+  const [formLayout, setFormLayout] = useState<FormLayout | null>(null);
   const [loadedId, setLoadedId] = useState("");
 
   const [preview, setPreview] = useState<FormValues>({});
-  const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [conditionalDemo, setConditionalDemo] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
 
   const isLoading = !!moduleId && loadedId !== moduleId;
 
@@ -76,19 +74,11 @@ function DynamicFormsInner() {
         const all = await getModules();
         const dynamic = all.filter((m) => m.storage_strategy === "dynamic");
         setModules(dynamic);
-        if (tutorialCreate) {
-          const tutorial = dynamic.find((m) => m.api_name === "tutorial_lead");
-          if (tutorial) {
-            setModuleId(tutorial.id);
-            const params = new URLSearchParams({ module: tutorial.id });
-            router.replace(`/forms?${params.toString()}`);
-          }
-        }
       } catch {
         toast.error("Failed to load modules");
       }
     })();
-  }, [tutorialCreate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (moduleFromQuery && moduleFromQuery !== moduleId) {
@@ -101,13 +91,14 @@ function DynamicFormsInner() {
 
     (async () => {
       try {
-        const [f, s] = await Promise.all([
+        const [f, s, layout] = await Promise.all([
           getModuleFields(moduleId),
           getValidationSchema(moduleId),
+          getFormLayout(moduleId, "create"),
         ]);
         setFields(f);
         setSchema(s);
-        setServerErrors({});
+        setFormLayout(layout);
         setPreview({});
         setLoadedId(moduleId);
       } catch {
@@ -140,85 +131,31 @@ function DynamicFormsInner() {
     const params = new URLSearchParams();
     if (id) params.set("module", id);
     const qs = params.toString();
-    router.replace(qs ? `/forms?${qs}` : "/forms");
-  }
-
-  async function handleSubmit(values: FormValues) {
-    if (!moduleId || submitting) return;
-    setSubmitting(true);
-    try {
-      await createRecord(moduleId, values);
-      setServerErrors({});
-      setPreview({});
-      toast.success("Record created");
-      if (tutorialCreate) {
-        // Stay briefly so demo validate can see the new row, then continue.
-        await demo?.validate({ silent: true });
-      }
-      router.push(`/tables?module=${moduleId}`);
-    } catch (err: unknown) {
-      const axiosErr = err as {
-        response?: { data?: { data?: { errors?: { field: string; message: string }[] }; message?: string } };
-      };
-      const fieldErrors = axiosErr.response?.data?.data?.errors;
-      if (fieldErrors?.length) {
-        setServerErrors(errorListToMap(fieldErrors));
-        toast.error("Validation failed");
-      } else {
-        toast.error(
-          axiosErr.response?.data?.message || "Failed to create record"
-        );
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    router.replace(qs ? `/settings/forms?${qs}` : "/settings/forms");
   }
 
   const selectedModule = modules.find((m) => m.id === moduleId);
+  const moduleHref = selectedModule
+    ? `/m/${selectedModule.api_name}?create=1`
+    : "/dashboard";
 
-  const tutorialInitialValues = useMemo<FormValues>(() => {
-    if (!tutorialCreate) return {};
-    const values: FormValues = {};
-    for (const f of fields) {
-      if (f.api_name === "company_name") {
-        values.company_name = "Acme Tutorial Co";
-      } else if (f.is_required && f.field_type === "text") {
-        values[f.api_name] = "Tutorial";
-      } else if (f.is_required && f.field_type === "email") {
-        values[f.api_name] = "demo@example.com";
-      } else if (f.is_required && (f.field_type === "number" || f.field_type === "currency")) {
-        values[f.api_name] = 1;
-      }
-    }
-    return values;
-  }, [tutorialCreate, fields]);
+  const requiredCount = fields.filter((f) => f.is_required && f.is_visible).length;
+  const sectionCount = formLayout?.sections?.length ?? 0;
 
   return (
-    <div className="space-y-8" data-tutorial-surface="create-record">
+    <div className="space-y-8" data-tutorial-surface="form-designer">
       <PageHeader
         badge="Metadata Engine"
-        title="Dynamic Forms"
-        description="Create records with forms generated from module field metadata and backend validation."
+        title="Form Designer"
+        description="Preview how create forms are generated from field metadata, sections, and layout — without saving records."
       />
-
-      {tutorialCreate && (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Tutorial Lead is selected and <strong>company_name</strong> is
-          pre-filled. Click <strong>Create record</strong> to continue.
-        </p>
-      )}
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-5 md:grid-cols-2">
           <FormSelect
             label="Module"
-            helperText={
-              tutorialCreate
-                ? "Locked to Tutorial Lead for the walkthrough."
-                : "Only dynamic modules are listed."
-            }
+            helperText="Only dynamic modules are listed."
             value={moduleId}
-            disabled={tutorialCreate}
             onChange={(e) => selectModule(e.target.value)}
           >
             <option value="">Select a module...</option>
@@ -229,18 +166,61 @@ function DynamicFormsInner() {
             ))}
           </FormSelect>
 
-          {!tutorialCreate && (
-            <label className="flex items-end gap-3 pb-3 text-sm font-medium text-slate-700">
+          <div className="flex flex-col justify-end gap-3 pb-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Preview
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewMode("desktop")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  previewMode === "desktop"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Monitor size={14} />
+                Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewMode("mobile")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  previewMode === "mobile"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Smartphone size={14} />
+                Mobile
+              </button>
+            </div>
+            <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
               <input
                 type="checkbox"
                 checked={conditionalDemo}
                 onChange={(e) => setConditionalDemo(e.target.checked)}
                 className="h-4 w-4 accent-emerald-500"
               />
-              Conditional demo: reveal fields after the first is filled
+              Test conditional visibility (reveal fields after the first is filled)
             </label>
-          )}
+          </div>
         </div>
+
+        {selectedModule && (
+          <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {fields.length} fields
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {requiredCount} required
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">
+              {sectionCount} sections
+            </span>
+          </div>
+        )}
       </div>
 
       {isLoading && (
@@ -251,24 +231,39 @@ function DynamicFormsInner() {
 
       {!isLoading && moduleId && schema && fields.length > 0 && (
         <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-          <DynamicForm
-            key={`${moduleId}-${conditionalDemo}-${tutorialCreate ? "tut" : "std"}`}
-            fields={fields}
-            schema={schema}
-            submitText={submitting ? "Creating..." : "Create record"}
-            initialValues={tutorialInitialValues}
-            visibilityRules={visibilityRules}
-            sectionTitle={selectedModule?.plural_label ?? "Record"}
-            sectionDescription="Rendered dynamically from field metadata."
-            externalErrors={serverErrors}
-            onSubmit={handleSubmit}
-            onChange={setPreview}
-          />
+          <div
+            className={
+              previewMode === "mobile"
+                ? "mx-auto w-full max-w-sm"
+                : "w-full"
+            }
+          >
+            <DynamicForm
+              key={`${moduleId}-${conditionalDemo}-${previewMode}`}
+              fields={fields}
+              schema={schema}
+              formLayout={formLayout}
+              previewOnly
+              visibilityRules={visibilityRules}
+              sectionTitle={selectedModule?.singular_label ?? "Record"}
+              sectionDescription="Rendered dynamically from field metadata."
+              onChange={setPreview}
+              footerSlot={
+                <Link
+                  href={moduleHref}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  Open {selectedModule?.singular_label ?? "module"} module
+                  <ArrowRight size={16} />
+                </Link>
+              }
+            />
+          </div>
 
           <aside className="space-y-4">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold text-slate-900">
-                Live payload
+                Live payload preview
               </h3>
               <pre className="max-h-96 overflow-auto rounded-2xl bg-slate-900 p-4 text-xs text-emerald-200">
                 {JSON.stringify(preview, null, 2)}
@@ -282,10 +277,16 @@ function DynamicFormsInner() {
               <ul className="list-disc space-y-1 pl-5">
                 <li>Fields come from <code>GET /modules/:id/fields</code>.</li>
                 <li>
-                  Submit creates a row via{" "}
-                  <code>POST /modules/:id/records</code>.
+                  Form sections come from{" "}
+                  <code>GET /modules/:id/layouts/form</code>.
                 </li>
-                <li>Conditional visibility is metadata-driven.</li>
+                <li>
+                  Edit sections and fields in Settings → Fields — this page only
+                  previews the result.
+                </li>
+                <li>
+                  Create real records from the module listing page (Add …).
+                </li>
               </ul>
             </div>
           </aside>
@@ -294,7 +295,7 @@ function DynamicFormsInner() {
 
       {!isLoading && moduleId && fields.length === 0 && schema && (
         <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 shadow-sm">
-          This module has no fields yet.
+          This module has no fields yet. Add fields in Settings → Fields.
         </div>
       )}
     </div>

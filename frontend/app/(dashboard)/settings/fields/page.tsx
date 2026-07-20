@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import Modal from "@/components/common/Modal";
 import FormInput from "@/components/common/form/FormInput";
@@ -11,6 +11,9 @@ import FormTextarea from "@/components/common/form/FormTextarea";
 import Toggle from "@/components/common/form/Toggle";
 
 import { useDemo } from "@/features/demo/DemoProvider";
+import FieldSectionsEditor, {
+  buildEditableSections,
+} from "@/features/settings/components/FieldSectionsEditor";
 import {
   createField,
   deleteField,
@@ -21,6 +24,12 @@ import {
 import { ModuleDetail } from "@/features/settings/types";
 import { apiErrorMessage } from "@/features/settings/errors";
 import { FieldOption, FieldType, ModuleField } from "@/features/metadata/types";
+import {
+  getDetailLayout,
+  updateDetailLayout,
+  updateFormLayout,
+} from "@/features/workspace/api";
+import type { LayoutSection } from "@/features/workspace/types";
 
 const FIELD_TYPES: FieldType[] = [
   "text",
@@ -65,6 +74,7 @@ type FormState = {
   max_length: string;
   options: FieldOption[];
   lookup_module_id: string;
+  section_key: string;
 };
 
 const EMPTY: FormState = {
@@ -87,6 +97,7 @@ const EMPTY: FormState = {
   max_length: "",
   options: [],
   lookup_module_id: "",
+  section_key: "general",
 };
 
 const TUTORIAL_FIELD: FormState = {
@@ -99,6 +110,7 @@ const TUTORIAL_FIELD: FormState = {
   is_searchable: true,
   placeholder: "Acme Corp",
   description: "Created during the interactive CRM walkthrough",
+  section_key: "general",
 };
 
 function intOrNull(v: string): number | null {
@@ -117,13 +129,17 @@ export default function FieldsSettingsPage() {
   const [modules, setModules] = useState<ModuleDetail[]>([]);
   const [moduleId, setModuleId] = useState("");
   const [fields, setFields] = useState<ModuleField[]>([]);
+  const [sections, setSections] = useState<LayoutSection[]>([]);
+  const [layoutTabs, setLayoutTabs] = useState<string[] | undefined>();
   const [loadingFields, setLoadingFields] = useState(false);
+  const [savingLayout, setSavingLayout] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ModuleField | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const layoutSaveChain = useRef(Promise.resolve());
 
   useEffect(() => {
     let active = true;
@@ -153,8 +169,14 @@ export default function FieldsSettingsPage() {
     (async () => {
       setLoadingFields(true);
       try {
-        const data = await listFields(moduleId);
-        if (active) setFields(data);
+        const [data, layout] = await Promise.all([
+          listFields(moduleId),
+          getDetailLayout(moduleId),
+        ]);
+        if (!active) return;
+        setFields(data);
+        setLayoutTabs(layout.config?.tabs);
+        setSections(buildEditableSections(layout.config?.sections, data));
       } catch {
         if (active) toast.error("Failed to load fields");
       } finally {
@@ -168,9 +190,20 @@ export default function FieldsSettingsPage() {
 
   const selectedModule = modules.find((m) => m.id === moduleId);
 
+  const sectionOptions = sections.filter((s) => s.key !== "system");
+
+  function sectionForField(apiName: string): string {
+    const found = sections.find((s) => s.fields.includes(apiName));
+    return found?.key ?? "general";
+  }
+
   function openCreate() {
     setEditing(null);
-    setForm(tutorialCreate ? TUTORIAL_FIELD : EMPTY);
+    const base = tutorialCreate ? TUTORIAL_FIELD : EMPTY;
+    setForm({
+      ...base,
+      section_key: sectionOptions[0]?.key ?? "general",
+    });
     setModalOpen(true);
   }
 
@@ -196,6 +229,7 @@ export default function FieldsSettingsPage() {
       max_length: f.max_length?.toString() ?? "",
       options: f.options ?? [],
       lookup_module_id: f.lookup_module_id ?? "",
+      section_key: sectionForField(f.api_name),
     });
     setModalOpen(true);
   }
@@ -216,6 +250,74 @@ export default function FieldsSettingsPage() {
 
   function removeOption(idx: number) {
     patch({ options: form.options.filter((_, i) => i !== idx) });
+  }
+
+  async function saveSections(next: LayoutSection[]) {
+    if (!moduleId) return;
+    setSections(next);
+    const job = async () => {
+      try {
+        setSavingLayout(true);
+        const layout = await updateDetailLayout(moduleId, {
+          sections: next,
+          tabs: layoutTabs,
+        });
+        // Keep create/edit forms in sync (exclude detail-only system section).
+        const formSections = next
+          .filter((s) => s.key !== "system")
+          .map((s, i) => ({
+            key: s.key,
+            label: s.label,
+            description: s.description ?? "",
+            order: s.order ?? i + 1,
+            collapsed: s.collapsed ?? false,
+            columns: s.columns && s.columns >= 1 && s.columns <= 3 ? s.columns : 2,
+            fields: (s.fields ?? []).filter(
+              (n) =>
+                n !== "owner_id" &&
+                n !== "assigned_to" &&
+                n !== "visibility" &&
+                n !== "created_at" &&
+                n !== "updated_at"
+            ),
+          }));
+        if (formSections.length > 0) {
+          await updateFormLayout(moduleId, formSections);
+        }
+        setLayoutTabs(layout.config?.tabs);
+        const refreshed = await listFields(moduleId);
+        setFields(refreshed);
+        setSections(
+          buildEditableSections(layout.config?.sections, refreshed)
+        );
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Failed to save field sections"));
+        setReloadKey((k) => k + 1);
+      } finally {
+        setSavingLayout(false);
+      }
+    };
+    layoutSaveChain.current = layoutSaveChain.current.then(job, job);
+    await layoutSaveChain.current;
+  }
+
+  async function moveFieldToSection(apiName: string, sectionKey: string) {
+    const key = sectionKey === "system" ? "general" : sectionKey;
+    const next = sections.map((s) => ({
+      ...s,
+      fields: s.fields.filter((n) => n !== apiName),
+    }));
+    const target = next.find((s) => s.key === key);
+    if (target) {
+      if (!target.fields.includes(apiName)) target.fields.push(apiName);
+    } else {
+      next.unshift({
+        key,
+        label: key === "general" ? "General Information" : key,
+        fields: [apiName],
+      });
+    }
+    await saveSections(next);
   }
 
   async function handleSubmit() {
@@ -259,6 +361,8 @@ export default function FieldsSettingsPage() {
           max_length: intOrNull(form.max_length),
           options: needsOptions ? cleanOptions : [],
         });
+        const desired = form.section_key || "general";
+        await moveFieldToSection(editing.api_name, desired);
         toast.success("Field updated");
       } else {
         await createField(moduleId, {
@@ -284,6 +388,7 @@ export default function FieldsSettingsPage() {
             form.field_type === "lookup" && form.lookup_module_id
               ? form.lookup_module_id
               : null,
+          section_key: form.section_key || "general",
         });
         toast.success("Field created");
       }
@@ -355,94 +460,25 @@ export default function FieldsSettingsPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
-              <th className="px-4 py-3 font-semibold">Field</th>
-              <th className="px-4 py-3 font-semibold">API name</th>
-              <th className="px-4 py-3 font-semibold">Type</th>
-              <th className="px-4 py-3 font-semibold">Flags</th>
-              <th className="px-4 py-3 text-right font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loadingFields ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  Loading fields...
-                </td>
-              </tr>
-            ) : fields.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  No fields yet.
-                </td>
-              </tr>
-            ) : (
-              fields.map((f) => (
-                <tr
-                  key={f.id}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50/60"
-                >
-                  <td className="px-4 py-3 font-semibold text-slate-800">
-                    {f.label}
-                  </td>
-                  <td className="px-4 py-3">
-                    <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">
-                      {f.api_name}
-                    </code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                      {f.field_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {f.is_required && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                          required
-                        </span>
-                      )}
-                      {f.is_unique && (
-                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
-                          unique
-                        </span>
-                      )}
-                      {f.is_system && (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                          system
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(f)}
-                        className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                        aria-label="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(f)}
-                        disabled={f.is_system}
-                        className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm sm:p-6">
+        {loadingFields ? (
+          <p className="py-10 text-center text-sm text-slate-400">
+            Loading fields...
+          </p>
+        ) : fields.length === 0 && sections.every((s) => s.fields.length === 0) ? (
+          <p className="py-10 text-center text-sm text-slate-400">
+            No fields yet. Create a field to start building sections.
+          </p>
+        ) : (
+          <FieldSectionsEditor
+            fields={fields}
+            sections={sections}
+            saving={savingLayout}
+            onChange={saveSections}
+            onEditField={openEdit}
+            onDeleteField={handleDelete}
+          />
+        )}
       </div>
 
       <Modal
@@ -501,21 +537,38 @@ export default function FieldsSettingsPage() {
               ))}
             </FormSelect>
 
-            {showLookup && !(tutorialCreate && !editing) && (
-              <FormSelect
-                label="Lookup module"
-                value={form.lookup_module_id}
-                onChange={(e) => patch({ lookup_module_id: e.target.value })}
-              >
-                <option value="">Select a module…</option>
-                {modules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.plural_label}
+            <FormSelect
+              label="Field section"
+              value={form.section_key}
+              helperText="Groups this field on the record overview."
+              onChange={(e) => patch({ section_key: e.target.value })}
+            >
+              {sectionOptions.length === 0 ? (
+                <option value="general">General Information</option>
+              ) : (
+                sectionOptions.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
                   </option>
-                ))}
-              </FormSelect>
-            )}
+                ))
+              )}
+            </FormSelect>
           </div>
+
+          {showLookup && !(tutorialCreate && !editing) && (
+            <FormSelect
+              label="Lookup module"
+              value={form.lookup_module_id}
+              onChange={(e) => patch({ lookup_module_id: e.target.value })}
+            >
+              <option value="">Select a module…</option>
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.plural_label}
+                </option>
+              ))}
+            </FormSelect>
+          )}
 
           {/* Full editor for normal use; walkthrough keeps a short essential form. */}
           {!(tutorialCreate && !editing) && (

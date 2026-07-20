@@ -49,15 +49,17 @@ func main() {
 	// they remain decoupled and idempotent.
 	runner.Register(
 		seeders.PermissionsSeeder{},
+		seeders.UsersSeeder{},
 		seeders.OrganizationSeeder{},
 		seeders.RolesSeeder{},
-		seeders.UsersSeeder{},
 		seeders.MembershipsSeeder{},
 		seeders.OrgStructureSeeder{},
 		seeders.ModulesSeeder{},
 		seeders.FieldsSeeder{},
+		seeders.LayoutsSeeder{},
 		seeders.TourStepsSeeder{},
 		seeders.BusinessDataSeeder{},
+		seeders.WorkspaceSideDataSeeder{},
 	)
 
 	if err := runner.Run(context.Background(), *fresh); err != nil {
