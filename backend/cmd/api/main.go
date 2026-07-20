@@ -35,6 +35,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/redis"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/secrets"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tenant"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/tour"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
@@ -131,7 +132,17 @@ func main() {
 	recordEngine.Service.SetListLayoutReader(workspaceModule.Service)
 	importEngine := importer.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
 	exportEngine := exporter.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
-	notificationModule := notification.NewModule(db, authMW, orgMiddleware, rbacLoad, guard, producer)
+
+	secretsBox, boxErr := secrets.NewBox(cfg.CommunicationSecretsKey)
+	if boxErr != nil {
+		log.Sugar().Warnf("communication secrets box: %v", boxErr)
+	}
+	notificationModule := notification.NewModuleWithDeps(notification.ModuleDeps{
+		DB: db, Auth: authMW, Org: orgMiddleware, Load: rbacLoad, Guard: guard, Producer: producer,
+		SecretsBox: secretsBox, Logger: log,
+		MetaSecret: cfg.WhatsAppAppSecret, MetaVerify: cfg.WhatsAppVerifyToken,
+		ResendSecret: cfg.ResendWebhookSecret,
+	})
 	tourModule := tour.NewModule(db, authMW, orgMiddleware)
 	demoModule := demo.NewModule(db, tenantResolver, authMW)
 	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)

@@ -1,4 +1,4 @@
-import { Boxes, Database } from "lucide-react";
+import { Boxes, Database, Mail, MessageCircle } from "lucide-react";
 
 import { DashboardResponse } from "../types";
 import MetricCard from "./MetricCard";
@@ -23,6 +23,25 @@ export default function MetricsGrid({ dashboard }: Props) {
       color: "bg-blue-500",
       trend: "All modules",
     },
+    {
+      title: "Emails today",
+      value: dashboard.emails_sent_today ?? 0,
+      icon: Mail,
+      color: "bg-amber-500",
+      trend: "Sent / delivered",
+    },
+    {
+      title: "WhatsApp today",
+      value: dashboard.whatsapp_sent_today ?? 0,
+      icon: MessageCircle,
+      color: "bg-teal-500",
+      trend:
+        (dashboard.failed_notifications ?? 0) > 0
+          ? `${dashboard.failed_notifications} failed`
+          : (dashboard.scheduled_notifications ?? 0) > 0
+            ? `${dashboard.scheduled_notifications} scheduled`
+            : "Sent / delivered",
+    },
   ];
 
   return (
@@ -35,16 +54,6 @@ export default function MetricsGrid({ dashboard }: Props) {
           icon={metric.icon}
           color={metric.color}
           trend={metric.trend}
-        />
-      ))}
-      {(dashboard.module_counts ?? []).slice(0, 2).map((m) => (
-        <MetricCard
-          key={m.module_id}
-          title={m.plural_label}
-          value={m.record_count}
-          icon={Boxes}
-          color="bg-violet-500"
-          trend={m.api_name}
         />
       ))}
     </section>

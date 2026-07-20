@@ -26,4 +26,8 @@ var PermissionCatalog = []PermissionDef{
 	{"role.manage", "role", "Create and manage roles and permissions"},
 	{"organization.manage", "organization", "Create organizations and manage membership structure"},
 	{"analytics.view", "analytics", "View dashboards and analytics"},
+	{"notification.view", "notification", "View notification center and delivery history"},
+	{"notification.send", "notification", "Compose, send, schedule, retry and cancel notifications"},
+	{"notification.templates.manage", "notification", "Create and manage notification templates"},
+	{"communication.providers.manage", "notification", "Manage email/WhatsApp providers and sender identities"},
 }

@@ -55,13 +55,23 @@ import {
   WorkspaceNote,
 } from "@/features/workspace/types";
 import { useDemo } from "@/features/demo/DemoProvider";
+import RecordCommunicationsPanel from "@/features/notifications/components/RecordCommunicationsPanel";
 
-type Tab = "overview" | "notes" | "attachments" | "timeline" | "related";
+type Tab =
+  | "overview"
+  | "notes"
+  | "attachments"
+  | "emails"
+  | "whatsapp"
+  | "timeline"
+  | "related";
 
 const VALID_TABS: Tab[] = [
   "overview",
   "notes",
   "attachments",
+  "emails",
+  "whatsapp",
   "timeline",
   "related",
 ];
@@ -352,6 +362,8 @@ export default function ModuleRecordPage() {
     { id: "overview", label: "Overview" },
     { id: "notes", label: "Notes" },
     { id: "attachments", label: "Attachments" },
+    { id: "emails", label: "Emails" },
+    { id: "whatsapp", label: "WhatsApp" },
     { id: "timeline", label: "Timeline" },
     { id: "related", label: "Related" },
   ];
@@ -610,6 +622,32 @@ export default function ModuleRecordPage() {
               ))
             )}
           </ul>
+        </div>
+      )}
+
+      {tab === "emails" && module && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <RecordCommunicationsPanel
+            moduleId={module.id}
+            recordId={record.id}
+            channel="email"
+            defaultTo={String(record.data?.email ?? "")}
+            recordLabel={title}
+          />
+        </div>
+      )}
+
+      {tab === "whatsapp" && module && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <RecordCommunicationsPanel
+            moduleId={module.id}
+            recordId={record.id}
+            channel="whatsapp"
+            defaultTo={String(
+              record.data?.phone ?? record.data?.mobile ?? ""
+            )}
+            recordLabel={title}
+          />
         </div>
       )}
 

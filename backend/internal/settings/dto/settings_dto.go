@@ -19,20 +19,22 @@ type SettingsResponse struct {
 	CompanySize     *string                   `json:"company_size,omitempty"`
 	Country         *string                   `json:"country,omitempty"`
 	Status          string                    `json:"status"`
-	General         entity.GeneralSettings    `json:"general"`
-	Automation      entity.AutomationSettings `json:"automation"`
-	UpdatedAt       time.Time                 `json:"updated_at"`
+	General         entity.GeneralSettings         `json:"general"`
+	Automation      entity.AutomationSettings      `json:"automation"`
+	Communication   entity.CommunicationSettings   `json:"communication"`
+	UpdatedAt       time.Time                      `json:"updated_at"`
 }
 
 // UpdateSettingsRequest is a partial update.
 type UpdateSettingsRequest struct {
-	Name        *string                    `json:"name" validate:"omitempty,min=1,max=200"`
-	LogoURL     *string                    `json:"logo_url"`
-	Description *string                    `json:"description" validate:"omitempty,max=2000"`
-	Industry    *string                    `json:"industry" validate:"omitempty,max=120"`
-	CompanySize *string                    `json:"company_size" validate:"omitempty,max=40"`
-	Country     *string                    `json:"country" validate:"omitempty,max=80"`
-	Status      *string                    `json:"status" validate:"omitempty,oneof=active suspended trial inactive"`
-	General     *entity.GeneralSettings    `json:"general"`
-	Automation  *entity.AutomationSettings `json:"automation"`
+	Name          *string                         `json:"name" validate:"omitempty,min=1,max=200"`
+	LogoURL       *string                         `json:"logo_url"`
+	Description   *string                         `json:"description" validate:"omitempty,max=2000"`
+	Industry      *string                         `json:"industry" validate:"omitempty,max=120"`
+	CompanySize   *string                         `json:"company_size" validate:"omitempty,max=40"`
+	Country       *string                         `json:"country" validate:"omitempty,max=80"`
+	Status        *string                         `json:"status" validate:"omitempty,oneof=active suspended trial inactive"`
+	General       *entity.GeneralSettings         `json:"general"`
+	Automation    *entity.AutomationSettings      `json:"automation"`
+	Communication *entity.CommunicationSettings   `json:"communication"`
 }

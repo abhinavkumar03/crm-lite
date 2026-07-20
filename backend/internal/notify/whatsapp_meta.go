@@ -32,7 +32,7 @@ func NewMetaCloudProvider(apiURL, token, phoneID string, logger *zap.Logger) *Me
 		apiURL:  strings.TrimRight(apiURL, "/"),
 		token:   token,
 		phoneID: phoneID,
-		client:  &http.Client{Timeout: 15 * time.Second},
+		client:  &http.Client{Timeout: 30 * time.Second},
 		logger:  logger,
 	}
 }
@@ -41,49 +41,97 @@ func (p *MetaCloudProvider) Name() string { return "meta-cloud" }
 
 func (p *MetaCloudProvider) Channel() Channel { return ChannelWhatsApp }
 
-func (p *MetaCloudProvider) Send(ctx context.Context, msg Message) error {
+func (p *MetaCloudProvider) Send(ctx context.Context, msg Message) (SendResult, error) {
 	endpoint := fmt.Sprintf("%s/%s/messages", p.apiURL, p.phoneID)
 
-	// Text message body. Template messages would use a different payload shape;
-	// this covers the common session-message case.
-	payload := map[string]any{
-		"messaging_product": "whatsapp",
-		"to":                msg.To,
-		"type":              "text",
-		"text": map[string]any{
-			"preview_url": false,
-			"body":        msg.Body,
-		},
+	var payload map[string]any
+	if msg.WhatsAppTemplateName != "" {
+		payload = map[string]any{
+			"messaging_product": "whatsapp",
+			"to":                msg.To,
+			"type":              "template",
+			"template": map[string]any{
+				"name": msg.WhatsAppTemplateName,
+				"language": map[string]any{
+					"code": firstNonEmpty(msg.WhatsAppLanguage, "en_US"),
+				},
+			},
+		}
+		if len(msg.WhatsAppComponents) > 0 {
+			payload["template"].(map[string]any)["components"] = msg.WhatsAppComponents
+		}
+	} else {
+		payload = map[string]any{
+			"messaging_product": "whatsapp",
+			"to":                msg.To,
+			"type":              "text",
+			"text": map[string]any{
+				"preview_url": false,
+				"body":        msg.Body,
+			},
+		}
 	}
 
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("notify(meta): marshal payload: %w", err)
+		return SendResult{}, fmt.Errorf("notify(meta): marshal payload: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
 	if err != nil {
-		return fmt.Errorf("notify(meta): build request: %w", err)
+		return SendResult{}, fmt.Errorf("notify(meta): build request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+p.token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("notify(meta): request failed: %w", err)
+		return SendResult{}, fmt.Errorf("notify(meta): request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
+	parsed := map[string]any{}
+	_ = json.Unmarshal(body, &parsed)
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("notify(meta): unexpected status %d: %s", resp.StatusCode, string(body))
+		return SendResult{RawResponse: parsed}, fmt.Errorf("notify(meta): unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
+	msgID := extractMetaMessageID(parsed)
 	if p.logger != nil {
-		p.logger.Info("notify: whatsapp delivered via meta cloud",
+		p.logger.Info("notify: whatsapp accepted via meta cloud",
 			zap.String("to", msg.To),
 			zap.String("template", msg.Template),
+			zap.String("provider_message_id", msgID),
 		)
 	}
-	return nil
+	return SendResult{
+		ProviderMessageID: msgID,
+		RawResponse:       parsed,
+	}, nil
+}
+
+func extractMetaMessageID(parsed map[string]any) string {
+	messages, ok := parsed["messages"].([]any)
+	if !ok || len(messages) == 0 {
+		return ""
+	}
+	first, ok := messages[0].(map[string]any)
+	if !ok {
+		return ""
+	}
+	if id, ok := first["id"].(string); ok {
+		return id
+	}
+	return ""
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }

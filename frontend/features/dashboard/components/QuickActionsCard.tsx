@@ -7,11 +7,19 @@ import {
   Settings,
   ArrowRight,
   Compass,
+  MessageCircle,
 } from "lucide-react";
 
 import { useDemo } from "@/features/demo/DemoProvider";
 
 const actions = [
+  {
+    title: "Compose notification",
+    description: "Send Email or WhatsApp from the Notification Center",
+    href: "/notifications",
+    icon: MessageCircle,
+    color: "bg-teal-500",
+  },
   {
     title: "Browse modules",
     description: "Open a module, then use Add to create records",

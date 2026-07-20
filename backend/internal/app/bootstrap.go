@@ -11,5 +11,8 @@ func RegisterModules(
 
 	for _, module := range modules {
 		module.RegisterRoutes(api)
+		if pub, ok := module.(PublicModule); ok {
+			pub.RegisterPublicRoutes(router)
+		}
 	}
 }

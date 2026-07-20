@@ -926,12 +926,13 @@ def build_paths():
             },
         ),
         "post": op(
-            "Send notification",
+            "Compose notification (draft/send/schedule)",
             "Notifications",
-            op_id="sendNotification",
+            op_id="composeNotification",
             req=json_body(
                 "#/components/schemas/SendNotificationRequest",
                 {
+                    "mode": "send",
                     "channel": "email",
                     "to": "ada@example.com",
                     "subject": "Welcome",
@@ -945,6 +946,17 @@ def build_paths():
             },
         ),
     }
+    paths["/notifications/metrics"] = {
+        "get": op(
+            "Notification metrics",
+            "Notifications",
+            op_id="notificationMetrics",
+            responses={
+                **ok("#/components/schemas/NotificationListResult"),
+                **err_refs("Unauthorized", "Forbidden"),
+            },
+        ),
+    }
     paths["/notifications/{id}"] = {
         "get": op(
             "Get notification",
@@ -955,7 +967,93 @@ def build_paths():
                 **ok("#/components/schemas/NotificationResponse"),
                 **err_refs("Unauthorized", "Forbidden", "NotFound"),
             },
-        )
+        ),
+        "patch": op(
+            "Update draft notification",
+            "Notifications",
+            op_id="updateDraftNotification",
+            params=[path_param("id")],
+            req=json_body("#/components/schemas/SendNotificationRequest", {}),
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/notifications/{id}/retry"] = {
+        "post": op(
+            "Retry failed notification",
+            "Notifications",
+            op_id="retryNotification",
+            params=[path_param("id")],
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/notifications/{id}/cancel"] = {
+        "post": op(
+            "Cancel scheduled notification",
+            "Notifications",
+            op_id="cancelNotification",
+            params=[path_param("id")],
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/communication-providers"] = {
+        "get": op(
+            "List communication providers",
+            "Communication",
+            op_id="listCommunicationProviders",
+            params=[q("channel")],
+            responses={
+                **ok("#/components/schemas/NotificationListResult"),
+                **err_refs("Unauthorized", "Forbidden"),
+            },
+        ),
+        "post": op(
+            "Create communication provider",
+            "Communication",
+            op_id="createCommunicationProvider",
+            req=json_body(
+                "#/components/schemas/SendNotificationRequest",
+                {
+                    "channel": "email",
+                    "provider_type": "smtp",
+                    "name": "Primary SMTP",
+                },
+            ),
+            responses={
+                **ok("#/components/schemas/NotificationResponse", code="201"),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest"),
+            },
+        ),
+    }
+    paths["/webhooks/whatsapp/meta"] = {
+        "get": op(
+            "Meta WhatsApp webhook verify",
+            "Webhooks",
+            op_id="metaWhatsAppVerify",
+            responses={"200": {"description": "Challenge echo"}},
+        ),
+        "post": op(
+            "Meta WhatsApp status webhook",
+            "Webhooks",
+            op_id="metaWhatsAppStatus",
+            responses={"200": {"description": "Accepted"}},
+        ),
+    }
+    paths["/webhooks/email/resend"] = {
+        "post": op(
+            "Resend email webhook",
+            "Webhooks",
+            op_id="resendEmailWebhook",
+            responses={"200": {"description": "Accepted"}},
+        ),
     }
 
     paths["/tour"] = {

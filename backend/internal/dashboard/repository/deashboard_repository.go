@@ -116,6 +116,29 @@ func (r *Repository) GetDashboard(
 		return nil, err
 	}
 
+	_ = r.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (
+				WHERE channel = 'email'
+				  AND status IN ('sent','delivered','opened','read')
+				  AND COALESCE(sent_at, created_at)::date = CURRENT_DATE
+			),
+			COUNT(*) FILTER (
+				WHERE channel = 'whatsapp'
+				  AND status IN ('sent','delivered','opened','read')
+				  AND COALESCE(sent_at, created_at)::date = CURRENT_DATE
+			),
+			COUNT(*) FILTER (WHERE status IN ('failed','retrying')),
+			COUNT(*) FILTER (WHERE status = 'scheduled')
+		FROM notifications
+		WHERE organization_id = $1
+	`, orgID).Scan(
+		&out.EmailsSentToday,
+		&out.WhatsAppSentToday,
+		&out.FailedNotifications,
+		&out.ScheduledNotifications,
+	)
+
 	return out, nil
 }
 

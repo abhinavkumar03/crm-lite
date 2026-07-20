@@ -60,6 +60,7 @@ func main() {
 		seeders.TourStepsSeeder{},
 		seeders.BusinessDataSeeder{},
 		seeders.WorkspaceSideDataSeeder{},
+		seeders.NotificationDemoSeeder{},
 	)
 
 	if err := runner.Run(context.Background(), *fresh); err != nil {

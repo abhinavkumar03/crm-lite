@@ -54,7 +54,11 @@ const (
 	ActionTaskCompleted = "TASK_COMPLETED"
 
 	ActionWhatsAppSent       = "WHATSAPP_SENT"
+	ActionWhatsAppDelivered  = "WHATSAPP_DELIVERED"
+	ActionWhatsAppRead       = "WHATSAPP_READ"
 	ActionEmailSent          = "EMAIL_SENT"
+	ActionEmailDelivered     = "EMAIL_DELIVERED"
+	ActionEmailOpened        = "EMAIL_OPENED"
 	ActionNotificationFailed = "NOTIFICATION_FAILED"
 )
 

@@ -36,6 +36,14 @@ type AutomationSettings struct {
 	DailyDigest          bool   `json:"daily_digest"`
 }
 
+// CommunicationSettings selects enabled channels and preferred providers.
+// Secrets remain in environment variables; this blob only stores selection.
+type CommunicationSettings struct {
+	EmailProvider    string   `json:"email_provider"`    // simulation|smtp|ses|sendgrid|mailgun|resend
+	WhatsAppProvider string   `json:"whatsapp_provider"` // simulation|meta|twilio|gupshup|interakt
+	EnabledChannels  []string `json:"enabled_channels"`  // email, whatsapp
+}
+
 func DefaultGeneral() GeneralSettings {
 	return GeneralSettings{
 		Timezone:   "UTC",
@@ -52,5 +60,13 @@ func DefaultAutomation() AutomationSettings {
 		NotificationsEnabled: true,
 		DefaultChannel:       "whatsapp",
 		DailyDigest:          false,
+	}
+}
+
+func DefaultCommunication() CommunicationSettings {
+	return CommunicationSettings{
+		EmailProvider:    "simulation",
+		WhatsAppProvider: "simulation",
+		EnabledChannels:  []string{"email", "whatsapp"},
 	}
 }

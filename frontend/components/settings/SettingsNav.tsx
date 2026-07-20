@@ -17,6 +17,8 @@ import {
   Users,
   Building2,
   Network,
+  MessageSquareText,
+  Radio,
   LucideIcon,
 } from "lucide-react";
 
@@ -114,6 +116,18 @@ const items: NavItem[] = [
     icon: Zap,
     description: "Notification behaviour",
     tutorialAction: "open-automation",
+  },
+  {
+    name: "Providers",
+    href: "/settings/communication-providers",
+    icon: Radio,
+    description: "Email & WhatsApp delivery",
+  },
+  {
+    name: "Message Templates",
+    href: "/settings/notification-templates",
+    icon: MessageSquareText,
+    description: "Email & WhatsApp templates",
   },
 ];
 

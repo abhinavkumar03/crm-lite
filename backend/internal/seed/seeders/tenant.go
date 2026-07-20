@@ -112,19 +112,23 @@ var roleDefs = []roleDef{
 		"module.view", "record.view", "record.create", "record.update", "record.delete",
 		"import.run", "export.run", "automation.manage", "validation.manage",
 		"analytics.view", "user.manage",
+		"notification.view", "notification.send", "notification.templates.manage",
 	}},
 	{"sales_executive", "Sales Executive", "Day-to-day sales work", 60, []string{
 		"module.view", "record.view", "record.create", "record.update", "export.run",
+		"notification.view", "notification.send",
 	}},
 	{"viewer", "Viewer", "Read-only access", 100, []string{
-		"module.view", "record.view", "analytics.view",
+		"module.view", "record.view", "analytics.view", "notification.view",
 	}},
 	{"manager", "Sales Manager (legacy)", "Alias of sales_manager", 40, []string{
 		"module.view", "record.view", "record.create", "record.update", "record.delete",
 		"import.run", "export.run", "automation.manage", "validation.manage",
+		"notification.view", "notification.send", "notification.templates.manage",
 	}},
 	{"sales_rep", "Sales Representative (legacy)", "Alias of sales_executive", 60, []string{
 		"module.view", "record.view", "record.create", "record.update", "export.run",
+		"notification.view", "notification.send",
 	}},
 }
 

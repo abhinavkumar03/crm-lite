@@ -22,6 +22,10 @@ const (
 	PermRoleManage         = "role.manage"
 	PermOrganizationManage = "organization.manage"
 	PermAnalyticsView      = "analytics.view"
+	PermNotificationView             = "notification.view"
+	PermNotificationSend             = "notification.send"
+	PermNotificationTemplatesManage  = "notification.templates.manage"
+	PermCommunicationProvidersManage = "communication.providers.manage"
 )
 
 // ModuleAction is a CRUD verb checked against role_module_access.

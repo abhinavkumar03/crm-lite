@@ -18,24 +18,54 @@ const (
 	ChannelWhatsApp Channel = "whatsapp"
 )
 
+// AttachmentRef points at an already-uploaded file (Cloudinary / attachments table).
+type AttachmentRef struct {
+	URL      string
+	FileName string
+	MimeType string
+}
+
 // Message is a provider-agnostic notification payload. Template + Data support
 // server-rendered templates, while Subject/Body allow pre-rendered content.
 type Message struct {
-	Channel  Channel
-	To       string
-	Subject  string
-	Body     string
-	Template string
-	Data     map[string]any
+	Channel        Channel
+	To             string
+	CC             []string
+	BCC            []string
+	From           string
+	ReplyTo        string
+	Subject        string
+	Body           string
+	HTMLBody       string
+	Template       string
+	// WhatsAppTemplateName / Language / Components support Meta-approved templates.
+	WhatsAppTemplateName string
+	WhatsAppLanguage     string
+	WhatsAppComponents   []map[string]any
+	Data                 map[string]any
+	Attachments          []AttachmentRef
+	IdempotencyKey       string
+}
+
+// SendResult is returned after a provider accepts (or rejects) a message.
+// ProviderMessageID is required for webhook correlation. Accepted means the
+// vendor acknowledged the request; delivery/open/read arrive via webhooks.
+type SendResult struct {
+	ProviderMessageID string
+	RawResponse       map[string]any
+	// Simulated is true only for the local SimulationProvider.
+	Simulated bool
+	// AutoDelivered lets simulation (and only simulation) jump to delivered.
+	AutoDelivered bool
 }
 
 // Provider is implemented by every concrete notification vendor.
 type Provider interface {
 	// Name is a human-readable identifier for logging/observability
-	// (e.g. "simulation", "meta-cloud", "twilio").
+	// (e.g. "simulation", "meta-cloud", "twilio", "smtp", "resend").
 	Name() string
 	// Channel reports which medium this provider delivers on.
 	Channel() Channel
-	// Send delivers the message or returns an error describing the failure.
-	Send(ctx context.Context, msg Message) error
+	// Send delivers the message and returns a result describing acceptance.
+	Send(ctx context.Context, msg Message) (SendResult, error)
 }

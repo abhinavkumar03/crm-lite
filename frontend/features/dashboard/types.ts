@@ -21,4 +21,8 @@ export interface DashboardResponse {
   total_records: number;
   module_counts: ModuleCount[];
   recent_records: RecentRecord[];
+  emails_sent_today?: number;
+  whatsapp_sent_today?: number;
+  failed_notifications?: number;
+  scheduled_notifications?: number;
 }
