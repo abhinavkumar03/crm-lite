@@ -167,6 +167,8 @@ func (h *FieldHandler) writeServiceError(c *gin.Context, err error, fallback str
 		response.Conflict(c, err.Error(), nil)
 	case errors.Is(err, service.ErrInvalidAPIName),
 		errors.Is(err, service.ErrInvalidType),
+		errors.Is(err, service.ErrInvalidLockMode),
+		errors.Is(err, service.ErrInvalidACL),
 		errors.Is(err, service.ErrOptionsRequired),
 		errors.Is(err, service.ErrLookupRequired),
 		errors.Is(err, service.ErrInvalidLength):

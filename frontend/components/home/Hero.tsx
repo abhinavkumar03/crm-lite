@@ -81,10 +81,10 @@ export default function Hero() {
               <p className="mt-5 text-sm text-slate-500">
                 Demo:{" "}
                 <span className="font-medium text-slate-700">
-                  admin@crmlite.com
+                  admin@crm.com
                 </span>{" "}
                 /{" "}
-                <span className="font-medium text-slate-700">Admin@12345</span>
+                <span className="font-medium text-slate-700">Admin@123</span>
                 {" · "}
                 then you land on the dashboard.
               </p>

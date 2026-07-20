@@ -55,6 +55,415 @@ func (s *Service) GetDetailLayout(ctx context.Context, orgID, moduleID string) (
 	}, nil
 }
 
+func (s *Service) UpdateDetailLayout(ctx context.Context, orgID, moduleID string, req dto.UpdateDetailLayoutRequest) (*dto.LayoutResponse, error) {
+	cfg, err := s.normalizeLayoutConfig(ctx, orgID, moduleID, req)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	l, err := s.repo.UpsertDefaultDetailLayout(ctx, orgID, moduleID, raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.syncFieldSortOrder(ctx, orgID, moduleID, cfg.Sections); err != nil {
+		return nil, err
+	}
+	return &dto.LayoutResponse{
+		ID: l.ID, Name: l.Name, Type: l.Type, IsDefault: l.IsDefault, Config: l.Config,
+	}, nil
+}
+
+// AppendFieldToSection adds api_name to the given section on detail + form layouts,
+// and appends a visible column to the list layout.
+func (s *Service) AppendFieldToSection(ctx context.Context, orgID, moduleID, sectionKey, apiName string) error {
+	if err := s.appendFieldToDetail(ctx, orgID, moduleID, sectionKey, apiName); err != nil {
+		return err
+	}
+	if err := s.appendFieldToForm(ctx, orgID, moduleID, sectionKey, apiName); err != nil {
+		return err
+	}
+	return s.appendFieldToList(ctx, orgID, moduleID, apiName)
+}
+
+func (s *Service) appendFieldToDetail(ctx context.Context, orgID, moduleID, sectionKey, apiName string) error {
+	layout, err := s.GetDetailLayout(ctx, orgID, moduleID)
+	if err != nil {
+		return err
+	}
+	var cfg layoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	if cfg.Sections == nil {
+		cfg.Sections = []dto.LayoutSection{}
+	}
+	key := strings.TrimSpace(sectionKey)
+	if key == "" || key == "system" {
+		key = "general"
+	}
+	for i := range cfg.Sections {
+		cfg.Sections[i].Fields = filterOut(cfg.Sections[i].Fields, apiName)
+	}
+	found := false
+	for i := range cfg.Sections {
+		if cfg.Sections[i].Key == key {
+			cfg.Sections[i].Fields = append(cfg.Sections[i].Fields, apiName)
+			found = true
+			break
+		}
+	}
+	if !found {
+		label := strings.ReplaceAll(key, "_", " ")
+		if key == "general" {
+			label = "General Information"
+		}
+		cfg.Sections = append([]dto.LayoutSection{{
+			Key: key, Label: label, Fields: []string{apiName},
+		}}, cfg.Sections...)
+	}
+	if len(cfg.Tabs) == 0 {
+		cfg.Tabs = []string{"overview", "notes", "attachments", "timeline", "related"}
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultDetailLayout(ctx, orgID, moduleID, raw)
+	if err != nil {
+		return err
+	}
+	return s.syncFieldSortOrder(ctx, orgID, moduleID, cfg.Sections)
+}
+
+func (s *Service) appendFieldToForm(ctx context.Context, orgID, moduleID, sectionKey, apiName string) error {
+	layout, err := s.ensureFormLayout(ctx, orgID, moduleID)
+	if err != nil {
+		return err
+	}
+	var cfg formLayoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	key := strings.TrimSpace(sectionKey)
+	if key == "" || key == "system" {
+		key = "general"
+	}
+	for i := range cfg.Sections {
+		cfg.Sections[i].Fields = filterOut(cfg.Sections[i].Fields, apiName)
+	}
+	found := false
+	for i := range cfg.Sections {
+		if cfg.Sections[i].Key == key {
+			cfg.Sections[i].Fields = append(cfg.Sections[i].Fields, apiName)
+			found = true
+			break
+		}
+	}
+	if !found {
+		label := "General Information"
+		if key != "general" {
+			label = strings.ReplaceAll(key, "_", " ")
+		}
+		cfg.Sections = append(cfg.Sections, dto.LayoutSection{
+			Key: key, Label: label, Order: len(cfg.Sections) + 1, Columns: 2, Fields: []string{apiName},
+		})
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultFormLayout(ctx, orgID, moduleID, raw)
+	return err
+}
+
+func (s *Service) appendFieldToList(ctx context.Context, orgID, moduleID, apiName string) error {
+	layout, fields, err := s.ensureListLayoutReconciled(ctx, orgID, moduleID)
+	if err != nil {
+		return err
+	}
+	var cfg listLayoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	cols := normalizeListColumns(cfg.Columns)
+	for _, c := range cols {
+		if c.FieldKey == apiName {
+			return nil
+		}
+	}
+	isSystem := false
+	searchable := false
+	for _, f := range fields {
+		if f.APIName == apiName {
+			isSystem = f.IsSystem
+			searchable = f.IsSearchable
+			break
+		}
+	}
+	// Insert before _actions.
+	insertAt := len(cols)
+	for i, c := range cols {
+		if c.FieldKey == dto.ActionsColumnKey {
+			insertAt = i
+			break
+		}
+	}
+	newCol := dto.ListColumn{
+		FieldKey: apiName, Visible: defaultListVisible(isSystem, apiName), Order: insertAt + 1,
+		Sortable: true, Searchable: searchable, System: false,
+		Locked: IsListColumnLocked(apiName, isSystem),
+	}
+	cols = append(cols[:insertAt], append([]dto.ListColumn{newCol}, cols[insertAt:]...)...)
+	for i := range cols {
+		cols[i].Order = i + 1
+		if cols[i].FieldKey == dto.ActionsColumnKey {
+			cols[i].System = true
+			cols[i].Visible = true
+			cols[i].Locked = true
+		}
+	}
+	raw, err := json.Marshal(listLayoutConfig{Columns: stripHydratedListColumns(cols)})
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultListLayout(ctx, orgID, moduleID, raw)
+	return err
+}
+
+// RemoveFieldFromLayout drops api_name from detail, form, and list layouts.
+func (s *Service) RemoveFieldFromLayout(ctx context.Context, orgID, moduleID, apiName string) error {
+	if err := s.removeFieldFromDetail(ctx, orgID, moduleID, apiName); err != nil {
+		return err
+	}
+	if err := s.removeFieldFromForm(ctx, orgID, moduleID, apiName); err != nil {
+		return err
+	}
+	return s.removeFieldFromList(ctx, orgID, moduleID, apiName)
+}
+
+func (s *Service) removeFieldFromDetail(ctx context.Context, orgID, moduleID, apiName string) error {
+	layout, err := s.repo.GetDefaultDetailLayout(ctx, orgID, moduleID)
+	if err != nil || layout == nil {
+		return err
+	}
+	var cfg layoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	changed := false
+	for i := range cfg.Sections {
+		before := len(cfg.Sections[i].Fields)
+		cfg.Sections[i].Fields = filterOut(cfg.Sections[i].Fields, apiName)
+		if len(cfg.Sections[i].Fields) != before {
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultDetailLayout(ctx, orgID, moduleID, raw)
+	return err
+}
+
+func (s *Service) removeFieldFromForm(ctx context.Context, orgID, moduleID, apiName string) error {
+	layout, err := s.repo.GetDefaultLayout(ctx, orgID, moduleID, repository.LayoutTypeForm)
+	if err != nil || layout == nil {
+		return err
+	}
+	var cfg formLayoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	changed := false
+	for i := range cfg.Sections {
+		before := len(cfg.Sections[i].Fields)
+		cfg.Sections[i].Fields = filterOut(cfg.Sections[i].Fields, apiName)
+		if len(cfg.Sections[i].Fields) != before {
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
+	}
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultFormLayout(ctx, orgID, moduleID, raw)
+	return err
+}
+
+func (s *Service) removeFieldFromList(ctx context.Context, orgID, moduleID, apiName string) error {
+	layout, err := s.repo.GetDefaultLayout(ctx, orgID, moduleID, repository.LayoutTypeList)
+	if err != nil || layout == nil {
+		return err
+	}
+	var cfg listLayoutConfig
+	if err := json.Unmarshal(layout.Config, &cfg); err != nil {
+		return err
+	}
+	out := make([]dto.ListColumn, 0, len(cfg.Columns))
+	changed := false
+	for _, c := range cfg.Columns {
+		if c.FieldKey == apiName {
+			changed = true
+			continue
+		}
+		out = append(out, c)
+	}
+	if !changed {
+		return nil
+	}
+	out = normalizeListColumns(out)
+	for i := range out {
+		out[i].Order = i + 1
+	}
+	raw, err := json.Marshal(listLayoutConfig{Columns: stripHydratedListColumns(out)})
+	if err != nil {
+		return err
+	}
+	_, err = s.repo.UpsertDefaultListLayout(ctx, orgID, moduleID, raw)
+	return err
+}
+
+type layoutConfig struct {
+	Sections []dto.LayoutSection `json:"sections"`
+	Tabs     []string            `json:"tabs"`
+}
+
+var systemFieldNames = map[string]bool{
+	"owner_id": true, "assigned_to": true, "visibility": true,
+	"created_at": true, "updated_at": true,
+}
+
+func (s *Service) normalizeLayoutConfig(ctx context.Context, orgID, moduleID string, req dto.UpdateDetailLayoutRequest) (*layoutConfig, error) {
+	known, err := s.repo.ListNonSystemFields(ctx, orgID, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	knownSet := make(map[string]bool, len(known))
+	for _, f := range known {
+		knownSet[f.APIName] = true
+	}
+
+	seenKeys := make(map[string]bool)
+	seenFields := make(map[string]bool)
+	sections := make([]dto.LayoutSection, 0, len(req.Sections))
+
+	for _, sec := range req.Sections {
+		key := strings.TrimSpace(sec.Key)
+		label := strings.TrimSpace(sec.Label)
+		if key == "" || label == "" {
+			return nil, fmt.Errorf("section key and label are required")
+		}
+		if seenKeys[key] {
+			return nil, fmt.Errorf("duplicate section key %q", key)
+		}
+		seenKeys[key] = true
+
+		fields := make([]string, 0, len(sec.Fields))
+		for _, name := range sec.Fields {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			if systemFieldNames[name] {
+				if !seenFields[name] {
+					fields = append(fields, name)
+					seenFields[name] = true
+				}
+				continue
+			}
+			// Custom fields never belong in the system section.
+			if key == "system" {
+				continue
+			}
+			if !knownSet[name] {
+				continue // prune unknown
+			}
+			if seenFields[name] {
+				continue // only one section
+			}
+			fields = append(fields, name)
+			seenFields[name] = true
+		}
+		sections = append(sections, dto.LayoutSection{Key: key, Label: label, Fields: fields})
+	}
+
+	if len(sections) == 0 {
+		return nil, fmt.Errorf("at least one section is required")
+	}
+
+	// Append orphans to the first non-system section (or first section).
+	orphanTarget := 0
+	for i, sec := range sections {
+		if sec.Key != "system" {
+			orphanTarget = i
+			break
+		}
+	}
+	for _, f := range known {
+		if !seenFields[f.APIName] {
+			sections[orphanTarget].Fields = append(sections[orphanTarget].Fields, f.APIName)
+			seenFields[f.APIName] = true
+		}
+	}
+
+	tabs := req.Tabs
+	if len(tabs) == 0 {
+		tabs = []string{"overview", "notes", "attachments", "timeline", "related"}
+	}
+	return &layoutConfig{Sections: sections, Tabs: tabs}, nil
+}
+
+func (s *Service) syncFieldSortOrder(ctx context.Context, orgID, moduleID string, sections []dto.LayoutSection) error {
+	refs, err := s.repo.ListNonSystemFields(ctx, orgID, moduleID)
+	if err != nil {
+		return err
+	}
+	byAPI := make(map[string]string, len(refs))
+	for _, f := range refs {
+		byAPI[f.APIName] = f.ID
+	}
+	positions := make([]repository.FieldSortPosition, 0, len(refs))
+	order := 0
+	for _, sec := range sections {
+		for _, name := range sec.Fields {
+			if id, ok := byAPI[name]; ok {
+				positions = append(positions, repository.FieldSortPosition{ID: id, SortOrder: order})
+				order++
+				delete(byAPI, name)
+			}
+		}
+	}
+	// Any remaining (should be none after normalize) keep at the end.
+	for _, id := range byAPI {
+		positions = append(positions, repository.FieldSortPosition{ID: id, SortOrder: order})
+		order++
+	}
+	if len(positions) == 0 {
+		return nil
+	}
+	return s.repo.ReorderFields(ctx, orgID, moduleID, positions)
+}
+
+func filterOut(list []string, apiName string) []string {
+	out := make([]string, 0, len(list))
+	for _, v := range list {
+		if v != apiName {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 func (s *Service) buildDefaultConfig(ctx context.Context, orgID, moduleID string) (json.RawMessage, error) {
 	fields, err := s.repo.ListVisibleFieldAPINames(ctx, orgID, moduleID)
 	if err != nil {

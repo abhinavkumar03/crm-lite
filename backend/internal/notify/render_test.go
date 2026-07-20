@@ -32,6 +32,20 @@ func TestRender_EmptyInputs(t *testing.T) {
 	}
 }
 
+func TestRender_DottedPaths(t *testing.T) {
+	data := map[string]any{
+		"lead": map[string]any{"name": "Alex", "company": "Acme"},
+		"lead.name": "flat-override",
+	}
+	if got := Render("Hi {{lead.name}}", data); got != "Hi flat-override" {
+		t.Fatalf("flat key should win: %q", got)
+	}
+	delete(data, "lead.name")
+	if got := Render("Hi {{lead.name}} at {{lead.company}}", data); got != "Hi Alex at Acme" {
+		t.Fatalf("nested walk failed: %q", got)
+	}
+}
+
 func TestBuildWhatsAppProvider_FallsBackToSimulation(t *testing.T) {
 	// "meta" without credentials must not produce a live provider.
 	p := BuildWhatsAppProvider(WhatsAppConfig{Provider: "meta"}, nil)

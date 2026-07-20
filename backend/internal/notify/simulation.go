@@ -2,6 +2,8 @@ package notify
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -13,16 +15,18 @@ import (
 // later phases satisfy the same Provider interface and can be swapped in via
 // Dispatcher.Register with no changes to callers.
 type SimulationProvider struct {
-	name    string
-	channel Channel
-	logger  *zap.Logger
+	name         string
+	channel      Channel
+	logger       *zap.Logger
+	autoDeliver  bool
 }
 
 func NewSimulationProvider(name string, channel Channel, logger *zap.Logger) *SimulationProvider {
 	return &SimulationProvider{
-		name:    name,
-		channel: channel,
-		logger:  logger,
+		name:        name,
+		channel:     channel,
+		logger:      logger,
+		autoDeliver: true, // local demos see delivered without webhooks
 	}
 }
 
@@ -30,7 +34,8 @@ func (p *SimulationProvider) Name() string { return p.name }
 
 func (p *SimulationProvider) Channel() Channel { return p.channel }
 
-func (p *SimulationProvider) Send(_ context.Context, msg Message) error {
+func (p *SimulationProvider) Send(_ context.Context, msg Message) (SendResult, error) {
+	msgID := fmt.Sprintf("sim_%d", time.Now().UnixNano())
 	if p.logger != nil {
 		p.logger.Info("notify: simulated delivery",
 			zap.String("provider", p.name),
@@ -38,7 +43,18 @@ func (p *SimulationProvider) Send(_ context.Context, msg Message) error {
 			zap.String("to", msg.To),
 			zap.String("subject", msg.Subject),
 			zap.String("template", msg.Template),
+			zap.Int("attachments", len(msg.Attachments)),
+			zap.String("message_id", msgID),
 		)
 	}
-	return nil
+	return SendResult{
+		ProviderMessageID: msgID,
+		RawResponse: map[string]any{
+			"simulated": true,
+			"to":        msg.To,
+			"channel":   string(p.channel),
+		},
+		Simulated:     true,
+		AutoDelivered: p.autoDeliver,
+	}, nil
 }

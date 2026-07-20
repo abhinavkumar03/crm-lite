@@ -58,7 +58,8 @@ export default function InstructionPanel() {
     });
   }
 
-  // Keyboard: Enter = validate/continue, Esc = minimize, S = skip (when allowed)
+  // Keyboard: Esc = minimize, S = skip. Enter only for create steps
+  // (view steps use the Continue button — Enter+click was double-advancing).
   useEffect(() => {
     if (!running || !demo || !step) return;
     const onKey = (e: KeyboardEvent) => {
@@ -72,9 +73,16 @@ export default function InstructionPanel() {
         return;
       }
       if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        if (step.step_key === "completion") void demo.finish();
-        else void demo.validate();
+        if (step.step_key === "completion") {
+          e.preventDefault();
+          void demo.finish();
+          return;
+        }
+        // Create steps: Enter = check. View steps: only the Continue button.
+        if (isCreateActionStep(step)) {
+          e.preventDefault();
+          void demo.validate();
+        }
         return;
       }
       if ((e.key === "s" || e.key === "S") && step.is_skippable) {
@@ -395,7 +403,7 @@ export default function InstructionPanel() {
             </div>
 
             <p className="text-center text-[10px] text-slate-400">
-              Drag header · collapse · Enter check · Esc hide
+              Drag header · collapse · Esc hide
             </p>
           </div>
         </>

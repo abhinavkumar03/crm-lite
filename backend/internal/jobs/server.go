@@ -24,6 +24,7 @@ type Server struct {
 // avoid an import cycle (the notification package imports jobs to enqueue).
 type NotificationProcessor interface {
 	Process(ctx context.Context, orgID, notificationID string) error
+	ProcessDueScheduled(ctx context.Context) error
 }
 
 // ImportProcessor executes a staged import job identified by its id. It is
@@ -78,6 +79,7 @@ func NewServer(
 	mux.HandleFunc(string(JobSendEmail), h.handleSendEmail)
 	mux.HandleFunc(string(JobSendWhatsApp), h.handleSendWhatsApp)
 	mux.HandleFunc(string(JobSendNotification), h.handleSendNotification)
+	mux.HandleFunc(string(JobProcessScheduledNotifications), h.handleProcessScheduled)
 	mux.HandleFunc(string(JobImportProcess), h.handleImportProcess)
 	mux.HandleFunc(string(JobExportProcess), h.handleExportProcess)
 
@@ -130,13 +132,14 @@ func (h *handlers) handleSendEmail(ctx context.Context, t *asynq.Task) error {
 		return err
 	}
 
-	return h.dispatcher.Dispatch(ctx, notify.Message{
+	_, err = h.dispatcher.Dispatch(ctx, notify.Message{
 		Channel:  notify.ChannelEmail,
 		To:       stringField(job.Payload, "email"),
 		Subject:  "Welcome to CRM Lite",
 		Template: "lead_welcome",
 		Data:     job.Payload,
 	})
+	return err
 }
 
 func (h *handlers) handleSendWhatsApp(ctx context.Context, t *asynq.Task) error {
@@ -145,12 +148,13 @@ func (h *handlers) handleSendWhatsApp(ctx context.Context, t *asynq.Task) error 
 		return err
 	}
 
-	return h.dispatcher.Dispatch(ctx, notify.Message{
+	_, err = h.dispatcher.Dispatch(ctx, notify.Message{
 		Channel:  notify.ChannelWhatsApp,
 		To:       stringField(job.Payload, "phone"),
 		Template: stringField(job.Payload, "template"),
 		Data:     job.Payload,
 	})
+	return err
 }
 
 func (h *handlers) handleSendNotification(ctx context.Context, t *asynq.Task) error {
@@ -170,6 +174,17 @@ func (h *handlers) handleSendNotification(ctx context.Context, t *asynq.Task) er
 	}
 
 	return h.processor.Process(ctx, orgID, id)
+}
+
+func (h *handlers) handleProcessScheduled(ctx context.Context, t *asynq.Task) error {
+	if _, err := decode(t); err != nil {
+		return err
+	}
+	if h.processor == nil {
+		h.logger.Warn("jobs: no notification processor configured; skipping scheduled sweep")
+		return nil
+	}
+	return h.processor.ProcessDueScheduled(ctx)
 }
 
 func (h *handlers) handleImportProcess(ctx context.Context, t *asynq.Task) error {

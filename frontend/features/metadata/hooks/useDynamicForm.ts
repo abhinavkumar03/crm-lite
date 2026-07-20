@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -21,6 +22,7 @@ function defaultForField(field: ModuleField): FieldValue {
       return [];
     case "boolean":
     case "checkbox":
+    case "toggle":
       return field.default_value === "true";
     default:
       return field.default_value ?? "";
@@ -37,6 +39,10 @@ export function buildInitialValues(
       initial?.[field.api_name] ?? defaultForField(field);
   }
   return values;
+}
+
+function fieldsSignature(fields: ModuleField[]): string {
+  return fields.map((f) => f.id).join(",");
 }
 
 type Options = {
@@ -59,6 +65,15 @@ export function useDynamicForm({
     buildInitialValues(fields, initialValues)
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Re-seed values when the field set changes (e.g. form layout / new fields load).
+  const signature = fieldsSignature(fields);
+  useEffect(() => {
+    setValues((prev) =>
+      buildInitialValues(fields, { ...prev, ...initialValues })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when field ids change
+  }, [signature]);
 
   const hidden = useMemo(
     () => computeHiddenFields(visibilityRules, values),

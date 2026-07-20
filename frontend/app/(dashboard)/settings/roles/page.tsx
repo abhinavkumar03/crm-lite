@@ -289,7 +289,7 @@ export default function RolesSettingsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-tutorial-surface="roles">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">

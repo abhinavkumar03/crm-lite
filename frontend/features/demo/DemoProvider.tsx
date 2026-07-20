@@ -27,6 +27,7 @@ import {
   validateDemoStep,
 } from "./api";
 import type { DemoSession, DemoStep, DemoWorkflowInfo } from "./types";
+import { isViewConfirmStep } from "./stepAdvance";
 
 type DemoUIMode =
   | "idle"
@@ -51,7 +52,7 @@ type DemoContextValue = {
   start: () => Promise<void>;
   continueSession: () => void;
   restart: () => Promise<void>;
-  validate: (opts?: { silent?: boolean }) => Promise<void>;
+  validate: (opts?: { silent?: boolean; stepKey?: string }) => Promise<void>;
   skip: () => Promise<void>;
   finish: () => Promise<void>;
   cleanup: (keepData: boolean) => Promise<void>;
@@ -74,6 +75,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     "idle" | "waiting" | "validating" | "failed"
   >("waiting");
   const loadedRef = useRef(false);
+  const currentStepKeyRef = useRef<string | null>(null);
+  const validateInFlightRef = useRef(false);
+  /** Blocks accidental double-Enter from completing the next view step instantly. */
+  const confirmCooldownUntilRef = useRef(0);
 
   const currentStep = useMemo(() => {
     if (!session?.current_step_key) return null;
@@ -83,6 +88,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       null
     );
   }, [session]);
+
+  currentStepKeyRef.current = currentStep?.step_key ?? null;
 
   useEffect(() => {
     if (!auth.token || loadedRef.current) return;
@@ -180,22 +187,44 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [reloadAfterTenantSwitch]);
 
   const validate = useCallback(
-    async (opts?: { silent?: boolean }) => {
+    async (opts?: { silent?: boolean; stepKey?: string }) => {
       if (!session || !currentStep) return;
+      if (validateInFlightRef.current || busy) return;
+
+      // Ignore stale timers from a previous create step (e.g. add_note → timeline).
+      if (opts?.stepKey && opts.stepKey !== currentStep.step_key) return;
+
       const silent = opts?.silent ?? false;
+
+      // View / navigate steps must never silent-auto advance.
+      if (silent && isViewConfirmStep(currentStep)) return;
+
+      // After advancing, ignore rapid Enter/click that would clear the next view step.
+      if (
+        !silent &&
+        isViewConfirmStep(currentStep) &&
+        Date.now() < confirmCooldownUntilRef.current
+      ) {
+        return;
+      }
+
+      const stepKey = currentStep.step_key;
+      validateInFlightRef.current = true;
       setBusy(true);
       setStepPhase("validating");
       if (!silent) setLastMessage(null);
       try {
-        const result = await validateDemoStep(
-          session.id,
-          currentStep.step_key,
-          pathname
-        );
+        if (currentStepKeyRef.current !== stepKey) return;
+
+        const result = await validateDemoStep(session.id, stepKey, pathname);
+        if (currentStepKeyRef.current !== stepKey) return;
+
         setLastMessage(result.message);
         if (result.ok && result.session) {
           setSession(result.session);
           setStepPhase("waiting");
+          // Give the user time to see the next view step before another confirm.
+          confirmCooldownUntilRef.current = Date.now() + 800;
           if (!silent) toast.success(result.message);
           if (result.session.status === "completed") {
             setMode("cleanup");
@@ -211,10 +240,11 @@ export function DemoProvider({ children }: { children: ReactNode }) {
           if (!silent) toast.error(result.message);
         }
       } finally {
+        validateInFlightRef.current = false;
         setBusy(false);
       }
     },
-    [session, currentStep, pathname, router]
+    [session, currentStep, pathname, router, busy]
   );
 
   const skip = useCallback(async () => {
@@ -319,7 +349,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       void import("@/features/metadata/api").then(async ({ getModules }) => {
         const modules = await getModules();
         const mod = modules.find((m) => m.api_name === "product_demo");
-        router.push(mod ? `/tables?module=${mod.id}` : "/tables");
+        router.push(mod ? `/m/${mod.api_name}` : "/dashboard");
       });
       return;
     }

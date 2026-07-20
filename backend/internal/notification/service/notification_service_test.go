@@ -20,21 +20,53 @@ type fakeRepo struct {
 
 func (r *fakeRepo) Create(_ context.Context, n *entity.Notification) error {
 	n.ID = "n1"
-	n.Status = entity.StatusQueued
 	r.created = n
 	return nil
 }
+func (r *fakeRepo) UpdateDraft(_ context.Context, _ *entity.Notification) error { return nil }
 func (r *fakeRepo) GetByID(_ context.Context, _, _ string) (*entity.Notification, error) {
 	return r.created, nil
 }
 func (r *fakeRepo) List(_ context.Context, _ string, _ dto.ListQuery) ([]entity.Notification, int, error) {
 	return nil, 0, nil
 }
-func (r *fakeRepo) MarkSent(_ context.Context, _, _ string) error { return nil }
+func (r *fakeRepo) MarkSent(_ context.Context, _, _, _ string, _ map[string]any) error { return nil }
 func (r *fakeRepo) MarkFailed(_ context.Context, id, reason string) error {
 	r.failedID = id
 	r.failReason = reason
 	return nil
+}
+func (r *fakeRepo) MarkRetrying(_ context.Context, _, _ string) error { return nil }
+func (r *fakeRepo) MarkQueued(_ context.Context, _ string) error       { return nil }
+func (r *fakeRepo) CancelScheduled(_ context.Context, _, _ string) (*entity.Notification, error) {
+	return nil, nil
+}
+func (r *fakeRepo) PromoteScheduled(_ context.Context, _ string) error { return nil }
+func (r *fakeRepo) ListDueScheduled(_ context.Context, _ int) ([]entity.Notification, error) {
+	return nil, nil
+}
+func (r *fakeRepo) AddDeliveryEvent(_ context.Context, _ *entity.DeliveryEvent) error { return nil }
+func (r *fakeRepo) ListDeliveryEvents(_ context.Context, _, _ string) ([]entity.DeliveryEvent, error) {
+	return nil, nil
+}
+func (r *fakeRepo) Metrics(_ context.Context, _ string) (*dto.MetricsResponse, error) {
+	return &dto.MetricsResponse{}, nil
+}
+func (r *fakeRepo) LoadMergeContext(_ context.Context, _, _, _, _ string) (map[string]any, error) {
+	return map[string]any{}, nil
+}
+func (r *fakeRepo) LinkAttachments(_ context.Context, _ string, _ []string) error { return nil }
+func (r *fakeRepo) CreateTemplate(_ context.Context, _ *entity.Template) error { return nil }
+func (r *fakeRepo) GetTemplate(_ context.Context, _, _ string) (*entity.Template, error) {
+	return nil, nil
+}
+func (r *fakeRepo) UpdateTemplate(_ context.Context, _ *entity.Template) error { return nil }
+func (r *fakeRepo) PublishTemplate(_ context.Context, _, _ string) (*entity.Template, error) {
+	return nil, nil
+}
+func (r *fakeRepo) DeleteTemplate(_ context.Context, _, _ string) error         { return nil }
+func (r *fakeRepo) ListTemplates(_ context.Context, _, _, _ string, _, _ int) ([]entity.Template, int, error) {
+	return nil, 0, nil
 }
 
 type fakeEnqueuer struct {
@@ -55,7 +87,7 @@ func TestSend_RendersPersistsAndEnqueues(t *testing.T) {
 	enq := &fakeEnqueuer{}
 	svc := New(repo, enq)
 
-	resp, err := svc.Send(context.Background(), "org1", "user1", dto.SendNotificationRequest{
+	resp, err := svc.Send(context.Background(), "org1", "user1", dto.ComposeRequest{
 		Channel: "whatsapp",
 		To:      "+15551234567",
 		Body:    "Hi {{name}}, your quote is {{amount}}",
@@ -87,9 +119,10 @@ func TestSend_MarksFailedWhenEnqueueFails(t *testing.T) {
 	enq := &fakeEnqueuer{err: errors.New("redis down")}
 	svc := New(repo, enq)
 
-	_, err := svc.Send(context.Background(), "org1", "user1", dto.SendNotificationRequest{
+	_, err := svc.Send(context.Background(), "org1", "user1", dto.ComposeRequest{
 		Channel: "email",
 		To:      "a@b.com",
+		Subject: "Hello",
 		Body:    "hello",
 	})
 	if err == nil {

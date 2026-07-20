@@ -55,7 +55,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div data-tour="dashboard" className="space-y-8">
+    <div
+      data-tour="dashboard"
+      data-tutorial-surface="dashboard"
+      className="space-y-8"
+    >
       <DashboardHeader onRefresh={() => loadDashboard(true)} />
 
       <MetricsGrid dashboard={dashboard} />

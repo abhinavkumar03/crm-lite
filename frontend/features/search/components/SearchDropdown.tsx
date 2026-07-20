@@ -62,7 +62,7 @@ export default function SearchDropdown({
                 type="record"
                 title={hit.title}
                 subtitle={hit.subtitle || hit.module_label}
-                href={`/tables/${hit.module_id}/${hit.id}`}
+                href={`/m/${hit.api_name}/${hit.id}`}
                 onClick={onClose}
                 query={query}
                 active={activeIndex === index}

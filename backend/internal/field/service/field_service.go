@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/field/entity"
@@ -17,6 +19,8 @@ var (
 	ErrInvalidAPIName   = errors.New("api_name must start with a letter and contain only lowercase letters, digits and underscores")
 	ErrDuplicateAPIName = errors.New("a field with this api_name already exists on the module")
 	ErrInvalidType      = errors.New("unsupported field_type")
+	ErrInvalidLockMode  = errors.New("lock_mode must be never, after_create, or always")
+	ErrInvalidACL       = errors.New("editable_by and viewable_by must be ALL for now")
 	ErrOptionsRequired  = errors.New("this field_type requires a non-empty options list")
 	ErrLookupRequired   = errors.New("lookup fields require a valid lookup_module_id")
 	ErrInvalidLength    = errors.New("min_length cannot be greater than max_length")
@@ -32,9 +36,26 @@ var choiceTypes = map[string]bool{
 	entity.TypeRadio:       true,
 }
 
+// typeAliases map PRD / common names onto canonical stored types.
+var typeAliases = map[string]string{
+	"select":       entity.TypeDropdown,
+	"multi_select": entity.TypeMultiselect,
+	"multiselect":  entity.TypeMultiselect,
+	"user_lookup":  entity.TypeUser,
+	"percent":      entity.TypePercentage,
+}
+
 var validTypes = func() map[string]bool {
 	m := make(map[string]bool, len(entity.AllTypes))
 	for _, t := range entity.AllTypes {
+		m[t] = true
+	}
+	return m
+}()
+
+var validLockModes = func() map[string]bool {
+	m := make(map[string]bool, len(entity.AllLockModes))
+	for _, t := range entity.AllLockModes {
 		m[t] = true
 	}
 	return m
@@ -55,11 +76,22 @@ type Repository interface {
 }
 
 type Service struct {
-	repo Repository
+	repo   Repository
+	layout LayoutSync
+}
+
+// LayoutSync keeps detail layout sections in sync with field create/delete.
+type LayoutSync interface {
+	AppendFieldToSection(ctx context.Context, orgID, moduleID, sectionKey, apiName string) error
+	RemoveFieldFromLayout(ctx context.Context, orgID, moduleID, apiName string) error
 }
 
 func New(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+func (s *Service) SetLayoutSync(layout LayoutSync) {
+	s.layout = layout
 }
 
 func (s *Service) List(ctx context.Context, orgID, moduleID string) ([]dto.FieldResponse, error) {
@@ -114,17 +146,26 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID string, req dto.Cr
 	if !apiNamePattern.MatchString(req.APIName) {
 		return nil, ErrInvalidAPIName
 	}
-	if !validTypes[req.FieldType] {
+	fieldType := canonicalizeType(req.FieldType)
+	if !validTypes[fieldType] {
 		return nil, ErrInvalidType
 	}
-	if choiceTypes[req.FieldType] && len(req.Options) == 0 {
+	if choiceTypes[fieldType] && len(req.Options) == 0 {
 		return nil, ErrOptionsRequired
 	}
 	if err := validateLength(req.MinLength, req.MaxLength); err != nil {
 		return nil, err
 	}
+	lockMode, err := normalizeLockMode(req.LockMode)
+	if err != nil {
+		return nil, err
+	}
+	editableBy, viewableBy, err := normalizeACL(req.EditableBy, req.ViewableBy)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := s.validateLookup(ctx, orgID, req.FieldType, req.LookupModuleID); err != nil {
+	if err := s.validateLookup(ctx, orgID, fieldType, req.LookupModuleID); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +192,7 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID string, req dto.Cr
 		ModuleID:          moduleID,
 		APIName:           req.APIName,
 		Label:             req.Label,
-		FieldType:         req.FieldType,
+		FieldType:         fieldType,
 		IsRequired:        req.IsRequired,
 		IsUnique:          req.IsUnique,
 		IsReadOnly:        req.IsReadOnly,
@@ -170,10 +211,23 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID string, req dto.Cr
 		IsSearchable:      req.IsSearchable,
 		IsFilterable:      req.IsFilterable,
 		IsSystem:          false,
+		LockMode:          lockMode,
+		EditableBy:        editableBy,
+		ViewableBy:        viewableBy,
 	}
 
 	if err := s.repo.Create(ctx, f); err != nil {
 		return nil, err
+	}
+
+	if s.layout != nil {
+		section := strings.TrimSpace(req.SectionKey)
+		if section == "" || section == "system" {
+			section = "general"
+		}
+		if err := s.layout.AppendFieldToSection(ctx, orgID, moduleID, section, f.APIName); err != nil {
+			return nil, fmt.Errorf("field created but layout sync failed: %w", err)
+		}
 	}
 
 	resp := toResponse(f, strategy)
@@ -242,6 +296,29 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id string, req dt
 	if req.IsFilterable != nil {
 		f.IsFilterable = *req.IsFilterable
 	}
+	if req.LockMode != nil {
+		mode, err := normalizeLockMode(*req.LockMode)
+		if err != nil {
+			return nil, err
+		}
+		f.LockMode = mode
+	}
+	if req.EditableBy != nil || req.ViewableBy != nil {
+		ed := f.EditableBy
+		vw := f.ViewableBy
+		if req.EditableBy != nil {
+			ed = *req.EditableBy
+		}
+		if req.ViewableBy != nil {
+			vw = *req.ViewableBy
+		}
+		ed, vw, err = normalizeACL(ed, vw)
+		if err != nil {
+			return nil, err
+		}
+		f.EditableBy = ed
+		f.ViewableBy = vw
+	}
 	if req.Options != nil {
 		options, err := marshalOptions(req.Options)
 		if err != nil {
@@ -291,6 +368,11 @@ func (s *Service) Delete(ctx context.Context, orgID, moduleID, id string) error 
 	}
 	if !deleted {
 		return ErrNotFound
+	}
+	if s.layout != nil {
+		if err := s.layout.RemoveFieldFromLayout(ctx, orgID, moduleID, f.APIName); err != nil {
+			return fmt.Errorf("field deleted but layout sync failed: %w", err)
+		}
 	}
 	return nil
 }
@@ -345,7 +427,54 @@ func storageFor(strategy, apiName string) dto.StorageDescriptor {
 	return dto.StorageDescriptor{Kind: dto.StorageJSONB, Path: "data." + apiName}
 }
 
+func canonicalizeType(raw string) string {
+	t := strings.TrimSpace(strings.ToLower(raw))
+	if alias, ok := typeAliases[t]; ok {
+		return alias
+	}
+	return t
+}
+
+func normalizeLockMode(raw string) (string, error) {
+	mode := strings.TrimSpace(raw)
+	if mode == "" {
+		return entity.LockNever, nil
+	}
+	if !validLockModes[mode] {
+		return "", ErrInvalidLockMode
+	}
+	return mode, nil
+}
+
+func normalizeACL(editableBy, viewableBy string) (string, string, error) {
+	ed := strings.TrimSpace(editableBy)
+	vw := strings.TrimSpace(viewableBy)
+	if ed == "" {
+		ed = "ALL"
+	}
+	if vw == "" {
+		vw = "ALL"
+	}
+	// Schema is future-ready; v1 only accepts ALL.
+	if !strings.EqualFold(ed, "ALL") || !strings.EqualFold(vw, "ALL") {
+		return "", "", ErrInvalidACL
+	}
+	return "ALL", "ALL", nil
+}
+
 func toResponse(f *entity.Field, strategy string) dto.FieldResponse {
+	lockMode := f.LockMode
+	if lockMode == "" {
+		lockMode = entity.LockNever
+	}
+	editableBy := f.EditableBy
+	if editableBy == "" {
+		editableBy = "ALL"
+	}
+	viewableBy := f.ViewableBy
+	if viewableBy == "" {
+		viewableBy = "ALL"
+	}
 	return dto.FieldResponse{
 		ID:                f.ID,
 		ModuleID:          f.ModuleID,
@@ -372,6 +501,9 @@ func toResponse(f *entity.Field, strategy string) dto.FieldResponse {
 		IsNullable:        f.IsNullable,
 		IsIndexed:         f.IsIndexed,
 		IsSystem:          f.IsSystem,
+		LockMode:          lockMode,
+		EditableBy:        editableBy,
+		ViewableBy:        viewableBy,
 		Storage:           storageFor(strategy, f.APIName),
 		CreatedAt:         f.CreatedAt,
 		UpdatedAt:         f.UpdatedAt,

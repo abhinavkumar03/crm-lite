@@ -191,7 +191,7 @@ def build_paths():
             op_id="login",
             req=json_body(
                 "#/components/schemas/LoginRequest",
-                {"email": "admin@crmlite.com", "password": "Admin@12345"},
+                {"email": "admin@crm.com", "password": "Admin@123"},
             ),
             responses={
                 **ok(
@@ -204,7 +204,7 @@ def build_paths():
                             "user": {
                                 "id": "…",
                                 "name": "Admin",
-                                "email": "admin@crmlite.com",
+                                "email": "admin@crm.com",
                             },
                         },
                     },
@@ -926,12 +926,13 @@ def build_paths():
             },
         ),
         "post": op(
-            "Send notification",
+            "Compose notification (draft/send/schedule)",
             "Notifications",
-            op_id="sendNotification",
+            op_id="composeNotification",
             req=json_body(
                 "#/components/schemas/SendNotificationRequest",
                 {
+                    "mode": "send",
                     "channel": "email",
                     "to": "ada@example.com",
                     "subject": "Welcome",
@@ -945,6 +946,17 @@ def build_paths():
             },
         ),
     }
+    paths["/notifications/metrics"] = {
+        "get": op(
+            "Notification metrics",
+            "Notifications",
+            op_id="notificationMetrics",
+            responses={
+                **ok("#/components/schemas/NotificationListResult"),
+                **err_refs("Unauthorized", "Forbidden"),
+            },
+        ),
+    }
     paths["/notifications/{id}"] = {
         "get": op(
             "Get notification",
@@ -955,7 +967,93 @@ def build_paths():
                 **ok("#/components/schemas/NotificationResponse"),
                 **err_refs("Unauthorized", "Forbidden", "NotFound"),
             },
-        )
+        ),
+        "patch": op(
+            "Update draft notification",
+            "Notifications",
+            op_id="updateDraftNotification",
+            params=[path_param("id")],
+            req=json_body("#/components/schemas/SendNotificationRequest", {}),
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/notifications/{id}/retry"] = {
+        "post": op(
+            "Retry failed notification",
+            "Notifications",
+            op_id="retryNotification",
+            params=[path_param("id")],
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/notifications/{id}/cancel"] = {
+        "post": op(
+            "Cancel scheduled notification",
+            "Notifications",
+            op_id="cancelNotification",
+            params=[path_param("id")],
+            responses={
+                **ok("#/components/schemas/NotificationResponse"),
+                **err_refs("Unauthorized", "Forbidden", "NotFound", "BadRequest"),
+            },
+        ),
+    }
+    paths["/communication-providers"] = {
+        "get": op(
+            "List communication providers",
+            "Communication",
+            op_id="listCommunicationProviders",
+            params=[q("channel")],
+            responses={
+                **ok("#/components/schemas/NotificationListResult"),
+                **err_refs("Unauthorized", "Forbidden"),
+            },
+        ),
+        "post": op(
+            "Create communication provider",
+            "Communication",
+            op_id="createCommunicationProvider",
+            req=json_body(
+                "#/components/schemas/SendNotificationRequest",
+                {
+                    "channel": "email",
+                    "provider_type": "smtp",
+                    "name": "Primary SMTP",
+                },
+            ),
+            responses={
+                **ok("#/components/schemas/NotificationResponse", code="201"),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest"),
+            },
+        ),
+    }
+    paths["/webhooks/whatsapp/meta"] = {
+        "get": op(
+            "Meta WhatsApp webhook verify",
+            "Webhooks",
+            op_id="metaWhatsAppVerify",
+            responses={"200": {"description": "Challenge echo"}},
+        ),
+        "post": op(
+            "Meta WhatsApp status webhook",
+            "Webhooks",
+            op_id="metaWhatsAppStatus",
+            responses={"200": {"description": "Accepted"}},
+        ),
+    }
+    paths["/webhooks/email/resend"] = {
+        "post": op(
+            "Resend email webhook",
+            "Webhooks",
+            op_id="resendEmailWebhook",
+            responses={"200": {"description": "Accepted"}},
+        ),
     }
 
     paths["/tour"] = {
@@ -1002,6 +1100,77 @@ def build_paths():
                 **err_refs("Unauthorized", "BadRequest"),
             },
         )
+    }
+
+    paths["/me/organizations"] = {
+        "get": op(
+            "List my workspaces",
+            "Organizations",
+            op_id="listMyOrganizations",
+            description="Returns every non-deleted organization the caller belongs to.",
+            responses={
+                **ok("#/components/schemas/OrgSummaryList"),
+                **err_refs("Unauthorized"),
+            },
+        ),
+    }
+    paths["/me/organizations/switch"] = {
+        "post": op(
+            "Switch active workspace",
+            "Organizations",
+            op_id="switchOrganization",
+            description="Updates users.active_organization_id. JWT stays user-only.",
+            req=json_body("#/components/schemas/SwitchOrgRequest"),
+            responses={
+                **ok(),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest"),
+            },
+        )
+    }
+    paths["/organizations"] = {
+        "post": op(
+            "Create workspace",
+            "Organizations",
+            op_id="createOrganization",
+            description="Bootstraps roles, full module catalog, and owner membership.",
+            req=json_body("#/components/schemas/CreateOrgRequest"),
+            responses={
+                **ok(None, {"id": "11111111-1111-1111-1111-111111111111"}, code="201"),
+                **err_refs("Unauthorized", "BadRequest"),
+            },
+        )
+    }
+    paths["/organizations/current"] = {
+        "get": op(
+            "Get current workspace",
+            "Organizations",
+            op_id="getCurrentOrganization",
+            responses={
+                **ok("#/components/schemas/OrgDetail"),
+                **err_refs("Unauthorized", "NotFound"),
+            },
+        ),
+        "patch": op(
+            "Update current workspace",
+            "Organizations",
+            op_id="updateCurrentOrganization",
+            description="Requires `organization.manage`.",
+            req=json_body("#/components/schemas/UpdateOrgRequest"),
+            responses={
+                **ok("#/components/schemas/OrgDetail"),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest", "NotFound"),
+            },
+        ),
+        "delete": op(
+            "Soft-delete current workspace",
+            "Organizations",
+            op_id="deleteCurrentOrganization",
+            description="Requires `organization.manage`. Blocked when it is the caller's last workspace.",
+            responses={
+                **ok(),
+                **err_refs("Unauthorized", "Forbidden", "BadRequest", "NotFound"),
+            },
+        ),
     }
 
     paths["/settings"] = {
@@ -1235,6 +1404,7 @@ def main():
                 "Export",
                 "Notifications",
                 "Tour",
+                "Organizations",
                 "Settings",
                 "Roles",
             ]

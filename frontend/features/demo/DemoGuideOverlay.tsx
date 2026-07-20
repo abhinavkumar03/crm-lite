@@ -7,8 +7,12 @@ import { usePathname } from "next/navigation";
 import { SpotlightLayer, useTargetRect } from "@/features/guided";
 
 import { useDemo } from "./DemoProvider";
-import { shouldAutoAdvance } from "./stepAdvance";
-import { actionSelectorsForStep, useActionWaiter } from "./useActionWaiter";
+import { isViewConfirmStep, shouldAutoAdvance } from "./stepAdvance";
+import {
+  actionSelectorsForStep,
+  highlightSelectorsForStep,
+  useActionWaiter,
+} from "./useActionWaiter";
 
 function firstMatchingSelector(candidates: string[]): string | null {
   if (typeof document === "undefined") return null;
@@ -41,8 +45,10 @@ export default function DemoGuideOverlay() {
 
   const step = demo?.currentStep ?? null;
   const running = demo?.mode === "running" && !!step;
+  const viewStep = !!step && isViewConfirmStep(step);
+  const autoAdvance = !!step && shouldAutoAdvance(step);
 
-  // Re-resolve targets when modals mount (New module / New field).
+  // Re-resolve targets when modals / data surfaces mount.
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => {
@@ -55,6 +61,16 @@ export default function DemoGuideOverlay() {
 
   const candidates = useMemo(() => {
     if (!step) return [] as string[];
+
+    // View/inspect: prefer large data surfaces so the user sees what to look at.
+    if (viewStep) {
+      const surfaces = highlightSelectorsForStep(step.step_key);
+      const fromTarget = step.target_selector
+        ? [normalizeSelector(step.target_selector)]
+        : [];
+      return Array.from(new Set([...surfaces, ...fromTarget]));
+    }
+
     const fromActions = actionSelectorsForStep(step.step_key);
     const fromTarget = step.target_selector
       ? [normalizeSelector(step.target_selector)]
@@ -62,22 +78,19 @@ export default function DemoGuideOverlay() {
     const submit = fromActions.filter((s) => s.includes("submit-"));
     const openers = fromActions.filter((s) => !s.includes("submit-"));
 
-    // Modal open → highlight Create/submit. Otherwise → highlight New/open button.
     const ordered = modalOpen
       ? [...submit, ...openers, ...fromTarget]
       : [...openers, ...submit, ...fromTarget];
 
     return Array.from(new Set(ordered));
-  }, [step, modalOpen]);
+  }, [step, modalOpen, viewStep]);
 
   const selector = useMemo(
     () => (running ? firstMatchingSelector(candidates) : null),
-    // tick forces re-query after route/modal paint
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [running, candidates, pathname, tick]
   );
 
-  // Keep measuring while modal is open so submit buttons get a hole.
   const rect = useTargetRect(
     selector,
     running,
@@ -85,9 +98,15 @@ export default function DemoGuideOverlay() {
     pathname
   );
 
-  const autoAdvance = !!step && shouldAutoAdvance(step);
+  // Keep the highlighted control / data area in view.
+  useEffect(() => {
+    if (!running || !selector) return;
+    if (!viewStep && step?.step_key !== "create_record") return;
+    const el = document.querySelector(selector);
+    if (!(el instanceof HTMLElement)) return;
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [running, selector, viewStep, step?.step_key]);
 
-  // Only wire click→validate for create/submit controls (not nav / tab views).
   const autoActionSelectors = useMemo(() => {
     if (!autoAdvance) return [] as string[];
     return candidates.filter(
@@ -102,30 +121,27 @@ export default function DemoGuideOverlay() {
 
   useActionWaiter({
     active: running && !!demo && !demo.busy && autoAdvance,
+    stepKey: step?.step_key,
     actionSelectors: autoActionSelectors,
-    onAction: () => {
-      window.setTimeout(() => {
-        void demo?.validate({ silent: true });
-      }, 600);
+    onAction: (_sel, stepKey) => {
+      // stepKey is frozen at click time — ignored if the session already advanced.
+      void demo?.validate({ silent: true, stepKey });
     },
     pollMs: running && autoAdvance ? 2500 : 0,
-    onPoll: () => {
-      if (!demo?.busy) void demo?.validate({ silent: true });
+    onPoll: (stepKey) => {
+      if (!demo?.busy) void demo?.validate({ silent: true, stepKey });
     },
   });
 
   if (!running || !step) return null;
 
-  // Create-record uses a full dynamic form — spotlight would fight the inputs.
-  if (step.step_key === "create_record") {
-    return null;
-  }
+  // Form create: highlight the submit button only (no blockers so inputs/scroll work).
+  const formCreateStep = step.step_key === "create_record";
 
   if (!selector && step.validator_key === "none") return null;
 
-  // Modal is z-[70]; raise spotlight above it so Create module/field stays focused.
-  // Do not capture outside the hole while a modal is open — blockers steal scroll.
   const zIndex = modalOpen ? 80 : 50;
+  const softHighlight = viewStep || formCreateStep;
 
   return (
     <SpotlightLayer
@@ -133,7 +149,9 @@ export default function DemoGuideOverlay() {
       mode="guide"
       pulse={!!rect}
       zIndex={zIndex}
-      captureOutside={!modalOpen}
+      // View + form-create + open modals: never block scroll/clicks outside the ring.
+      captureOutside={!modalOpen && !softHighlight}
+      variant={softHighlight ? "highlight" : "focus"}
     />
   );
 }

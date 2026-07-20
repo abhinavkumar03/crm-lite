@@ -49,6 +49,9 @@ func (m *Module) RegisterRoutes(api *gin.RouterGroup) {
 
 	scoped := api.Group("")
 	scoped.Use(m.auth, m.org, m.load)
+	scoped.GET("/organizations/current", m.Handler.GetCurrentOrg)
+	scoped.PATCH("/organizations/current", m.guard.Require(rbac.PermOrganizationManage), m.Handler.UpdateCurrentOrg)
+	scoped.DELETE("/organizations/current", m.guard.Require(rbac.PermOrganizationManage), m.Handler.DeleteCurrentOrg)
 	scoped.GET("/organizations/members", m.guard.Require(rbac.PermUserManage), m.Handler.ListMembers)
 	scoped.POST("/organizations/invitations", m.guard.Require(rbac.PermUserManage), m.Handler.Invite)
 

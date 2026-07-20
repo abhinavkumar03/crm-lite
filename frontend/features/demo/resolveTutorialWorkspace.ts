@@ -1,7 +1,9 @@
 import { getModules, listRecords } from "@/features/metadata/api";
+import { moduleRecordPath } from "@/features/modules/paths";
 
 export type TutorialWorkspaceTarget = {
   moduleId: string;
+  apiName: string;
   recordId: string;
   tab: "overview" | "notes" | "timeline";
 };
@@ -28,11 +30,16 @@ export async function resolveTutorialWorkspace(
   const record = result.records?.[0];
   if (!record) return null;
 
-  return { moduleId: mod.id, recordId: record.id, tab };
+  return {
+    moduleId: mod.id,
+    apiName: mod.api_name,
+    recordId: record.id,
+    tab,
+  };
 }
 
 export function workspacePath(target: TutorialWorkspaceTarget): string {
-  return `/tables/${target.moduleId}/${target.recordId}?tab=${target.tab}`;
+  return `${moduleRecordPath(target.apiName, target.recordId)}?tab=${target.tab}`;
 }
 
 /** Map demo step keys to the workspace tab they should open. */

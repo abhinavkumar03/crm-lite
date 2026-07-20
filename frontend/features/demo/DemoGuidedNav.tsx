@@ -33,7 +33,7 @@ export default function DemoGuidedNav() {
     const tab = workspaceTabForStep(stepKey);
     if (tab) {
       const onRecord =
-        /^\/tables\/[^/]+\/[^/]+$/.test(pathname) &&
+        /^\/m\/[^/]+\/[^/]+$/.test(pathname) &&
         searchParams.get("tab") === tab;
 
       if (lastKey.current === stepKey && onRecord) return;
@@ -57,7 +57,7 @@ export default function DemoGuidedNav() {
 
     // Product demo showcase table
     if (stepKey === "product_demo_module") {
-      if (lastKey.current === stepKey && pathname.startsWith("/tables")) {
+      if (lastKey.current === stepKey && pathname.startsWith("/m/")) {
         return;
       }
       let cancelled = false;
@@ -67,8 +67,8 @@ export default function DemoGuidedNav() {
           const mod = modules.find((m) => m.api_name === "product_demo");
           if (cancelled) return;
           lastKey.current = stepKey;
-          if (mod) router.replace(`/tables?module=${mod.id}`);
-          else router.replace("/tables");
+          if (mod) router.replace(`/m/${mod.api_name}`);
+          else router.replace("/dashboard");
         } catch {
           // ignore
         }

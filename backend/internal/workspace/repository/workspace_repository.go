@@ -35,23 +35,55 @@ func (r *Repository) RecordExists(ctx context.Context, orgID, moduleID, recordID
 
 // --- Layouts ----------------------------------------------------------------
 
+const (
+	LayoutTypeDetail = "detail"
+	LayoutTypeForm   = "form"
+	LayoutTypeList   = "list"
+)
+
 type Layout struct {
-	ID       string
-	Name     string
-	Type     string
+	ID        string
+	Name      string
+	Type      string
 	IsDefault bool
-	Config   json.RawMessage
+	Config    json.RawMessage
 }
 
-func (r *Repository) GetDefaultDetailLayout(ctx context.Context, orgID, moduleID string) (*Layout, error) {
+// HydrateField is a field row used when building hydrated form/list metadata.
+type HydrateField struct {
+	ID             string
+	APIName        string
+	Label          string
+	FieldType      string
+	IsRequired     bool
+	IsReadOnly     bool
+	IsVisible      bool
+	IsSearchable   bool
+	IsFilterable   bool
+	IsSystem       bool
+	DefaultValue   *string
+	Placeholder    *string
+	Description    *string
+	MinLength      *int
+	MaxLength      *int
+	Regex          *string
+	Options        []byte
+	LookupModuleID *string
+	SortOrder      int
+	LockMode       string
+	EditableBy     string
+	ViewableBy     string
+}
+
+func (r *Repository) GetDefaultLayout(ctx context.Context, orgID, moduleID, layoutType string) (*Layout, error) {
 	var l Layout
 	err := r.db.QueryRow(ctx, `
 		SELECT id::text, name, layout_type, is_default, config
 		FROM layouts
 		WHERE organization_id = $1 AND module_id = $2
-		  AND layout_type = 'detail' AND is_default = TRUE
+		  AND layout_type = $3 AND is_default = TRUE
 		LIMIT 1
-	`, orgID, moduleID).Scan(&l.ID, &l.Name, &l.Type, &l.IsDefault, &l.Config)
+	`, orgID, moduleID, layoutType).Scan(&l.ID, &l.Name, &l.Type, &l.IsDefault, &l.Config)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -61,8 +93,12 @@ func (r *Repository) GetDefaultDetailLayout(ctx context.Context, orgID, moduleID
 	return &l, nil
 }
 
-func (r *Repository) UpsertDefaultDetailLayout(ctx context.Context, orgID, moduleID string, config json.RawMessage) (*Layout, error) {
-	existing, err := r.GetDefaultDetailLayout(ctx, orgID, moduleID)
+func (r *Repository) GetDefaultDetailLayout(ctx context.Context, orgID, moduleID string) (*Layout, error) {
+	return r.GetDefaultLayout(ctx, orgID, moduleID, LayoutTypeDetail)
+}
+
+func (r *Repository) UpsertDefaultLayout(ctx context.Context, orgID, moduleID, layoutType, name string, config json.RawMessage) (*Layout, error) {
+	existing, err := r.GetDefaultLayout(ctx, orgID, moduleID, layoutType)
 	if err != nil {
 		return nil, err
 	}
@@ -80,10 +116,54 @@ func (r *Repository) UpsertDefaultDetailLayout(ctx context.Context, orgID, modul
 	var l Layout
 	err = r.db.QueryRow(ctx, `
 		INSERT INTO layouts (organization_id, module_id, name, layout_type, is_default, config)
-		VALUES ($1, $2, 'Default Detail', 'detail', TRUE, $3)
+		VALUES ($1, $2, $3, $4, TRUE, $5)
 		RETURNING id::text, name, layout_type, is_default, config
-	`, orgID, moduleID, config).Scan(&l.ID, &l.Name, &l.Type, &l.IsDefault, &l.Config)
+	`, orgID, moduleID, name, layoutType, config).Scan(&l.ID, &l.Name, &l.Type, &l.IsDefault, &l.Config)
 	return &l, err
+}
+
+func (r *Repository) UpsertDefaultDetailLayout(ctx context.Context, orgID, moduleID string, config json.RawMessage) (*Layout, error) {
+	return r.UpsertDefaultLayout(ctx, orgID, moduleID, LayoutTypeDetail, "Default Detail", config)
+}
+
+func (r *Repository) UpsertDefaultFormLayout(ctx context.Context, orgID, moduleID string, config json.RawMessage) (*Layout, error) {
+	return r.UpsertDefaultLayout(ctx, orgID, moduleID, LayoutTypeForm, "Default Form", config)
+}
+
+func (r *Repository) UpsertDefaultListLayout(ctx context.Context, orgID, moduleID string, config json.RawMessage) (*Layout, error) {
+	return r.UpsertDefaultLayout(ctx, orgID, moduleID, LayoutTypeList, "Default List", config)
+}
+
+func (r *Repository) ListFieldsForHydrate(ctx context.Context, orgID, moduleID string) ([]HydrateField, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id::text, api_name, label, field_type,
+		       is_required, is_read_only, is_visible, is_searchable, is_filterable, is_system,
+		       default_value, placeholder, description, min_length, max_length, regex,
+		       options, lookup_module_id, sort_order,
+		       COALESCE(lock_mode, 'never'), COALESCE(editable_by, 'ALL'), COALESCE(viewable_by, 'ALL')
+		FROM fields
+		WHERE organization_id = $1 AND module_id = $2
+		ORDER BY sort_order ASC, api_name ASC
+	`, orgID, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]HydrateField, 0)
+	for rows.Next() {
+		var f HydrateField
+		if err := rows.Scan(
+			&f.ID, &f.APIName, &f.Label, &f.FieldType,
+			&f.IsRequired, &f.IsReadOnly, &f.IsVisible, &f.IsSearchable, &f.IsFilterable, &f.IsSystem,
+			&f.DefaultValue, &f.Placeholder, &f.Description, &f.MinLength, &f.MaxLength, &f.Regex,
+			&f.Options, &f.LookupModuleID, &f.SortOrder,
+			&f.LockMode, &f.EditableBy, &f.ViewableBy,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
 }
 
 func (r *Repository) ListVisibleFieldAPINames(ctx context.Context, orgID, moduleID string) ([]string, error) {
@@ -105,6 +185,56 @@ func (r *Repository) ListVisibleFieldAPINames(ctx context.Context, orgID, module
 		out = append(out, name)
 	}
 	return out, rows.Err()
+}
+
+// FieldRef is an id + api_name pair used when syncing layout order to fields.sort_order.
+type FieldRef struct {
+	ID      string
+	APIName string
+}
+
+func (r *Repository) ListNonSystemFields(ctx context.Context, orgID, moduleID string) ([]FieldRef, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id::text, api_name FROM fields
+		WHERE organization_id = $1 AND module_id = $2 AND is_system = FALSE
+		ORDER BY sort_order, api_name
+	`, orgID, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]FieldRef, 0)
+	for rows.Next() {
+		var f FieldRef
+		if err := rows.Scan(&f.ID, &f.APIName); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) ReorderFields(ctx context.Context, orgID, moduleID string, positions []FieldSortPosition) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	for _, p := range positions {
+		if _, err := tx.Exec(ctx, `
+			UPDATE fields SET sort_order = $1, updated_at = NOW()
+			WHERE id = $2 AND module_id = $3 AND organization_id = $4
+		`, p.SortOrder, p.ID, moduleID, orgID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+type FieldSortPosition struct {
+	ID        string
+	SortOrder int
 }
 
 // --- Notes ------------------------------------------------------------------

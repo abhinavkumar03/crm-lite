@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/dto"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/settings/entity"
@@ -26,8 +27,9 @@ func New(repo Repository) *Service {
 }
 
 type settingsBlob struct {
-	General    json.RawMessage `json:"general,omitempty"`
-	Automation json.RawMessage `json:"automation,omitempty"`
+	General       json.RawMessage `json:"general,omitempty"`
+	Automation    json.RawMessage `json:"automation,omitempty"`
+	Communication json.RawMessage `json:"communication,omitempty"`
 }
 
 func (s *Service) Get(ctx context.Context, orgID string) (*dto.SettingsResponse, error) {
@@ -38,8 +40,8 @@ func (s *Service) Get(ctx context.Context, orgID string) (*dto.SettingsResponse,
 	if org == nil {
 		return nil, ErrNotFound
 	}
-	general, automation := parseBlob(org.Settings)
-	resp := toResponse(org, general, automation)
+	general, automation, communication := parseBlob(org.Settings)
+	resp := toResponse(org, general, automation, communication)
 	return &resp, nil
 }
 
@@ -52,7 +54,7 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 		return nil, ErrNotFound
 	}
 
-	general, automation := parseBlob(org.Settings)
+	general, automation, communication := parseBlob(org.Settings)
 
 	name := org.Name
 	if req.Name != nil {
@@ -60,7 +62,21 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 	}
 	logo := org.LogoURL
 	if req.LogoURL != nil {
-		logo = req.LogoURL
+		v := strings.TrimSpace(*req.LogoURL)
+		if v == "" {
+			logo = nil
+		} else {
+			logo = &v
+		}
+	}
+	desc := org.Description
+	if req.Description != nil {
+		v := strings.TrimSpace(*req.Description)
+		if v == "" {
+			desc = nil
+		} else {
+			desc = &v
+		}
 	}
 	industry := org.Industry
 	if req.Industry != nil {
@@ -87,8 +103,11 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 	if req.Automation != nil {
 		automation = normalizeAutomation(*req.Automation)
 	}
+	if req.Communication != nil {
+		communication = normalizeCommunication(*req.Communication)
+	}
 
-	blob, err := marshalBlob(general, automation)
+	blob, err := marshalBlob(general, automation, communication)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +115,7 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 	updated, err := s.repo.Update(ctx, orgID, repository.ProfileUpdate{
 		Name:        name,
 		LogoURL:     logo,
+		Description: desc,
 		Industry:    industry,
 		CompanySize: size,
 		Country:     country,
@@ -109,19 +129,20 @@ func (s *Service) Update(ctx context.Context, orgID string, req dto.UpdateSettin
 		return nil, ErrNotFound
 	}
 
-	resp := toResponse(updated, general, automation)
+	resp := toResponse(updated, general, automation, communication)
 	return &resp, nil
 }
 
-func parseBlob(raw []byte) (entity.GeneralSettings, entity.AutomationSettings) {
+func parseBlob(raw []byte) (entity.GeneralSettings, entity.AutomationSettings, entity.CommunicationSettings) {
 	general := entity.DefaultGeneral()
 	automation := entity.DefaultAutomation()
+	communication := entity.DefaultCommunication()
 	if len(raw) == 0 {
-		return general, automation
+		return general, automation, communication
 	}
 	var b settingsBlob
 	if err := json.Unmarshal(raw, &b); err != nil {
-		return general, automation
+		return general, automation, communication
 	}
 	if len(b.General) > 0 {
 		_ = json.Unmarshal(b.General, &general)
@@ -129,10 +150,13 @@ func parseBlob(raw []byte) (entity.GeneralSettings, entity.AutomationSettings) {
 	if len(b.Automation) > 0 {
 		_ = json.Unmarshal(b.Automation, &automation)
 	}
-	return normalizeGeneral(general), normalizeAutomation(automation)
+	if len(b.Communication) > 0 {
+		_ = json.Unmarshal(b.Communication, &communication)
+	}
+	return normalizeGeneral(general), normalizeAutomation(automation), normalizeCommunication(communication)
 }
 
-func marshalBlob(general entity.GeneralSettings, automation entity.AutomationSettings) ([]byte, error) {
+func marshalBlob(general entity.GeneralSettings, automation entity.AutomationSettings, communication entity.CommunicationSettings) ([]byte, error) {
 	g, err := json.Marshal(general)
 	if err != nil {
 		return nil, err
@@ -141,7 +165,11 @@ func marshalBlob(general entity.GeneralSettings, automation entity.AutomationSet
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(settingsBlob{General: g, Automation: a})
+	c, err := json.Marshal(communication)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(settingsBlob{General: g, Automation: a, Communication: c})
 }
 
 func normalizeGeneral(g entity.GeneralSettings) entity.GeneralSettings {
@@ -174,7 +202,25 @@ func normalizeAutomation(a entity.AutomationSettings) entity.AutomationSettings 
 	return a
 }
 
-func toResponse(org *entity.Organization, general entity.GeneralSettings, automation entity.AutomationSettings) dto.SettingsResponse {
+func normalizeCommunication(c entity.CommunicationSettings) entity.CommunicationSettings {
+	d := entity.DefaultCommunication()
+	switch c.EmailProvider {
+	case "simulation", "smtp", "ses", "sendgrid", "mailgun", "resend":
+	default:
+		c.EmailProvider = d.EmailProvider
+	}
+	switch c.WhatsAppProvider {
+	case "simulation", "meta", "twilio", "gupshup", "interakt", "360dialog":
+	default:
+		c.WhatsAppProvider = d.WhatsAppProvider
+	}
+	if len(c.EnabledChannels) == 0 {
+		c.EnabledChannels = d.EnabledChannels
+	}
+	return c
+}
+
+func toResponse(org *entity.Organization, general entity.GeneralSettings, automation entity.AutomationSettings, communication entity.CommunicationSettings) dto.SettingsResponse {
 	status := org.Status
 	if status == "" {
 		status = "active"
@@ -186,12 +232,14 @@ func toResponse(org *entity.Organization, general entity.GeneralSettings, automa
 		Plan:             org.Plan,
 		SubscriptionPlan: org.Plan,
 		LogoURL:          org.LogoURL,
+		Description:      org.Description,
 		Industry:         org.Industry,
 		CompanySize:      org.CompanySize,
 		Country:          org.Country,
 		Status:           status,
 		General:          general,
 		Automation:       automation,
+		Communication:    communication,
 		UpdatedAt:        org.UpdatedAt,
 	}
 }

@@ -42,6 +42,7 @@ tags:
 - name: Export
 - name: Notifications
 - name: Tour
+- name: Organizations
 - name: Settings
 - name: Roles
 paths:
@@ -119,8 +120,8 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginRequest'
             example:
-              email: admin@crmlite.com
-              password: Admin@12345
+              email: admin@crm.com
+              password: Admin@123
       responses:
         '200':
           description: Success
@@ -141,7 +142,7 @@ paths:
                   user:
                     id: …
                     name: Admin
-                    email: admin@crmlite.com
+                    email: admin@crm.com
         '401':
           $ref: '#/components/responses/Unauthorized'
         '400':
@@ -2335,6 +2336,166 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /me/organizations:
+    get:
+      summary: List my workspaces
+      tags:
+      - Organizations
+      operationId: listMyOrganizations
+      description: Returns every non-deleted organization the caller belongs to.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgSummaryList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /me/organizations/switch:
+    post:
+      summary: Switch active workspace
+      tags:
+      - Organizations
+      operationId: switchOrganization
+      description: Updates users.active_organization_id. JWT stays user-only.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwitchOrgRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /organizations:
+    post:
+      summary: Create workspace
+      tags:
+      - Organizations
+      operationId: createOrganization
+      description: Bootstraps roles, full module catalog, and owner membership.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrgRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+              example:
+                id: 11111111-1111-1111-1111-111111111111
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /organizations/current:
+    get:
+      summary: Get current workspace
+      tags:
+      - Organizations
+      operationId: getCurrentOrganization
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update current workspace
+      tags:
+      - Organizations
+      operationId: updateCurrentOrganization
+      description: Requires `organization.manage`.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrgRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/OrgDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Soft-delete current workspace
+      tags:
+      - Organizations
+      operationId: deleteCurrentOrganization
+      description: Requires `organization.manage`. Blocked when it is the caller's last workspace.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /settings:
     get:
       summary: Get organization settings
@@ -2957,7 +3118,7 @@ components:
         password:
           type: string
           format: password
-          example: Admin@12345
+          example: Admin@123
     UserResponse:
       type: object
       required:
@@ -4731,6 +4892,24 @@ components:
         plan:
           type: string
           example: pro
+        description:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        company_size:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        status:
+          type: string
+          example: active
         general:
           $ref: '#/components/schemas/GeneralSettings'
         automation:
@@ -4741,10 +4920,125 @@ components:
       properties:
         name:
           type: string
+        description:
+          type: string
+          nullable: true
+        logo_url:
+          type: string
+          nullable: true
         general:
           $ref: '#/components/schemas/GeneralSettings'
         automation:
           $ref: '#/components/schemas/AutomationSettings'
+    OrgSummary:
+      type: object
+      properties:
+        id: *id002
+        name:
+          type: string
+          example: CRM Lite Demo
+        slug:
+          type: string
+          example: crm-lite-demo
+        logo_url:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        role_slug:
+          type: string
+          example: owner
+        is_active:
+          type: boolean
+    OrgSummaryList:
+      type: array
+      items:
+        $ref: '#/components/schemas/OrgSummary'
+    OrgDetail:
+      type: object
+      properties:
+        id: *id002
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        company_size:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        status:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+          nullable: true
+        general:
+          $ref: '#/components/schemas/GeneralSettings'
+        created_at: *id003
+        updated_at: *id003
+    UpdateOrgRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        company_size:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        general:
+          $ref: '#/components/schemas/GeneralSettings'
+    CreateOrgRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        industry:
+          type: string
+        company_size:
+          type: string
+        country:
+          type: string
+        logo_url:
+          type: string
+        general:
+          $ref: '#/components/schemas/GeneralSettings'
+    SwitchOrgRequest:
+      type: object
+      required:
+      - organization_id
+      properties:
+        organization_id: *id002
     PermissionResponse:
       type: object
       properties:

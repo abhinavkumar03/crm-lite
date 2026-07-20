@@ -2,6 +2,8 @@ export interface OrgMembership {
   id: string;
   name: string;
   slug: string;
+  logo_url?: string | null;
+  description?: string | null;
   role_slug: string;
   is_active: boolean;
 }
@@ -49,6 +51,7 @@ export interface StructureItem {
 export interface CreateOrganizationPayload {
   name: string;
   slug?: string;
+  description?: string;
   industry?: string;
   company_size?: string;
   country?: string;
@@ -57,6 +60,7 @@ export interface CreateOrganizationPayload {
     timezone?: string;
     currency?: string;
     locale?: string;
+    date_format?: string;
   };
 }
 

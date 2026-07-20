@@ -3,6 +3,8 @@ type Props = {
   submitText: string;
   cancelText?: string;
   onCancel?: () => void;
+  /** Stronger visual cue during guided tutorials. */
+  emphasizeSubmit?: boolean;
 };
 
 export default function FormActions({
@@ -10,6 +12,7 @@ export default function FormActions({
   submitText,
   cancelText = "Cancel",
   onCancel,
+  emphasizeSubmit = false,
 }: Props) {
   return (
     <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
@@ -38,7 +41,7 @@ export default function FormActions({
         type="submit"
         data-tutorial-action="create-record"
         disabled={loading}
-        className="
+        className={`
           rounded-2xl
           bg-emerald-500
           px-6
@@ -50,7 +53,8 @@ export default function FormActions({
           hover:bg-emerald-600
           disabled:cursor-not-allowed
           disabled:opacity-60
-        "
+          ${emphasizeSubmit ? "ring-4 ring-emerald-300 ring-offset-2" : ""}
+        `}
       >
         {loading
           ? "Saving..."

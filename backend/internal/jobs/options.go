@@ -17,7 +17,7 @@ const (
 // still append/override options when publishing.
 func DefaultOpts(t JobType) []asynq.Option {
 	switch t {
-	case JobSendEmail, JobSendWhatsApp, JobSendNotification:
+	case JobSendEmail, JobSendWhatsApp, JobSendNotification, JobProcessScheduledNotifications:
 		return []asynq.Option{
 			asynq.Queue(QueueCritical),
 			asynq.MaxRetry(5),

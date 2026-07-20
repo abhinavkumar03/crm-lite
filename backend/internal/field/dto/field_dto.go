@@ -48,6 +48,9 @@ type FieldResponse struct {
 	IsNullable        bool              `json:"is_nullable"`
 	IsIndexed         bool              `json:"is_indexed"`
 	IsSystem          bool              `json:"is_system"`
+	LockMode          string            `json:"lock_mode"`
+	EditableBy        string            `json:"editable_by"`
+	ViewableBy        string            `json:"viewable_by"`
 	Storage           StorageDescriptor `json:"storage"`
 	CreatedAt         time.Time         `json:"created_at"`
 	UpdatedAt         time.Time         `json:"updated_at"`
@@ -74,6 +77,10 @@ type CreateFieldRequest struct {
 	IsVisible         *bool         `json:"is_visible"`
 	IsSearchable      bool          `json:"is_searchable"`
 	IsFilterable      bool          `json:"is_filterable"`
+	LockMode          string        `json:"lock_mode" validate:"omitempty,oneof=never after_create always"`
+	EditableBy        string        `json:"editable_by" validate:"omitempty,max=40"`
+	ViewableBy        string        `json:"viewable_by" validate:"omitempty,max=40"`
+	SectionKey        string        `json:"section_key" validate:"omitempty,max=80"`
 }
 
 // UpdateFieldRequest is a partial update. api_name and field_type are immutable
@@ -95,6 +102,9 @@ type UpdateFieldRequest struct {
 	IsVisible         *bool         `json:"is_visible"`
 	IsSearchable      *bool         `json:"is_searchable"`
 	IsFilterable      *bool         `json:"is_filterable"`
+	LockMode          *string       `json:"lock_mode" validate:"omitempty,oneof=never after_create always"`
+	EditableBy        *string       `json:"editable_by" validate:"omitempty,max=40"`
+	ViewableBy        *string       `json:"viewable_by" validate:"omitempty,max=40"`
 }
 
 // ReorderRequest carries the new ordering for a set of fields.

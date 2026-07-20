@@ -56,6 +56,7 @@ export default function DynamicField({
     case "textarea":
     case "richtext":
     case "json":
+    case "address":
       return (
         <div>
           <FormTextarea
@@ -69,6 +70,7 @@ export default function DynamicField({
 
     case "number":
     case "currency":
+    case "percentage":
       return (
         <div>
           <FormInput
@@ -94,6 +96,19 @@ export default function DynamicField({
         </div>
       );
 
+    case "time":
+      return (
+        <div>
+          <FormInput
+            {...common}
+            type="time"
+            value={String(value ?? "")}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          <FieldError error={error} />
+        </div>
+      );
+
     case "datetime":
       return (
         <div>
@@ -108,13 +123,19 @@ export default function DynamicField({
 
     case "email":
     case "phone":
-    case "url": {
+    case "url":
+    case "gst":
+    case "pan":
+    case "barcode":
+    case "serial_number": {
       const type =
         field.field_type === "email"
           ? "email"
           : field.field_type === "phone"
           ? "tel"
-          : "url";
+          : field.field_type === "url"
+          ? "url"
+          : "text";
       return (
         <div>
           <FormInput
@@ -211,6 +232,7 @@ export default function DynamicField({
 
     case "boolean":
     case "checkbox":
+    case "toggle":
       return (
         <div className="space-y-1">
           <label className="flex items-center gap-3 text-sm font-semibold text-slate-700">
@@ -232,13 +254,18 @@ export default function DynamicField({
       );
 
     case "formula":
+    case "auto_number":
       return (
         <div>
           <FormInput
             {...common}
             value={String(value ?? "")}
             disabled
-            helperText="Calculated field"
+            helperText={
+              field.field_type === "auto_number"
+                ? "Auto-generated"
+                : "Calculated field"
+            }
           />
           <FieldError error={error} />
         </div>

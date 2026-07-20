@@ -17,6 +17,9 @@ const (
 	// JobSendNotification delivers a persisted notification (looked up by id) via
 	// the notification pipeline: dispatch -> update status -> log activity.
 	JobSendNotification JobType = "notification.send"
+	// JobProcessScheduledNotifications promotes due scheduled notifications and
+	// delivers them through the same pipeline.
+	JobProcessScheduledNotifications JobType = "notification.process_scheduled"
 	// JobImportProcess processes a staged import job (looked up by id): map,
 	// validate and insert each row, then record progress and the error report.
 	JobImportProcess JobType = "import.process"

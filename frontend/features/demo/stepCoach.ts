@@ -25,6 +25,15 @@ export function coachForStep(step: DemoStep): {
           step.hint ||
           "Settings → Fields → New field → Create field in the dialog.",
       };
+    case "create_record":
+      return {
+        goLabel: "Open Tutorial Lead",
+        coach:
+          "Open Tutorial Lead from the sidebar (or Go). Click Add Tutorial Lead, fill the form, then click Add — this step advances automatically.",
+        hint:
+          step.hint ||
+          "Module → Add Tutorial Lead → Create record (highlighted submit).",
+      };
     case "record_workspace":
       return {
         goLabel: "Open Tutorial Lead workspace",
@@ -50,10 +59,35 @@ export function coachForStep(step: DemoStep): {
       };
     case "product_demo_module":
       return {
-        goLabel: "Open Product Demo table",
+        goLabel: "Open Product Demo",
         coach:
-          "Browse the seeded Product Demo module (fields + sample rows). Press Continue when ready.",
-        hint: step.hint || "View-only — explore the table, then Continue.",
+          "Open Product Demo from the workspace sidebar. Browse fields and sample rows, then press Continue.",
+        hint: step.hint || "View-only — explore the module page, then Continue.",
+      };
+    case "automation_settings":
+      return {
+        goLabel: "Open Automation settings",
+        coach:
+          "Glance at automation / notification controls. Press Continue when you’ve looked around.",
+        hint: step.hint || "View-only — open Automation, then Continue.",
+      };
+    case "export_engine":
+      return {
+        goLabel: "Open Export (Settings)",
+        coach: "Open Settings → Export, explore the page, then press Continue.",
+        hint: step.hint || "View-only — Continue when ready.",
+      };
+    case "import_engine":
+      return {
+        goLabel: "Open Import (Settings)",
+        coach: "Open Settings → Import, explore the page, then press Continue.",
+        hint: step.hint || "View-only — Continue when ready.",
+      };
+    case "validation_rules":
+      return {
+        goLabel: "Open Validation settings",
+        coach: "Glance at validation rules, then press Continue.",
+        hint: step.hint || "View-only — Continue when ready.",
       };
     default:
       return {

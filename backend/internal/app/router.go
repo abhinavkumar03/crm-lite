@@ -41,6 +41,7 @@ func NewRouter(
 		AllowHeaders: []string{
 			"Authorization",
 			"Content-Type",
+			"X-Organization-Id",
 		},
 		AllowCredentials: true,
 	}))

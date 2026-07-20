@@ -72,14 +72,19 @@ recorded in `schema_seed_history`, and idempotent.
 
 | Email | Password | Role |
 |---|---|---|
-| `admin@crmlite.com` | `Admin@12345` | Administrator |
+| `demo@crmlite.com` | `Password@123` | Owner of all 5 demo workspaces (primary) |
+| `admin@crm.com` | `Admin@123` | Owner on CRM Lite Demo |
 | `priya@crmlite.com` | `Password@123` | Sales Manager |
-| `vikram@crmlite.com` | `Password@123` | Sales Representative |
-| `sneha@crmlite.com` | `Password@123` | Sales Representative |
+| `vikram@crmlite.com` | `Password@123` | Sales Executive |
+| `sneha@crmlite.com` | `Password@123` | Sales Executive |
 | `arjun@crmlite.com` | `Password@123` | Viewer |
 
-The demo dataset also creates 50 leads, 30 contacts, 60 tasks, ~100 activities,
-notes, and 35 dynamic `company`/`deal` records (JSONB engine) owned by the admin.
+**Demo workspaces** (switch from the sidebar): CRM Lite Demo, SME Junction,
+Acme Manufacturing, Bright Marketing Agency, Personal Sales CRM.
+
+Each workspace includes ~28 leads, ~22 contacts, ~22 tasks, companies/deals,
+notes, attachments, and timeline activities (including `call.*` events) on the
+dynamic record engine.
 
 ---
 
@@ -341,19 +346,21 @@ compiled validation schema — no form is hand-coded. Lives under
 
 | Piece | Path | Responsibility |
 | --- | --- | --- |
-| `DynamicForm` | `features/metadata/components/DynamicForm.tsx` | Renders a full form from `ModuleField[]`, handles layout, visibility, validation, submit. |
+| `DynamicForm` | `features/metadata/components/DynamicForm.tsx` | Renders a full form from `ModuleField[]`; supports create submit or `previewOnly`. |
 | `DynamicField` | `features/metadata/components/DynamicField.tsx` | Maps a single `field_type` to the right shared input primitive. |
 | `useDynamicForm` | `features/metadata/hooks/useDynamicForm.ts` | Form state, computed visibility, validation. |
 | `lib/conditions.ts` | `features/metadata/lib/conditions.ts` | Conditional-rendering engine (`VisibilityRule[]`). |
 | `lib/validation.ts` | `features/metadata/lib/validation.ts` | Client-side validation derived from the Phase 7 schema. |
 | `api.ts` | `features/metadata/api.ts` | `getModules`, `getModuleFields`, `getValidationSchema`, `validateRecord`. |
-| Playground page | `app/(dashboard)/forms/page.tsx` | Pick a module → generate its form → server-validate. Route: `/forms`. |
+| Form Designer | `app/(dashboard)/settings/forms/page.tsx` | Preview-only form layout (no record create). Route: `/settings/forms`. |
+| Module create | `features/modules/components/ModuleRecordsWorkspace.tsx` | Day-to-day Add record on `/m/{apiName}`. |
 
 Run the frontend and open the page:
 ```bash
 cd frontend
 npm run dev
-# then visit http://localhost:3000/forms  (also linked in the sidebar)
+# Form Designer: http://localhost:3000/settings/forms  (/forms redirects)
+# Create records: http://localhost:3000/m/lead → Add Lead
 ```
 
 Reuse the renderer for any module:
@@ -439,12 +446,12 @@ Lives under `frontend/features/metadata/`, reusing the Phase 8 form primitives.
 | `useDynamicTable` | `features/metadata/hooks/useDynamicTable.ts` | Owns columns/filters/sort/pagination state and derives visible rows. |
 | `lib/table.ts` | `features/metadata/lib/table.ts` | Pure `sortRows` / `filterRows` / `paginate` (type-aware). |
 | `api.ts` | `features/metadata/api.ts` | `getViews`, `createView`, `updateView`, `deleteView`, `setDefaultView`. |
-| Playground page | `app/(dashboard)/tables/page.tsx` | Pick a dynamic module → table + saved views; create/delete records via the record runtime. Route: `/tables`. |
+| Playground page | `app/(dashboard)/settings/tables/page.tsx` | Pick a dynamic module → table + saved views; create/delete records via the record runtime. Route: `/settings/tables`. |
 
 ```bash
 cd frontend
 npm run dev
-# then visit http://localhost:3000/tables  (also linked in the sidebar)
+# then visit http://localhost:3000/settings/tables  (Settings → Tables, or a module in the workspace sidebar)
 ```
 
 > The playground lists dynamic modules only and is now backed by the Phase 10
@@ -671,7 +678,7 @@ Implementation:
 | Engine (API) | `internal/importer/` | Analyze/create/list/get vertical slice; suggests + sanitizes the mapping, stages rows, enqueues. |
 | Queue | `internal/jobs/{jobs,server}.go` | `import.process` job type + worker handler + `ImportProcessor` interface. |
 | Processor (worker) | `internal/importer/processor/` | Coerces cells to field types, validates (Phase 7), inserts (Phase 10), records counters + errors. |
-| Frontend | `frontend/features/import/` + `app/(dashboard)/imports/page.tsx` | Upload → mapping wizard + live history with error report. Route: `/imports`. |
+| Frontend | `frontend/features/import/` + `app/(dashboard)/settings/imports/page.tsx` | Upload → mapping wizard + live history with error report. Route: `/settings/imports`. |
 
 > Type coercion: cells are converted to the target field's type before
 > validation (numbers/currency → float, boolean/checkbox → bool, multiselect →
@@ -744,7 +751,7 @@ Implementation:
 | Engine (API) | `internal/exporter/` | Sync/async/list/get/download + template CRUD; shared `Build` core reused by the worker. |
 | Queue | `internal/jobs/{jobs,server}.go` | `export.process` job type + worker handler + `ExportProcessor` interface. |
 | Processor (worker) | `internal/exporter/processor/` | Thin adapter that runs the service's `RunJob` (build + store). |
-| Frontend | `frontend/features/export/` + `app/(dashboard)/exports/page.tsx` | Column picker + templates + sync/async download + history. Route: `/exports`. |
+| Frontend | `frontend/features/export/` + `app/(dashboard)/settings/exports/page.tsx` | Column picker + templates + sync/async download + history. Route: `/settings/exports`. |
 
 > Reuse: the export service consumes the record service as its row source, so
 > filters/search/sort/expansion are the Phase 10 engine — the export never
@@ -856,7 +863,7 @@ curl -X PUT http://localhost:8080/api/v1/settings \
 | Validation | `/settings/validation` | `GET/POST/PUT/DELETE /modules/:id/validation-rules` |
 | Roles | `/settings/roles` | `GET/POST/PUT/DELETE /roles`, permission matrix + module/field ACL |
 | Automation | `/settings/automation` | `GET/PUT /settings` (automation section) + link to `/notifications` |
-| Data | `/settings/data` | Links to the Import (`/imports`) & Export (`/exports`) engines |
+| Data | `/settings/imports`, `/settings/exports` | Import & Export engines (under Settings) |
 
 Implementation:
 
@@ -1080,7 +1087,7 @@ Embedded at build time via `//go:embed` in `internal/docs`.
 ## 23. Documentation & architecture (Phase 19)
 
 > **Dynamic-only CRM:** Native `/leads`, `/contacts`, and `/tasks` HTTP APIs are
-> unwired. Use Settings → Modules/Fields, `/forms`, `/tables`, and
+> unwired. Use Settings → Modules/Fields, Settings → Form Designer / Listing Columns, and
 > `/modules/:id/records`. Legacy SQL tables remain in migrations unused.
 
 > **Tenancy-first roadmap:** Canonical product phases live in
@@ -1153,7 +1160,7 @@ Canonical product order: [`docs/roadmap.md`](./docs/roadmap.md).
 
 Schema: migration **`000012_record_workspace`**. Apply with `cd backend && make migrate-up`.
 
-UI: `/tables/:moduleId/:recordId` (row click from Tables, search, recent records).
+UI: `/settings/tables/:moduleId/:recordId` (row click from Tables, search, recent records).
 
 | Concern | Endpoints |
 | --- | --- |

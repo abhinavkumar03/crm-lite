@@ -19,8 +19,12 @@ type RecentRecord struct {
 }
 
 type DashboardResponse struct {
-	TotalModules int64           `json:"total_modules"`
-	TotalRecords int64           `json:"total_records"`
-	ModuleCounts []ModuleCount   `json:"module_counts"`
-	RecentRecords []RecentRecord `json:"recent_records"`
+	TotalModules         int64                    `json:"total_modules"`
+	TotalRecords         int64                    `json:"total_records"`
+	ModuleCounts         []ModuleCount            `json:"module_counts"`
+	RecentRecords        []RecentRecord           `json:"recent_records"`
+	EmailsSentToday      int64                    `json:"emails_sent_today"`
+	WhatsAppSentToday    int64                    `json:"whatsapp_sent_today"`
+	FailedNotifications  int64                    `json:"failed_notifications"`
+	ScheduledNotifications int64                  `json:"scheduled_notifications"`
 }

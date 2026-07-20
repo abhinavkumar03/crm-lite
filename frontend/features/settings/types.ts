@@ -15,6 +15,12 @@ export interface AutomationSettings {
   daily_digest: boolean;
 }
 
+export interface CommunicationSettings {
+  email_provider: string;
+  whatsapp_provider: string;
+  enabled_channels: string[];
+}
+
 export interface OrgSettings {
   id: string;
   name: string;
@@ -28,6 +34,7 @@ export interface OrgSettings {
   status?: string;
   general: GeneralSettings;
   automation: AutomationSettings;
+  communication?: CommunicationSettings;
   updated_at: string;
 }
 
@@ -40,6 +47,7 @@ export interface UpdateSettingsPayload {
   country?: string | null;
   general?: GeneralSettings;
   automation?: AutomationSettings;
+  communication?: CommunicationSettings;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +123,8 @@ export interface CreateFieldPayload {
   is_visible?: boolean;
   is_searchable?: boolean;
   is_filterable?: boolean;
+  /** Detail layout section key (defaults to "general" on the server). */
+  section_key?: string;
 }
 
 export interface UpdateFieldPayload {

@@ -22,13 +22,13 @@ export default function RecentRecordsCard({ records }: Props) {
       <div className="divide-y divide-slate-100">
         {records.length === 0 ? (
           <p className="p-6 text-sm text-slate-500">
-            No records yet. Create one from Forms.
+            No records yet. Open a module from the sidebar and use Add.
           </p>
         ) : (
           records.map((r) => (
             <Link
               key={r.id}
-              href={`/tables/${r.module_id}/${r.id}`}
+              href={`/m/${r.api_name}/${r.id}`}
               className="flex items-center justify-between px-6 py-4 transition hover:bg-slate-50"
             >
               <div>

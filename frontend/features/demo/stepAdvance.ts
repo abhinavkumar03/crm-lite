@@ -10,9 +10,10 @@ const CREATE_STEP_KEYS = new Set([
 /**
  * Create / mutate steps: auto-validate after the user acts (and poll).
  * View / navigate / acknowledge steps: stay visible until Continue.
+ * Only the whitelist drives auto-advance — never required_action alone
+ * (mis-seeded DB metadata must not skip view steps).
  */
 export function isCreateActionStep(step: DemoStep): boolean {
-  if (step.required_action === "create_resource") return true;
   return CREATE_STEP_KEYS.has(step.step_key);
 }
 

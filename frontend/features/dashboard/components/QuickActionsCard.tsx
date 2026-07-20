@@ -7,23 +7,31 @@ import {
   Settings,
   ArrowRight,
   Compass,
+  MessageCircle,
 } from "lucide-react";
 
 import { useDemo } from "@/features/demo/DemoProvider";
 
 const actions = [
   {
-    title: "New record",
-    description: "Open a metadata-driven form",
-    href: "/forms",
-    icon: LayoutTemplate,
+    title: "Compose notification",
+    description: "Send Email or WhatsApp from the Notification Center",
+    href: "/notifications",
+    icon: MessageCircle,
+    color: "bg-teal-500",
+  },
+  {
+    title: "Browse modules",
+    description: "Open a module, then use Add to create records",
+    href: "/dashboard",
+    icon: Table2,
     color: "bg-emerald-500",
   },
   {
-    title: "Browse tables",
-    description: "List and edit module records",
-    href: "/tables",
-    icon: Table2,
+    title: "Form Designer",
+    description: "Preview metadata-driven create forms",
+    href: "/settings/forms",
+    icon: LayoutTemplate,
     color: "bg-blue-500",
   },
   {

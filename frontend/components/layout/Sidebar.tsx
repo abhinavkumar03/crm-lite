@@ -2,14 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   X,
   LayoutDashboard,
-  LayoutTemplate,
-  Table2,
-  Upload,
-  Download,
   MessageCircle,
   Settings,
   CircleHelp,
@@ -21,6 +17,8 @@ import {
 
 import api from "@/services/api";
 import { useDemo } from "@/features/demo/DemoProvider";
+import WorkspaceSwitcher from "@/features/organization/components/WorkspaceSwitcher";
+import { useOrgOptional } from "@/features/organization/OrgContext";
 
 type NavItem = {
   name: string;
@@ -35,37 +33,17 @@ type NavModule = {
   plural_label: string;
 };
 
-const fixedNavigation: NavItem[] = [
+/** Fixed workspace items (modules are inserted after Dashboard). */
+const beforeModules: NavItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
     tourKey: "dashboard",
   },
-  {
-    name: "Forms",
-    href: "/forms",
-    icon: LayoutTemplate,
-    tourKey: "forms",
-  },
-  {
-    name: "Tables",
-    href: "/tables",
-    icon: Table2,
-    tourKey: "tables",
-  },
-  {
-    name: "Import",
-    href: "/imports",
-    icon: Upload,
-    tourKey: "imports",
-  },
-  {
-    name: "Export",
-    href: "/exports",
-    icon: Download,
-    tourKey: "exports",
-  },
+];
+
+const afterModules: NavItem[] = [
   {
     name: "Notifications",
     href: "/notifications",
@@ -179,9 +157,8 @@ function NavLink({
 
 export default function Sidebar({ open, onClose }: Props) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const activeModuleId = searchParams.get("module");
   const [modules, setModules] = useState<NavModule[]>([]);
+  const orgCtx = useOrgOptional();
 
   useEffect(() => {
     let active = true;
@@ -196,7 +173,7 @@ export default function Sidebar({ open, onClose }: Props) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [orgCtx?.activeOrg?.id]);
 
   return (
     <>
@@ -236,7 +213,7 @@ export default function Sidebar({ open, onClose }: Props) {
         ${open ? "translate-x-0" : "-translate-x-full"}
       `}
       >
-        <div className="relative border-b border-slate-200 px-6 py-4">
+        <div className="relative border-b border-slate-200 px-4 py-4">
           <button
             onClick={onClose}
             className="
@@ -253,44 +230,48 @@ export default function Sidebar({ open, onClose }: Props) {
             <X size={20} />
           </button>
 
-          <Link
-            href="/dashboard"
-            onClick={onClose}
-            className="flex items-center gap-4"
-          >
-            <div
-              className="
-              flex
-              h-12
-              w-12
-              items-center
-              justify-center
-              rounded-2xl
-              bg-gradient-to-br
-              from-emerald-500
-              to-teal-500
-              text-xl
-              font-bold
-              text-white
-              shadow
-              "
-            >
-              C
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">CRM Lite</h2>
-              <p className="text-xs text-slate-500">Production CRM</p>
-            </div>
-          </Link>
+          <WorkspaceSwitcher variant="sidebar" className="pr-8 lg:pr-0" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-            Workspace
+            Navigation
           </p>
 
           <nav data-tour="sidebar-nav" className="space-y-2">
-            {fixedNavigation.map((item) => {
+            {beforeModules.map((item) => {
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+              return (
+                <NavLink
+                  key={item.href}
+                  {...item}
+                  active={active}
+                  onClose={onClose}
+                />
+              );
+            })}
+
+            {modules.map((m) => {
+              const href = `/m/${m.api_name}`;
+              const active =
+                pathname === href ||
+                pathname.startsWith(`${href}/`);
+              return (
+                <NavLink
+                  key={m.id}
+                  name={m.plural_label}
+                  href={href}
+                  icon={Boxes}
+                  tourKey={`module-${m.api_name}`}
+                  active={active}
+                  onClose={onClose}
+                />
+              );
+            })}
+
+            {afterModules.map((item) => {
               const active =
                 pathname === item.href ||
                 pathname.startsWith(`${item.href}/`);
@@ -304,33 +285,6 @@ export default function Sidebar({ open, onClose }: Props) {
               );
             })}
           </nav>
-
-          {modules.length > 0 && (
-            <>
-              <p className="mb-4 mt-8 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                Modules
-              </p>
-              <nav className="space-y-2">
-                {modules.map((m) => {
-                  const href = `/tables?module=${m.id}`;
-                  const active =
-                    pathname.startsWith("/tables") &&
-                    activeModuleId === m.id;
-                  return (
-                    <NavLink
-                      key={m.id}
-                      name={m.plural_label}
-                      href={href}
-                      icon={Boxes}
-                      tourKey={`module-${m.api_name}`}
-                      active={active}
-                      onClose={onClose}
-                    />
-                  );
-                })}
-              </nav>
-            </>
-          )}
 
           <ExploreCrmButton onClose={onClose} />
         </div>

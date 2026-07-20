@@ -3,24 +3,67 @@ package dto
 import "time"
 
 type OrgSummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Slug     string `json:"slug"`
-	RoleSlug string `json:"role_slug"`
-	IsActive bool   `json:"is_active"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Slug        string  `json:"slug"`
+	LogoURL     *string `json:"logo_url,omitempty"`
+	Description *string `json:"description,omitempty"`
+	RoleSlug    string  `json:"role_slug"`
+	IsActive    bool    `json:"is_active"`
+}
+
+// OrgGeneralPrefs are locale defaults stored under settings.general.
+type OrgGeneralPrefs struct {
+	Timezone   string `json:"timezone" validate:"omitempty,max=80"`
+	Currency   string `json:"currency" validate:"omitempty,max=10"`
+	Locale     string `json:"locale" validate:"omitempty,max=20"`
+	DateFormat string `json:"date_format" validate:"omitempty,max=40"`
+	TimeFormat string `json:"time_format" validate:"omitempty,oneof=12h 24h"`
+	WeekStart  string `json:"week_start" validate:"omitempty,oneof=sunday monday"`
+}
+
+// OrgDetail is the active workspace profile returned by GET /organizations/current.
+type OrgDetail struct {
+	ID          string           `json:"id"`
+	Name        string           `json:"name"`
+	Slug        string           `json:"slug"`
+	Plan        string           `json:"plan"`
+	LogoURL     *string          `json:"logo_url,omitempty"`
+	Description *string          `json:"description,omitempty"`
+	Industry    *string          `json:"industry,omitempty"`
+	CompanySize *string          `json:"company_size,omitempty"`
+	Country     *string          `json:"country,omitempty"`
+	Status      string           `json:"status"`
+	CreatedBy   *string          `json:"created_by,omitempty"`
+	General     OrgGeneralPrefs  `json:"general"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+}
+
+// UpdateOrgRequest partially updates the active workspace.
+type UpdateOrgRequest struct {
+	Name        *string          `json:"name" validate:"omitempty,min=2,max=200"`
+	LogoURL     *string          `json:"logo_url"`
+	Description *string          `json:"description" validate:"omitempty,max=2000"`
+	Industry    *string          `json:"industry" validate:"omitempty,max=120"`
+	CompanySize *string          `json:"company_size" validate:"omitempty,max=40"`
+	Country     *string          `json:"country" validate:"omitempty,max=80"`
+	General     *OrgGeneralPrefs `json:"general"`
 }
 
 // CreateOrgGeneralPrefs are locale defaults applied into settings.general on create.
 type CreateOrgGeneralPrefs struct {
-	Timezone string `json:"timezone" validate:"omitempty,max=80"`
-	Currency string `json:"currency" validate:"omitempty,max=10"`
-	Locale   string `json:"locale" validate:"omitempty,max=20"`
+	Timezone   string `json:"timezone" validate:"omitempty,max=80"`
+	Currency   string `json:"currency" validate:"omitempty,max=10"`
+	Locale     string `json:"locale" validate:"omitempty,max=20"`
+	DateFormat string `json:"date_format" validate:"omitempty,max=40"`
 }
 
 // CreateOrgRequest creates a workspace and bootstraps roles/modules for the caller.
 type CreateOrgRequest struct {
 	Name        string                 `json:"name" validate:"required,min=2,max=200"`
 	Slug        string                 `json:"slug" validate:"omitempty,max=120"`
+	Description string                 `json:"description" validate:"omitempty,max=2000"`
 	Industry    string                 `json:"industry" validate:"omitempty,max=120"`
 	CompanySize string                 `json:"company_size" validate:"omitempty,max=40"`
 	Country     string                 `json:"country" validate:"omitempty,max=80"`

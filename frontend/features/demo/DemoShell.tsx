@@ -12,7 +12,6 @@ import DemoGuidedNav from "./DemoGuidedNav";
 import DemoLauncher from "./DemoLauncher";
 import InstructionPanel from "./InstructionPanel";
 import ResumeDialog from "./ResumeDialog";
-import TutorialSidebar from "./TutorialSidebar";
 import { useDemo } from "./DemoProvider";
 
 /** Mounts all demo engine UI surfaces inside the authenticated shell. */
@@ -42,7 +41,6 @@ export default function DemoShell() {
             </>
           )}
           <InstructionPanel />
-          <TutorialSidebar />
         </>
       )}
     </>

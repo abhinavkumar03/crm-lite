@@ -28,7 +28,7 @@ export default function ModuleCountsCard({ modules }: Props) {
           modules.map((m) => (
             <Link
               key={m.module_id}
-              href={`/tables?module=${m.module_id}`}
+              href={`/m/${m.api_name}`}
               className="flex items-center justify-between px-6 py-4 transition hover:bg-slate-50"
             >
               <div className="flex items-center gap-3">

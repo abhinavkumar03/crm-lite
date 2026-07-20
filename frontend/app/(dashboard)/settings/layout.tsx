@@ -8,14 +8,8 @@ export default function SettingsLayout({
 }) {
   return (
     <div className="space-y-8">
-      <PageHeader
-        badge="Settings Center"
-        title="Settings"
-        description="Configure your organization, shape your data model, and tune automation — all metadata-driven, no redeploys required."
-      />
-
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="lg:sticky lg:self-start">
           <SettingsNav />
         </aside>
 
