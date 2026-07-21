@@ -139,6 +139,21 @@ func (r *Repository) GetDashboard(
 		&out.ScheduledNotifications,
 	)
 
+	_ = r.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (WHERE status = 'active'),
+			COUNT(*) FILTER (WHERE status = 'disabled')
+		FROM workflows WHERE organization_id = $1
+	`, orgID).Scan(&out.ActiveWorkflows, &out.DisabledWorkflows)
+
+	_ = r.db.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE),
+			COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE AND status = 'failed'),
+			AVG(duration_ms) FILTER (WHERE created_at::date = CURRENT_DATE AND duration_ms IS NOT NULL)
+		FROM workflow_executions WHERE organization_id = $1
+	`, orgID).Scan(&out.WorkflowsExecutedToday, &out.WorkflowsFailedToday, &out.AvgWorkflowDurationMs)
+
 	return out, nil
 }
 

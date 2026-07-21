@@ -3,16 +3,47 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Save, MessageCircle, ArrowRight } from "lucide-react";
+import {
+  Save,
+  MessageCircle,
+  ArrowRight,
+  Workflow,
+  ScrollText,
+  LayoutTemplate,
+} from "lucide-react";
 
 import FormSelect from "@/components/common/form/FormSelect";
 import Toggle from "@/components/common/form/Toggle";
 
 import { getSettings, updateSettings } from "@/features/settings/api";
 import { AutomationSettings } from "@/features/settings/types";
+import { getWorkflowMetrics } from "@/features/workflows/api";
+import type { WorkflowMetrics } from "@/features/workflows/types";
+
+const hubLinks = [
+  {
+    href: "/settings/automation/workflows",
+    title: "Workflows",
+    description: "Create and publish automation rules",
+    icon: Workflow,
+  },
+  {
+    href: "/settings/automation/logs",
+    title: "Execution logs",
+    description: "Inspect runs, failures, and retries",
+    icon: ScrollText,
+  },
+  {
+    href: "/settings/automation/templates",
+    title: "Templates",
+    description: "Clone starter workflows",
+    icon: LayoutTemplate,
+  },
+];
 
 export default function AutomationSettingsPage() {
   const [automation, setAutomation] = useState<AutomationSettings | null>(null);
+  const [metrics, setMetrics] = useState<WorkflowMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -20,8 +51,14 @@ export default function AutomationSettingsPage() {
     let active = true;
     (async () => {
       try {
-        const data = await getSettings();
-        if (active) setAutomation(data.automation);
+        const [settings, m] = await Promise.all([
+          getSettings(),
+          getWorkflowMetrics().catch(() => null),
+        ]);
+        if (active) {
+          setAutomation(settings.automation);
+          setMetrics(m);
+        }
       } catch {
         toast.error("Failed to load settings");
       } finally {
@@ -61,19 +98,73 @@ export default function AutomationSettingsPage() {
 
   return (
     <div className="space-y-6" data-tutorial-surface="automation">
+      <section className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Automation center
+          </h2>
+          <p className="text-sm text-slate-500">
+            Define metadata-driven workflows across any module, then tune
+            notification preferences.
+          </p>
+        </div>
+
+        {metrics && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Active", metrics.active_workflows],
+              ["Draft", metrics.draft_workflows],
+              ["Executed today", metrics.executed_today],
+              ["Failed today", metrics.failed_today],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+              >
+                <p className="text-xs uppercase tracking-wide text-slate-500">
+                  {label}
+                </p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {hubLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group flex flex-col gap-2 rounded-2xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              <item.icon className="h-5 w-5 text-slate-700" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-slate-900">{item.title}</span>
+                <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5" />
+              </div>
+              <p className="text-sm text-slate-500">{item.description}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Automation</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Notification preferences
+          </h2>
           <p className="text-sm text-slate-500">
-            Behavioural preferences for the notification pipeline. Provider
-            credentials are configured via environment variables.
+            Master switches for the outbound notification pipeline. Delivery
+            credentials live under Communication Providers.
           </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 p-4">
           <Toggle
             label="Enable notifications"
-            description="Master switch for outbound WhatsApp & email automations."
+            description="Master switch for outbound WhatsApp & email."
             checked={automation.notifications_enabled}
             onChange={(v) => patch({ notifications_enabled: v })}
           />
@@ -83,52 +174,44 @@ export default function AutomationSettingsPage() {
           label="Default channel"
           value={automation.default_channel}
           onChange={(e) =>
-            patch({ default_channel: e.target.value as "whatsapp" | "email" })
+            patch({
+              default_channel: e.target.value as AutomationSettings["default_channel"],
+            })
           }
-        >
-          <option value="whatsapp">WhatsApp</option>
-          <option value="email">Email</option>
-        </FormSelect>
+          options={[
+            { value: "email", label: "Email" },
+            { value: "whatsapp", label: "WhatsApp" },
+          ]}
+        />
 
         <div className="rounded-2xl border border-slate-200 p-4">
           <Toggle
             label="Daily digest"
-            description="Send a once-a-day summary instead of per-event messages."
+            description="Summarize queued notifications once per day."
             checked={automation.daily_digest}
             onChange={(v) => patch({ daily_digest: v })}
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save changes"}
+            {saving ? "Saving…" : "Save preferences"}
           </button>
+          <Link
+            href="/notifications"
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Open notification center
+          </Link>
         </div>
       </section>
-
-      <Link
-        href="/notifications"
-        className="flex items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
-      >
-        <div className="flex items-center gap-4">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <MessageCircle className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="font-semibold text-slate-800">Compose a notification</p>
-            <p className="text-sm text-slate-500">
-              Send a WhatsApp/email message and watch delivery in the log.
-            </p>
-          </div>
-        </div>
-        <ArrowRight className="h-5 w-5 text-slate-400" />
-      </Link>
     </div>
   );
 }

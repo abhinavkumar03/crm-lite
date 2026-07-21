@@ -41,6 +41,7 @@ import (
 	"github.com/abhinavkumar03/crm-lite/backend/internal/validationengine"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/view"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/workspace"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/workflow"
 )
 
 func main() {
@@ -143,6 +144,13 @@ func main() {
 		MetaSecret: cfg.WhatsAppAppSecret, MetaVerify: cfg.WhatsAppVerifyToken,
 		ResendSecret: cfg.ResendWebhookSecret,
 	})
+	workflowModule := workflow.NewModule(workflow.ModuleDeps{
+		DB: db, Auth: authMW, Org: orgMiddleware, Load: rbacLoad, Guard: guard,
+		Producer: producer, Enabled: cfg.Features.Automation, Logger: log,
+		Records: recordEngine.Service, Notify: notificationModule.Service,
+		Notes: workspaceModule.Service, Activities: workspaceModule.Service,
+	})
+	recordEngine.Service.SetMutationHook(workflowModule.Publisher)
 	tourModule := tour.NewModule(db, authMW, orgMiddleware)
 	demoModule := demo.NewModule(db, tenantResolver, authMW)
 	settingsModule := settings.NewModule(db, authMW, orgMiddleware, rbacLoad, guard)
@@ -174,6 +182,7 @@ func main() {
 		importEngine,
 		exportEngine,
 		notificationModule,
+		workflowModule,
 		tourModule,
 		demoModule,
 		settingsModule,

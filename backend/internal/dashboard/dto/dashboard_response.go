@@ -27,4 +27,9 @@ type DashboardResponse struct {
 	WhatsAppSentToday    int64                    `json:"whatsapp_sent_today"`
 	FailedNotifications  int64                    `json:"failed_notifications"`
 	ScheduledNotifications int64                  `json:"scheduled_notifications"`
+	ActiveWorkflows      int64                    `json:"active_workflows"`
+	DisabledWorkflows    int64                    `json:"disabled_workflows"`
+	WorkflowsExecutedToday int64                  `json:"workflows_executed_today"`
+	WorkflowsFailedToday int64                    `json:"workflows_failed_today"`
+	AvgWorkflowDurationMs *float64                `json:"avg_workflow_duration_ms,omitempty"`
 }

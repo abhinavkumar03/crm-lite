@@ -380,7 +380,7 @@ export const DOC_GUIDES: DocGuide[] = [
     blocks: [
       {
         type: "intro",
-        text: "Shipped automation centers on notifications and organizations.settings.automation. The automation_rules table is ready for a fuller rules engine.",
+        text: "Workflow Automation Engine (workflows* tables) drives record triggers, conditions, and actions. Notification prefs remain on organizations.settings.automation. The legacy automation_rules table is deprecated.",
       },
       {
         type: "table",

@@ -41,6 +41,13 @@ type ExportProcessor interface {
 	Process(ctx context.Context, orgID, exportID string) error
 }
 
+// WorkflowProcessor evaluates and resumes workflow automation jobs.
+type WorkflowProcessor interface {
+	ProcessEvaluate(ctx context.Context, job Job) error
+	ProcessResume(ctx context.Context, job Job) error
+	ProcessScheduledSweep(ctx context.Context) error
+}
+
 // NewServer wires the asynq server and routes each JobType to a handler. The
 // notification-oriented jobs are delegated to the shared notify.Dispatcher so
 // email and WhatsApp travel the same pipeline. The optional processor handles
@@ -52,11 +59,10 @@ func NewServer(
 	processor NotificationProcessor,
 	importProcessor ImportProcessor,
 	exportProcessor ExportProcessor,
+	workflowProcessor WorkflowProcessor,
 ) *Server {
 	srv := asynq.NewServer(opt, asynq.Config{
 		Concurrency: 10,
-		// Weighted queues: critical (notify) > default (lead events) > bulk
-		// (import/export). Weights are relative poll priorities.
 		Queues: map[string]int{
 			QueueCritical: 6,
 			QueueDefault:  3,
@@ -66,11 +72,12 @@ func NewServer(
 	})
 
 	h := &handlers{
-		logger:          logger,
-		dispatcher:      dispatcher,
-		processor:       processor,
-		importProcessor: importProcessor,
-		exportProcessor: exportProcessor,
+		logger:            logger,
+		dispatcher:        dispatcher,
+		processor:         processor,
+		importProcessor:   importProcessor,
+		exportProcessor:   exportProcessor,
+		workflowProcessor: workflowProcessor,
 	}
 
 	mux := asynq.NewServeMux()
@@ -82,6 +89,9 @@ func NewServer(
 	mux.HandleFunc(string(JobProcessScheduledNotifications), h.handleProcessScheduled)
 	mux.HandleFunc(string(JobImportProcess), h.handleImportProcess)
 	mux.HandleFunc(string(JobExportProcess), h.handleExportProcess)
+	mux.HandleFunc(string(JobWorkflowEvaluate), h.handleWorkflowEvaluate)
+	mux.HandleFunc(string(JobWorkflowResume), h.handleWorkflowResume)
+	mux.HandleFunc(string(JobWorkflowScheduledSweep), h.handleWorkflowSweep)
 
 	return &Server{srv: srv, mux: mux, logger: logger}
 }
@@ -95,11 +105,12 @@ func (s *Server) Run() error {
 
 // handlers holds dependencies shared by all job handlers.
 type handlers struct {
-	logger          *zap.Logger
-	dispatcher      *notify.Dispatcher
-	processor       NotificationProcessor
-	importProcessor ImportProcessor
-	exportProcessor ExportProcessor
+	logger            *zap.Logger
+	dispatcher        *notify.Dispatcher
+	processor         NotificationProcessor
+	importProcessor   ImportProcessor
+	exportProcessor   ExportProcessor
+	workflowProcessor WorkflowProcessor
 }
 
 func decode(t *asynq.Task) (Job, error) {
@@ -223,6 +234,41 @@ func (h *handlers) handleExportProcess(ctx context.Context, t *asynq.Task) error
 	}
 
 	return h.exportProcessor.Process(ctx, orgID, id)
+}
+
+func (h *handlers) handleWorkflowEvaluate(ctx context.Context, t *asynq.Task) error {
+	job, err := decode(t)
+	if err != nil {
+		return err
+	}
+	if h.workflowProcessor == nil {
+		h.logger.Warn("jobs: no workflow processor configured; skipping")
+		return nil
+	}
+	return h.workflowProcessor.ProcessEvaluate(ctx, job)
+}
+
+func (h *handlers) handleWorkflowResume(ctx context.Context, t *asynq.Task) error {
+	job, err := decode(t)
+	if err != nil {
+		return err
+	}
+	if h.workflowProcessor == nil {
+		h.logger.Warn("jobs: no workflow processor configured; skipping")
+		return nil
+	}
+	return h.workflowProcessor.ProcessResume(ctx, job)
+}
+
+func (h *handlers) handleWorkflowSweep(ctx context.Context, t *asynq.Task) error {
+	if _, err := decode(t); err != nil {
+		return err
+	}
+	if h.workflowProcessor == nil {
+		h.logger.Warn("jobs: no workflow processor configured; skipping sweep")
+		return nil
+	}
+	return h.workflowProcessor.ProcessScheduledSweep(ctx)
 }
 
 func stringField(payload map[string]interface{}, key string) string {

@@ -22,6 +22,7 @@ type Module struct {
 	ProviderHandler *handler.ProviderHandler
 	WebhookHandler *handler.WebhookHandler
 	ProviderService *service.ProviderService
+	Service        *service.Service
 	auth           gin.HandlerFunc
 	org            gin.HandlerFunc
 	load           gin.HandlerFunc
@@ -74,6 +75,7 @@ func NewModuleWithDeps(d ModuleDeps) *Module {
 		ProviderHandler: providerH,
 		WebhookHandler:  webhookH,
 		ProviderService: providerSvc,
+		Service:         svc,
 		auth:            d.Auth,
 		org:             d.Org,
 		load:            d.Load,
