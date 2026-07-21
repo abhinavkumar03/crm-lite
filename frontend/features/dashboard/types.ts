@@ -25,4 +25,9 @@ export interface DashboardResponse {
   whatsapp_sent_today?: number;
   failed_notifications?: number;
   scheduled_notifications?: number;
+  active_workflows?: number;
+  disabled_workflows?: number;
+  workflows_executed_today?: number;
+  workflows_failed_today?: number;
+  avg_workflow_duration_ms?: number | null;
 }

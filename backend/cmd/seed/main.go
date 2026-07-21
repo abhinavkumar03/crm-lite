@@ -61,6 +61,7 @@ func main() {
 		seeders.BusinessDataSeeder{},
 		seeders.WorkspaceSideDataSeeder{},
 		seeders.NotificationDemoSeeder{},
+		seeders.WorkflowDemoSeeder{},
 	)
 
 	if err := runner.Run(context.Background(), *fresh); err != nil {

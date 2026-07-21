@@ -65,6 +65,13 @@ type ActivityLogger interface {
 	LogRecordActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) error
 }
 
+// MutationHook is notified after successful record CUD (workflow engine, etc.).
+type MutationHook interface {
+	AfterCreate(ctx context.Context, orgID, moduleID, userID string, rec *dto.RecordResponse) error
+	AfterUpdate(ctx context.Context, orgID, moduleID, userID string, before, after *dto.RecordResponse) error
+	AfterDelete(ctx context.Context, orgID, moduleID, userID, recordID string, before *dto.RecordResponse) error
+}
+
 // ListLayoutReader loads org-default list columns for embedding on list responses.
 type ListLayoutReader interface {
 	GetListLayout(ctx context.Context, orgID, moduleID string, includeHidden bool) (*workspacedto.ListLayoutResponse, error)
@@ -78,6 +85,7 @@ type Service struct {
 	access     *access.Service
 	activity   ActivityLogger
 	listLayout ListLayoutReader
+	mutation   MutationHook
 }
 
 func New(repo RecordRepository, fields FieldReader, validator Validator, appCache *cache.Cache, accessSvc *access.Service) *Service {
@@ -90,6 +98,10 @@ func (s *Service) SetActivityLogger(logger ActivityLogger) {
 
 func (s *Service) SetListLayoutReader(reader ListLayoutReader) {
 	s.listLayout = reader
+}
+
+func (s *Service) SetMutationHook(hook MutationHook) {
+	s.mutation = hook
 }
 
 func (s *Service) logActivity(ctx context.Context, orgID, moduleID, recordID, userID, action, description string, metadata map[string]any) {
@@ -168,6 +180,9 @@ func (s *Service) Create(ctx context.Context, orgID, moduleID, userID string, re
 	s.logActivity(ctx, orgID, moduleID, rec.ID, userID, "RECORD_CREATED", "Record created", nil)
 	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(rec)
+	if s.mutation != nil {
+		_ = s.mutation.AfterCreate(ctx, orgID, moduleID, userID, &resp)
+	}
 	return &resp, nil
 }
 
@@ -183,6 +198,8 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id, userID string
 	if existing == nil {
 		return nil, ErrNotFound
 	}
+
+	beforeResp := toResponse(existing)
 
 	if s.access != nil {
 		actor, err := s.access.LoadActor(ctx, orgID, userID)
@@ -233,6 +250,9 @@ func (s *Service) Update(ctx context.Context, orgID, moduleID, id, userID string
 	s.logActivity(ctx, orgID, moduleID, id, userID, "RECORD_UPDATED", "Record updated", nil)
 	s.invalidateDashboard(ctx, orgID)
 	resp := toResponse(existing)
+	if s.mutation != nil {
+		_ = s.mutation.AfterUpdate(ctx, orgID, moduleID, userID, &beforeResp, &resp)
+	}
 	return &resp, nil
 }
 
@@ -391,6 +411,7 @@ func (s *Service) Delete(ctx context.Context, orgID, moduleID, id, userID string
 
 	s.logActivity(ctx, orgID, moduleID, id, userID, "RECORD_DELETED", "Record deleted", nil)
 
+	beforeResp := toResponse(existing)
 	deleted, err := s.repo.Delete(ctx, orgID, moduleID, id)
 	if err != nil {
 		return err
@@ -399,6 +420,9 @@ func (s *Service) Delete(ctx context.Context, orgID, moduleID, id, userID string
 		return ErrNotFound
 	}
 	s.invalidateDashboard(ctx, orgID)
+	if s.mutation != nil {
+		_ = s.mutation.AfterDelete(ctx, orgID, moduleID, userID, id, &beforeResp)
+	}
 	return nil
 }
 

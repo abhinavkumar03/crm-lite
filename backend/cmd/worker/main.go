@@ -18,12 +18,16 @@ import (
 	notificationservice "github.com/abhinavkumar03/crm-lite/backend/internal/notification/service"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/notify"
 	recordrepo "github.com/abhinavkumar03/crm-lite/backend/internal/record/repository"
+	recordservice "github.com/abhinavkumar03/crm-lite/backend/internal/record/service"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/config"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/database"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/logger"
 	"github.com/abhinavkumar03/crm-lite/backend/internal/shared/secrets"
 	vrepo "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/repository"
 	vservice "github.com/abhinavkumar03/crm-lite/backend/internal/validationengine/service"
+	"github.com/abhinavkumar03/crm-lite/backend/internal/workflow"
+	workspacerepo "github.com/abhinavkumar03/crm-lite/backend/internal/workspace/repository"
+	workspaceservice "github.com/abhinavkumar03/crm-lite/backend/internal/workspace/service"
 )
 
 func main() {
@@ -85,16 +89,32 @@ func main() {
 	processor.SetPublicBaseURL(cfg.PublicBaseURL)
 
 	fieldRepo := fieldrepo.New(db)
+	validator := vservice.New(vrepo.New(db), fieldRepo)
+	recordSvc := recordservice.New(recordrepo.New(db), fieldRepo, validator, nil, nil)
+	workspaceSvc := workspaceservice.New(workspacerepo.New(db))
+	recordSvc.SetActivityLogger(workspaceSvc)
+	recordSvc.SetListLayoutReader(workspaceSvc)
+
+	redisOpt := jobs.RedisOpt(cfg.RedisHost, cfg.RedisPort, cfg.RedisPassword, cfg.RedisDB)
+	producer := jobs.NewProducer(redisOpt)
+	defer producer.Close()
+
+	notifySvc := notificationservice.New(notificationrepo.New(db), producer)
+
+	workflowModule := workflow.NewModule(workflow.ModuleDeps{
+		DB: db, Producer: producer, Enabled: cfg.Features.Automation, Logger: log,
+		Records: recordSvc, Notify: notifySvc, Notes: workspaceSvc, Activities: workspaceSvc,
+	})
+	recordSvc.SetMutationHook(workflowModule.Publisher)
+
 	importProcessor := importprocessor.New(
 		importrepo.New(db),
 		recordrepo.New(db),
 		fieldRepo,
-		vservice.New(vrepo.New(db), fieldRepo),
+		validator,
 		log,
 	)
 	exportProcessor := exportprocessor.New(exporter.NewService(db, nil), log)
-
-	redisOpt := jobs.RedisOpt(cfg.RedisHost, cfg.RedisPort, cfg.RedisPassword, cfg.RedisDB)
 
 	// Periodic sweep for due scheduled + retrying notifications.
 	scheduler := asynq.NewScheduler(redisOpt, nil)
@@ -102,18 +122,23 @@ func main() {
 	_, err = scheduler.Register("@every 1m", sweepTask, jobs.DefaultOpts(jobs.JobProcessScheduledNotifications)...)
 	if err != nil {
 		log.Sugar().Warnf("worker: schedule sweep register failed: %v", err)
+	}
+
+	wfSweep := asynq.NewTask(string(jobs.JobWorkflowScheduledSweep), []byte(`{"type":"workflow.scheduled_sweep","user_id":"","payload":{}}`))
+	_, err = scheduler.Register("@every 1m", wfSweep, jobs.DefaultOpts(jobs.JobWorkflowScheduledSweep)...)
+	if err != nil {
+		log.Sugar().Warnf("worker: workflow sweep register failed: %v", err)
 	} else {
 		go func() {
 			if err := scheduler.Run(); err != nil {
 				log.Sugar().Errorf("worker: scheduler stopped: %v", err)
 			}
 		}()
-		log.Info("jobs: scheduled notification sweep registered (@every 1m)")
+		log.Info("jobs: scheduled sweeps registered (@every 1m)")
 	}
 
-	server := jobs.NewServer(redisOpt, log, dispatcher, processor, importProcessor, exportProcessor)
+	server := jobs.NewServer(redisOpt, log, dispatcher, processor, importProcessor, exportProcessor, workflowModule.Processor)
 
-	// Warm-up: process any already-due rows once at boot.
 	go func() {
 		time.Sleep(2 * time.Second)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -134,4 +159,3 @@ func firstNonEmpty(vals ...string) string {
 	}
 	return ""
 }
-

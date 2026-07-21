@@ -26,6 +26,12 @@ const (
 	// JobExportProcess builds a persisted export (looked up by id): query the
 	// records, serialize the file and store it for download.
 	JobExportProcess JobType = "export.process"
+	// JobWorkflowEvaluate matches active workflows and runs their actions.
+	JobWorkflowEvaluate JobType = "workflow.evaluate"
+	// JobWorkflowResume continues a delayed workflow from a step index.
+	JobWorkflowResume JobType = "workflow.resume"
+	// JobWorkflowScheduledSweep scans scheduled/date_based triggers.
+	JobWorkflowScheduledSweep JobType = "workflow.scheduled_sweep"
 )
 
 // Job is the transport-agnostic payload enqueued for asynchronous processing.

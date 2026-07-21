@@ -34,13 +34,16 @@ var DefaultRoles = []RoleSpec{
 		"module.view", "record.view", "record.create", "record.update", "record.delete",
 		"import.run", "export.run", "automation.manage", "validation.manage", "analytics.view", "user.manage",
 		"notification.view", "notification.send", "notification.templates.manage",
+		"workflow.view", "workflow.create", "workflow.edit", "workflow.delete", "workflow.publish", "workflow.execute", "workflow.logs.view",
 	}},
 	{Slug: "sales_executive", Name: "Sales Executive", Description: "Day-to-day sales work", HierarchyLevel: 60, PermissionKeys: []string{
 		"module.view", "record.view", "record.create", "record.update", "export.run",
 		"notification.view", "notification.send",
+		"workflow.view", "workflow.execute", "workflow.logs.view",
 	}},
 	{Slug: "viewer", Name: "Viewer", Description: "Read-only access", HierarchyLevel: 100, PermissionKeys: []string{
 		"module.view", "record.view", "analytics.view", "notification.view",
+		"workflow.view", "workflow.logs.view",
 	}},
 }
 

@@ -1,22 +1,96 @@
 # Automation guide
 
-Automation in CRM Lite today means **notification delivery** plus **org-level
-automation settings**. A richer `automation_rules` table exists for trigger /
-condition / action JSON and is intended for rule-engine expansion; the shipped
-path is the notification pipeline.
+CRM Lite ships a **Workflow Automation Engine** plus the **Notification Center**.
+The legacy `automation_rules` table is deprecated (unused placeholder from early
+metadata migrations). Prefer the `workflows*` tables.
 
-Feature flag: `FEATURE_AUTOMATION`. Permission: `automation.manage`.
+Feature flag: `FEATURE_AUTOMATION`. Permissions: `workflow.*` (and
+`automation.manage` as a transitional OR on routes).
 
-## Organization settings
+## Architecture
 
-Stored on `organizations.settings` JSONB (no separate settings table). API:
+```text
+Record Create/Update/Delete
+  → record.Service MutationHook
+  → enqueue workflow.evaluate (asynq)
+  → worker matches active published workflows
+  → evaluate condition tree
+  → run actions (notify / records / notes / activities / webhook / delay / invoke)
+  → append-only workflow_executions + steps
+```
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/api/v1/settings` | Any org member |
-| `PUT` | `/api/v1/settings` | Requires `settings.manage` |
+Workspace scope = `organization_id`. Switching workspace isolates workflows and logs.
 
-Shape (relevant slice):
+## Settings UI
+
+| Route | Purpose |
+| --- | --- |
+| `/settings/automation` | Hub + notification prefs + metrics |
+| `/settings/automation/workflows` | List / publish / disable |
+| `/settings/automation/workflows/[id]` | Form builder (metadata-driven) |
+| `/settings/automation/logs` | Execution history + retry |
+| `/settings/automation/templates` | Clone built-in starters |
+
+## API (auth + org + RBAC)
+
+| Method | Path |
+| --- | --- |
+| GET/POST | `/api/v1/workflows` |
+| GET/PATCH/DELETE | `/api/v1/workflows/:id` |
+| POST | `/api/v1/workflows/:id/publish` |
+| POST | `/api/v1/workflows/:id/disable` |
+| GET | `/api/v1/workflows/:id/versions` |
+| POST | `/api/v1/workflows/:id/versions/:versionId/rollback` |
+| POST | `/api/v1/workflows/:id/run` |
+| GET | `/api/v1/workflows/builder-metadata` |
+| GET | `/api/v1/workflows/executions` |
+| GET | `/api/v1/workflows/executions/:id` |
+| POST | `/api/v1/workflows/executions/:id/retry` |
+| GET | `/api/v1/workflows/templates` |
+| POST | `/api/v1/workflows/templates/:id/clone` |
+| GET | `/api/v1/workflows/metrics` |
+
+## Triggers (MVP+)
+
+`record_created`, `record_updated`, `field_updated`, `record_deleted`,
+`manual`, `scheduled` (hour/minute UTC + optional `days_of_week` + `batch_size`),
+`date_based` (`field_api_name` + `offset_days`).
+
+### Scheduled / date-based sweep
+
+Worker registers `workflow.scheduled_sweep` `@every 1m`:
+
+- **scheduled** — when current UTC hour:minute matches, fan-out to up to
+  `batch_size` (default 100) module records; skip if already ran today.
+- **date_based** — records where `LEFT(data->>field, 10) = today+offset`;
+  skip if already ran today.
+
+### Manual run
+
+`POST /workflows/:id/run` with `{ "record_id", "module_id?" }` from Settings
+or the **Run workflow** panel on record detail (`/m/[apiName]/[recordId]`).
+
+### Delay / webhook / resume
+
+- `delay` action enqueues `workflow.resume` via Asynq `ProcessAt`.
+- `webhook` POSTs JSON to `config.url` (optional headers/method/payload).
+
+### Soft-delete readiness
+
+`record_deleted` fires from `MutationHook.AfterDelete` with a **before**
+snapshot. Records are hard-deleted today; the hook remains valid if soft-delete
+is introduced later (fire on status transition or tombstone write).
+
+## Actions (MVP+)
+
+`update_record`, `create_record`, `assign_owner`, `send_email`, `send_whatsapp`,
+`create_note`, `create_activity`, `invoke_workflow`, `webhook`, `delay`.
+
+Email/WhatsApp reuse `notification.Compose` — never duplicate providers.
+
+## Organization notification settings
+
+Still stored on `organizations.settings` JSONB:
 
 ```json
 {
@@ -24,99 +98,43 @@ Shape (relevant slice):
     "notifications_enabled": true,
     "default_channel": "email",
     "daily_digest": false
-  },
-  "general": {
-    "timezone": "Asia/Kolkata",
-    "currency": "INR",
-    "locale": "en-IN"
   }
 }
 ```
 
-UI: `/settings` (General) and `/settings/automation`.
+## Versioning
 
-## Notification pipeline
+- **Save draft** writes the editable draft version (`workflow_versions.state=draft`).
+- **Publish** (with optional changelog) marks the draft published, sets
+  `workflows.published_version_id`, and status `active`.
+- **Rollback** clones a past published/rolled_back version into a **new**
+  published version (history is never rewritten).
 
-```text
-API Send → INSERT notifications (queued) → asynq notification.send (critical)
-        → worker Dispatcher → MarkSent | MarkFailed → activity log
-```
+UI: workflow editor shows status badges, live version marker, and confirm
+dialogs for publish/rollback.
 
-### API
+## Template gallery
 
-| Method | Path |
-| --- | --- |
-| `POST` | `/api/v1/notifications` |
-| `GET` | `/api/v1/notifications` |
-| `GET` | `/api/v1/notifications/:id` |
+`GET /workflows/templates` calls `EnsureBuiltinTemplates` so the gallery is
+always populated (even without re-seed). Categories: sales, nurture, tasks,
+lifecycle — including Lead Qualification, Lost Lead, Birthday, Anniversary,
+Task Overdue, Manual Follow-up, and more.
 
-Create body example:
+Clone creates a **draft** workflow you can edit and publish.
 
-```json
-{
-  "channel": "email",
-  "to": "ada@example.com",
-  "subject": "Welcome",
-  "body": "Thanks for joining",
-  "template": "lead_welcome",
-  "entity_type": "LEAD",
-  "entity_id": "…",
-  "data": { "name": "Ada" }
-}
-```
+## Failed-run retry
 
-Channels: `email` | `whatsapp`. Statuses: `queued` → `sent` | `failed`.
+`POST /workflows/executions/:id/retry` re-queues only `failed` / `partial`
+runs when the workflow is still active. Logs UI supports Failed filter and
+inline Retry on list rows + detail panel.
 
-### Providers (`internal/notify`)
+## Reentrancy
 
-| Channel | Default | Production switch |
-| --- | --- | --- |
-| Email | Simulation logger | Swap provider registration in worker |
-| WhatsApp | Simulation | `WHATSAPP_PROVIDER=meta` + `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_ID` (+ optional `WHATSAPP_API_URL`) |
-
-The dispatcher is strategy-based: handlers never talk to Meta/SMTP directly.
-
-### Lead side-effects
-
-Creating a lead may also enqueue:
-
-- `lead.created` (default queue) — logged by worker
-- `email.send` (critical) — if the lead has an email
-
-These share the same notify dispatcher.
-
-### Queue profile
-
-`notification.send` / `email.send` / `whatsapp.send` → **critical** queue,
-MaxRetry 5, Timeout 30s.
-
-## `automation_rules` table
-
-Schema (from core metadata migration):
-
-| Column | Role |
-| --- | --- |
-| `trigger_event` | e.g. record created / status changed |
-| `conditions` | JSONB predicate tree |
-| `actions` | JSONB action list (notify, assign, …) |
-| `module_id` | Optional scope |
-| `is_active` | Toggle |
-
-Seed / Settings may expose toggles; a full rules engine evaluator is the natural
-next step. Prefer storing durable rule definitions here rather than hardcoding
-workflows in handlers.
-
-## Operational checklist
-
-1. Ensure worker is running (`make run-worker`).
-2. Confirm Redis connectivity (jobs sit in asynq otherwise).
-3. `notifications_enabled` true in settings when UI should offer send.
-4. For real WhatsApp: set Meta env vars and restart worker.
-5. Inspect `notifications` rows + worker logs for `failed` + `error`.
-6. Use Swagger (`/api/v1/docs`) tag **Notifications** to Try it out.
+Workflow-caused record updates set context `source=workflow` and
+`exclude_workflow_id`. Max depth is 3.
 
 ## Related
 
-- [Sequences](./sequences.md) — notification sequence
 - [Architecture](./architecture.md) — queues
-- Settings Center notes in [`COMMANDS.md`](../COMMANDS.md)
+- Notification Center routes under `/api/v1/notifications`
+- Swagger: `/api/v1/docs`

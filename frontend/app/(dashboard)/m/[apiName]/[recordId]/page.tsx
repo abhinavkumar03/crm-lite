@@ -56,6 +56,7 @@ import {
 } from "@/features/workspace/types";
 import { useDemo } from "@/features/demo/DemoProvider";
 import RecordCommunicationsPanel from "@/features/notifications/components/RecordCommunicationsPanel";
+import RecordWorkflowsPanel from "@/features/workflows/components/RecordWorkflowsPanel";
 
 type Tab =
   | "overview"
@@ -447,6 +448,9 @@ export default function ModuleRecordPage() {
 
       {tab === "overview" && (
         <div className="space-y-5" data-tutorial-surface="record-overview">
+          {moduleId && recordId ? (
+            <RecordWorkflowsPanel moduleId={moduleId} recordId={recordId} />
+          ) : null}
           {editing ? (
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <DynamicForm

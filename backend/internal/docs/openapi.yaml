@@ -2168,10 +2168,10 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
-      summary: Send notification
+      summary: Compose notification (draft/send/schedule)
       tags:
       - Notifications
-      operationId: sendNotification
+      operationId: composeNotification
       security:
       - bearerAuth: []
       requestBody:
@@ -2181,6 +2181,7 @@ paths:
             schema:
               $ref: '#/components/schemas/SendNotificationRequest'
             example:
+              mode: send
               channel: email
               to: ada@example.com
               subject: Welcome
@@ -2204,6 +2205,30 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /notifications/metrics:
+    get:
+      summary: Notification metrics
+      tags:
+      - Notifications
+      operationId: notificationMetrics
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationListResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /notifications/{id}:
     get:
       summary: Get notification
@@ -2238,6 +2263,218 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update draft notification
+      tags:
+      - Notifications
+      operationId: updateDraftNotification
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+            example: {}
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /notifications/{id}/retry:
+    post:
+      summary: Retry failed notification
+      tags:
+      - Notifications
+      operationId: retryNotification
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /notifications/{id}/cancel:
+    post:
+      summary: Cancel scheduled notification
+      tags:
+      - Notifications
+      operationId: cancelNotification
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ''
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /communication-providers:
+    get:
+      summary: List communication providers
+      tags:
+      - Communication
+      operationId: listCommunicationProviders
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: channel
+        in: query
+        required: false
+        schema:
+          type: string
+        description: ''
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationListResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create communication provider
+      tags:
+      - Communication
+      operationId: createCommunicationProvider
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+            example:
+              channel: email
+              provider_type: smtp
+              name: Primary SMTP
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/APIResponse'
+                - type: object
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /webhooks/whatsapp/meta:
+    get:
+      summary: Meta WhatsApp webhook verify
+      tags:
+      - Webhooks
+      operationId: metaWhatsAppVerify
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Challenge echo
+    post:
+      summary: Meta WhatsApp status webhook
+      tags:
+      - Webhooks
+      operationId: metaWhatsAppStatus
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Accepted
+  /webhooks/email/resend:
+    post:
+      summary: Resend email webhook
+      tags:
+      - Webhooks
+      operationId: resendEmailWebhook
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Accepted
   /tour:
     get:
       summary: Get tour progress
@@ -3442,6 +3679,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecentRecord'
+        emails_sent_today:
+          type: integer
+          format: int64
+        whatsapp_sent_today:
+          type: integer
+          format: int64
+        failed_notifications:
+          type: integer
+          format: int64
+        scheduled_notifications:
+          type: integer
+          format: int64
+        active_workflows:
+          type: integer
+          format: int64
+        disabled_workflows:
+          type: integer
+          format: int64
+        workflows_executed_today:
+          type: integer
+          format: int64
+        workflows_failed_today:
+          type: integer
+          format: int64
+        avg_workflow_duration_ms:
+          type: number
     SearchHit:
       type: object
       properties:

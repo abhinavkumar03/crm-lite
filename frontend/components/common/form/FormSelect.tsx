@@ -4,11 +4,14 @@ import {
 
 import { ChevronDown } from "lucide-react";
 
+type Option = { value: string; label: string };
+
 type Props =
   SelectHTMLAttributes<HTMLSelectElement> & {
     label: string;
     requiredMark?: boolean;
     helperText?: string;
+    options?: Option[];
   };
 
 export default function FormSelect({
@@ -17,6 +20,7 @@ export default function FormSelect({
   helperText,
   className = "",
   children,
+  options,
   ...props
 }: Props) {
   return (
@@ -58,7 +62,13 @@ export default function FormSelect({
             ${className}
           `}
         >
-          {children}
+          {options
+            ? options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))
+            : children}
         </select>
 
         <ChevronDown

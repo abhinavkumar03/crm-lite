@@ -29,6 +29,12 @@ func DefaultOpts(t JobType) []asynq.Option {
 			asynq.MaxRetry(3),
 			asynq.Timeout(10 * time.Minute),
 		}
+	case JobWorkflowEvaluate, JobWorkflowResume, JobWorkflowScheduledSweep:
+		return []asynq.Option{
+			asynq.Queue(QueueDefault),
+			asynq.MaxRetry(3),
+			asynq.Timeout(2 * time.Minute),
+		}
 	default:
 		return []asynq.Option{
 			asynq.Queue(QueueDefault),

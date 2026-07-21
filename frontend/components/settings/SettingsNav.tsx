@@ -114,7 +114,7 @@ const items: NavItem[] = [
     name: "Automation",
     href: "/settings/automation",
     icon: Zap,
-    description: "Notification behaviour",
+    description: "Workflows & notifications",
     tutorialAction: "open-automation",
   },
   {
